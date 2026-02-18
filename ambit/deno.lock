@@ -1,0 +1,44 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@cliffy/table@1": "1.0.0",
+    "jsr:@std/cli@^1.0.27": "1.0.27",
+    "jsr:@std/fmt@^1.0.9": "1.0.9",
+    "jsr:@std/internal@^1.0.12": "1.0.12",
+    "jsr:@zod/zod@^4.3.6": "4.3.6"
+  },
+  "jsr": {
+    "@cliffy/table@1.0.0": {
+      "integrity": "3fdaa9e1ef1ea62022108adabd826932bdea8dd05497079896febcd41322907f",
+      "dependencies": [
+        "jsr:@std/fmt"
+      ]
+    },
+    "@std/cli@1.0.27": {
+      "integrity": "eba97edd0891871a7410e835dd94b3c260c709cca5983df2689c25a71fbe04de",
+      "dependencies": [
+        "jsr:@std/internal"
+      ]
+    },
+    "@std/fmt@1.0.9": {
+      "integrity": "2487343e8899fb2be5d0e3d35013e54477ada198854e52dd05ed0422eddcabe0"
+    },
+    "@std/internal@1.0.12": {
+      "integrity": "972a634fd5bc34b242024402972cd5143eac68d8dffaca5eaa4dba30ce17b027"
+    },
+    "@zod/zod@4.3.6": {
+      "integrity": "7144e5e11f8ffc3cf6e2fca624f6597a8762898aac9868cc8938e9398b96ffe4"
+    }
+  },
+  "workspace": {
+    "dependencies": [
+      "jsr:@cliffy/table@1",
+      "jsr:@std/assert@1",
+      "jsr:@std/cli@^1.0.27",
+      "jsr:@std/fs@^1.0.22",
+      "jsr:@std/json@^1.0.2",
+      "jsr:@std/path@^1.1.4",
+      "jsr:@zod/zod@^4.3.6"
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+# ambit - Tailscale Subnet Router for Fly.io Custom Networks
+# App name is overridden at deploy time via -a flag
+
+app = "ambit"
+primary_region = "iad"
+
+[build]
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = 512
+
+[[mounts]]
+  source = "tailscale_state"
+  destination = "/var/lib/tailscale"

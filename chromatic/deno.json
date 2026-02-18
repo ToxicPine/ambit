@@ -1,0 +1,21 @@
+{
+  "name": "@chromatic/cli",
+  "version": "0.2.0",
+  "exports": "./main.ts",
+  "tasks": {
+    "dev": "deno run --watch main.ts",
+    "run": "deno run -A main.ts",
+    "check": "deno check main.ts",
+    "test": "deno test -A"
+  },
+  "imports": {
+    "@cliffy/table": "jsr:@cliffy/table@^1.0.0",
+    "@ambit/cli": "jsr:@ambit/cli",
+    "@std/cli": "jsr:@std/cli@^1.0.27",
+    "@std/path": "jsr:@std/path@^1.1.4",
+    "zod": "jsr:@zod/zod@^4.3.6"
+  },
+  "compilerOptions": {
+    "strict": true
+  }
+}
