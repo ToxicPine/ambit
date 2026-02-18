@@ -2,6 +2,7 @@ media/*
 
 # Build Artifacts
 result
+*/npm/
 
 # Editor
 .idea/

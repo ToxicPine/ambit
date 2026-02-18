@@ -33,6 +33,7 @@
           devShells.default = pkgs.mkShell {
             nativeBuildInputs = [
               pkgs.deno
+              pkgs.nodejs
               pkgs.flyctl
               pkgs.tailscale
               unstablePkgs.claude-code

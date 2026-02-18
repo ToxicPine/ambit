@@ -1,12 +1,13 @@
 {
-  "name": "@chromatic/cli",
+  "name": "@ambit/chromatic",
   "version": "0.2.0",
   "exports": "./main.ts",
   "tasks": {
     "dev": "deno run --watch main.ts",
     "run": "deno run -A main.ts",
     "check": "deno check main.ts",
-    "test": "deno test -A"
+    "test": "deno test -A",
+    "build": "deno run -A scripts/build_npm.ts"
   },
   "imports": {
     "@cliffy/table": "jsr:@cliffy/table@^1.0.0",

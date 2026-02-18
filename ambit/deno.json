@@ -21,7 +21,8 @@
     "run": "deno run -A main.ts",
     "check": "deno check main.ts",
     "test": "deno test -A",
-    "check-versions": "deno run --allow-net --allow-run=git scripts/check-versions.ts"
+    "check-versions": "deno run --allow-net --allow-run=git scripts/check-versions.ts",
+    "build": "deno run -A scripts/build_npm.ts"
   },
   "imports": {
     "@cliffy/table": "jsr:@cliffy/table@^1.0.0",
