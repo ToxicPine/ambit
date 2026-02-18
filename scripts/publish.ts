@@ -4,6 +4,7 @@ const run = async (cmd: string, args: string[], cwd?: string) => {
   const p = new Deno.Command(cmd, {
     args,
     cwd,
+    stdin: "inherit",
     stdout: "inherit",
     stderr: "inherit",
   });
@@ -14,8 +15,26 @@ const run = async (cmd: string, args: string[], cwd?: string) => {
 const build = (dir: string) =>
   run("deno", ["run", "-A", "scripts/build_npm.ts", "--publish"], dir);
 
-const publish = (dir: string) =>
-  run("npm", ["publish", "--access", "public"], dir);
+const publish = async (dir: string) => {
+  const pkg = JSON.parse(await Deno.readTextFile(`${dir}/package.json`));
+  const p = new Deno.Command("npm", {
+    args: ["publish", "--access", "public"],
+    cwd: dir,
+    stdin: "inherit",
+    stdout: "inherit",
+    stderr: "piped",
+  });
+  const result = await p.output();
+  const stderr = new TextDecoder().decode(result.stderr);
+  if (stderr) Deno.stderr.writeSync(new TextEncoder().encode(stderr));
+  if (result.code !== 0) {
+    if (stderr.includes("You cannot publish over the previously published")) {
+      console.log(`${pkg.name}@${pkg.version} already published, skipping`);
+      return;
+    }
+    Deno.exit(result.code);
+  }
+};
 
 // Phase 1: Build + publish ambit (base — others depend on it)
 console.log("\n=== @cardelli/ambit ===\n");
@@ -28,4 +47,4 @@ await Promise.all([build("./chromatic"), build("./ambit-mcp")]);
 await publish("./chromatic/npm");
 await publish("./ambit-mcp/npm");
 
-console.log("\n=== All packages published ===\n");
+console.log("\n=== All Packages Published ===\n");
