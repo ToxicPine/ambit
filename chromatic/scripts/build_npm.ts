@@ -13,11 +13,20 @@ const ambitMapping = (subPath: string) => ({
   subPath,
 });
 
+// dnt mangles Deno shebangs — clean up the garbled output
+const stripDenoShebang = async (path: string) => {
+  const text = await Deno.readTextFile(path);
+  const fixed = text.replace(
+    /^(#!\/usr\/bin\/env node\n(?:import [^\n]+\n)*)!\/usr\/bin \/ env - S;\ndeno;\nrun - A;\n/,
+    "$1",
+  );
+  if (fixed !== text) await Deno.writeTextFile(path, fixed);
+};
+
 await emptyDir("./npm");
 
 await build({
   entryPoints: [
-    "./main.ts",
     {
       kind: "bin",
       name: "chromatic",
@@ -57,5 +66,6 @@ await build({
   },
   async postBuild() {
     await copy("./src/docker", "./npm/esm/src/docker", { overwrite: true });
+    await stripDenoShebang("./npm/esm/main.js");
   },
 });
