@@ -35,8 +35,8 @@ Chromatic gives your AI agent a browser. It runs a headless Chrome instance in t
 Each tool is available as a Nix package:
 
 ```bash
-nix profile install github:ToxicPine/ambit        # ambit
-nix profile install github:ToxicPine/ambit#chromatic   # chromatic
+nix profile add github:ToxicPine/ambit        # ambit
+nix profile add github:ToxicPine/ambit#chromatic   # chromatic
 ```
 
 If you don't have Nix, install it first:
