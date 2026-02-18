@@ -2,15 +2,32 @@
   "mcpServers": {
     "zod": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "https://mcp.inkeep.com/zod/mcp"]
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.inkeep.com/zod/mcp"
+      ]
     },
     "tanstack": {
       "command": "npx",
-      "args": ["@tanstack/cli", "mcp"]
+      "args": [
+        "@tanstack/cli",
+        "mcp"
+      ]
     },
     "flyctl": {
       "command": "flyctl",
-      "args": ["mcp", "server"]
+      "args": [
+        "mcp",
+        "server"
+      ]
+    },
+    "ambit": {
+      "command": "nix",
+      "args": [
+        "run",
+        "github:ToxicPine/ambit#ambit-mcp"
+      ]
     }
   }
 }

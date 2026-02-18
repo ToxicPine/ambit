@@ -1,73 +1,105 @@
 #!/usr/bin/env -S deno run --allow-read --allow-write --allow-env
 // =============================================================================
-// ambit-mcp setup — add the MCP server to .mcp.json
-// =============================================================================
-// Usage:
-//   nix run .#setup                       # safe mode, find .mcp.json upward
-//   nix run .#setup -- --unsafe           # unsafe mode
-//   nix run .#setup -- --create           # create .mcp.json if not found
-//   nix run .#setup -- --name my-server   # custom server name
-//   nix run .#setup -- --yes              # skip confirmation
-//   nix run .#setup -- --dry-run          # preview without writing
-//   nix run .#setup -- --flake /path      # custom flake path
+// ambit-mcp setup — register the MCP server with your editor or project
 // =============================================================================
 
 import { parseArgs } from "@std/cli";
 import { dirname, join, resolve } from "@std/path";
 
-// =============================================================================
+// ---------------------------------------------------------------------------
 // Types
-// =============================================================================
+// ---------------------------------------------------------------------------
 
-interface McpServer {
+type EditorId = "claude" | "cursor" | "windsurf" | "vscode" | "claude-desktop";
+
+interface McpEntry {
   command: string;
   args?: string[];
   env?: Record<string, string>;
+  type?: string;
 }
 
-interface McpConfig {
-  mcpServers?: Record<string, McpServer>;
-  [key: string]: unknown;
+/** Each editor knows its config path, JSON key, and how to shape entries. */
+interface Editor {
+  label: string;
+  configDir: string;
+  configPath: string;
+  serversKey: "mcpServers" | "servers";
+  transformEntry: (entry: McpEntry) => McpEntry;
 }
 
-// =============================================================================
-// File Finder
-// =============================================================================
+/** Resolved write target — carries editor-specific details through the flow. */
+interface Target {
+  path: string;
+  scope: "user" | "project";
+  label: string;
+  serversKey: "mcpServers" | "servers";
+  transformEntry: (entry: McpEntry) => McpEntry;
+}
 
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const HOME = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
+const DEFAULT_FLAKE_REF = "github:ToxicPine/ambit#ambit-mcp";
 const MCP_FILENAME = ".mcp.json";
 
-async function findFileUp(filename: string): Promise<string | null> {
-  let current = resolve(Deno.cwd());
-  const root = Deno.build.os === "windows"
-    ? current.split(":")[0] + ":\\"
-    : "/";
+const identity = (e: McpEntry): McpEntry => e;
 
-  while (current !== root) {
-    const candidate = join(current, filename);
-    try {
-      const stat = await Deno.stat(candidate);
-      if (stat.isFile) return candidate;
-    } catch { /* continue */ }
+/** VS Code requires `type: "stdio"` on every stdio server entry. */
+const addStdioType = (e: McpEntry): McpEntry => ({ type: "stdio", ...e });
 
-    const parent = dirname(current);
-    if (parent === current) break;
-    current = parent;
-  }
-  return null;
-}
+// Editor registry — paths and formats sourced from official docs:
+//   Claude Code:    https://code.claude.com/docs/en/mcp
+//   Cursor:         https://cursor.com/docs/context/mcp
+//   Windsurf:       https://docs.windsurf.com/windsurf/cascade/mcp
+//   VS Code:        https://code.visualstudio.com/docs/copilot/chat/mcp-servers
+//   Claude Desktop: https://modelcontextprotocol.io/quickstart/user
 
-function relativePath(absolutePath: string): string {
-  const base = resolve(Deno.cwd());
-  if (absolutePath.startsWith(base)) {
-    const rel = absolutePath.slice(base.length);
-    return rel === "" ? "." : rel.startsWith("/") ? "." + rel : "./" + rel;
-  }
-  return absolutePath;
-}
+const EDITORS: Record<EditorId, Editor> = {
+  "claude": {
+    label: "Claude Code",
+    configDir: join(HOME, ".claude"),
+    configPath: join(HOME, ".claude.json"),
+    serversKey: "mcpServers",
+    transformEntry: identity,
+  },
+  "cursor": {
+    label: "Cursor",
+    configDir: join(HOME, ".cursor"),
+    configPath: join(HOME, ".cursor", "mcp.json"),
+    serversKey: "mcpServers",
+    transformEntry: identity,
+  },
+  "windsurf": {
+    label: "Windsurf",
+    configDir: join(HOME, ".codeium", "windsurf"),
+    configPath: join(HOME, ".codeium", "windsurf", "mcp_config.json"),
+    serversKey: "mcpServers",
+    transformEntry: identity,
+  },
+  "vscode": {
+    label: "VS Code",
+    configDir: join(HOME, ".config", "Code"),
+    configPath: join(HOME, ".config", "Code", "User", "mcp.json"),
+    serversKey: "servers",
+    transformEntry: addStdioType,
+  },
+  "claude-desktop": {
+    label: "Claude Desktop",
+    configDir: join(HOME, ".config", "Claude"),
+    configPath: join(HOME, ".config", "Claude", "claude_desktop_config.json"),
+    serversKey: "mcpServers",
+    transformEntry: identity,
+  },
+};
 
-// =============================================================================
-// Display Helpers
-// =============================================================================
+const EDITOR_IDS = Object.keys(EDITORS) as EditorId[];
+
+// ---------------------------------------------------------------------------
+// Display
+// ---------------------------------------------------------------------------
 
 const bold = (s: string) => `\x1b[1m${s}\x1b[0m`;
 const dim = (s: string) => `\x1b[2m${s}\x1b[0m`;
@@ -76,18 +108,15 @@ const green = (s: string) => `\x1b[32m${s}\x1b[0m`;
 const yellow = (s: string) => `\x1b[33m${s}\x1b[0m`;
 const red = (s: string) => `\x1b[31m${s}\x1b[0m`;
 
-function formatServer(name: string, server: McpServer): string {
-  const lines = [`"${name}": {`, `  "command": "${server.command}",`];
-  if (server.args?.length) {
-    lines.push(`  "args": [`);
-    server.args.forEach((arg, i) => {
-      const comma = i < server.args!.length - 1 ? "," : "";
-      lines.push(`    "${arg}"${comma}`);
-    });
-    lines.push(`  ]`);
-  }
-  lines.push(`}`);
-  return lines.join("\n");
+function tildeify(p: string): string {
+  return HOME && p.startsWith(HOME) ? "~" + p.slice(HOME.length) : p;
+}
+
+function formatEntry(name: string, entry: McpEntry): string {
+  return JSON.stringify({ [name]: entry }, null, 2)
+    .split("\n").slice(1, -1)   // strip outer braces
+    .map((l) => l.slice(2))     // un-indent one level
+    .join("\n");
 }
 
 async function confirm(message: string): Promise<boolean> {
@@ -95,72 +124,300 @@ async function confirm(message: string): Promise<boolean> {
   Deno.stdout.writeSync(new TextEncoder().encode(`${message} [y/N] `));
   const n = await Deno.stdin.read(buf);
   if (n === null) return false;
-  const answer = new TextDecoder().decode(buf.subarray(0, n)).trim()
-    .toLowerCase();
-  return answer === "y" || answer === "yes";
+  return new TextDecoder()
+    .decode(buf.subarray(0, n)).trim().toLowerCase().startsWith("y");
 }
 
-// =============================================================================
-// Resolve Flake Path
-// =============================================================================
-
-function resolveFlakePath(override?: string): string {
-  if (override) return resolve(override);
-
-  // If running as compiled binary, the flake is adjacent to the binary.
-  // If running as a deno script, use the script's directory.
-  const scriptDir = dirname(new URL(import.meta.url).pathname);
-  return resolve(scriptDir);
+function die(msg: string): never {
+  console.error(`  ${red(msg)}`);
+  Deno.exit(1);
 }
 
-// =============================================================================
+// ---------------------------------------------------------------------------
+// Filesystem
+// ---------------------------------------------------------------------------
+
+async function pathExists(
+  path: string,
+  kind: "file" | "dir",
+): Promise<boolean> {
+  try {
+    const s = await Deno.stat(path);
+    return kind === "file" ? s.isFile : s.isDirectory;
+  } catch {
+    return false;
+  }
+}
+
+async function findUp(filename: string): Promise<string | null> {
+  let dir = resolve(Deno.cwd());
+  const root = Deno.build.os === "windows" ? dir.split(":")[0] + ":\\" : "/";
+  while (dir !== root) {
+    const candidate = join(dir, filename);
+    if (await pathExists(candidate, "file")) return candidate;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Config I/O
+// ---------------------------------------------------------------------------
+
+/** Read a JSON file. Returns {} on not-found. Exits on parse error. */
+async function readJson(path: string): Promise<Record<string, unknown>> {
+  try {
+    const text = await Deno.readTextFile(path);
+    const parsed = JSON.parse(text);
+    if (typeof parsed === "object" && parsed !== null) return parsed;
+    return {};
+  } catch (e) {
+    if (e instanceof Deno.errors.NotFound) return {};
+    if (e instanceof SyntaxError) die(`Invalid JSON in ${tildeify(path)}`);
+    throw e;
+  }
+}
+
+/** Write JSON atomically: write to .tmp sibling, then rename. */
+async function writeJsonAtomic(
+  path: string,
+  data: Record<string, unknown>,
+): Promise<void> {
+  await Deno.mkdir(dirname(path), { recursive: true });
+  const tmp = path + ".tmp";
+  await Deno.writeTextFile(tmp, JSON.stringify(data, null, 2) + "\n");
+  await Deno.rename(tmp, path);
+}
+
+/**
+ * Safely upsert an MCP server entry into a JSON config file.
+ *
+ * Reads the full file, sets `config[serversKey][name] = entry`, and writes
+ * back atomically — preserving every other key in the file. This is safe for
+ * shared config files like Claude Code's ~/.claude.json and Claude Desktop's
+ * claude_desktop_config.json, as well as standalone MCP config files.
+ */
+async function upsertServer(
+  path: string,
+  serversKey: string,
+  name: string,
+  entry: McpEntry,
+): Promise<void> {
+  const config = await readJson(path);
+  const servers = (config[serversKey] ?? {}) as Record<string, unknown>;
+  servers[name] = entry;
+  config[serversKey] = servers;
+  await writeJsonAtomic(path, config);
+}
+
+// ---------------------------------------------------------------------------
+// Editor Detection
+// ---------------------------------------------------------------------------
+
+async function detectEditors(): Promise<EditorId[]> {
+  const found: EditorId[] = [];
+  for (const id of EDITOR_IDS) {
+    if (await pathExists(EDITORS[id].configDir, "dir")) found.push(id);
+  }
+  return found;
+}
+
+async function promptEditorChoice(editors: EditorId[]): Promise<EditorId> {
+  console.log(`  ${bold("Multiple Editors Detected:")}`);
+  console.log();
+  for (let i = 0; i < editors.length; i++) {
+    console.log(`    ${cyan(String(i + 1))}  ${EDITORS[editors[i]].label}`);
+  }
+  console.log();
+
+  const buf = new Uint8Array(64);
+  Deno.stdout.writeSync(
+    new TextEncoder().encode(`  Choose [1-${editors.length}]: `),
+  );
+  const n = await Deno.stdin.read(buf);
+  if (n === null) Deno.exit(1);
+
+  const choice = parseInt(
+    new TextDecoder().decode(buf.subarray(0, n)).trim(),
+    10,
+  );
+  if (isNaN(choice) || choice < 1 || choice > editors.length) {
+    die("Invalid Choice.");
+  }
+  return editors[choice - 1];
+}
+
+// ---------------------------------------------------------------------------
+// Target Resolution
+// ---------------------------------------------------------------------------
+
+async function resolveTarget(args: {
+  project?: boolean;
+  create?: boolean;
+  editor?: string;
+  yes?: boolean;
+  json?: boolean;
+}): Promise<Target> {
+  // --- Project mode: find or create .mcp.json ---
+  if (args.project) {
+    const found = await findUp(MCP_FILENAME);
+    if (found) {
+      return {
+        path: found, scope: "project", label: "Project",
+        serversKey: "mcpServers", transformEntry: identity,
+      };
+    }
+    if (!args.create) {
+      if (args.json) {
+        console.log(JSON.stringify({ error: `No ${MCP_FILENAME} Found` }));
+      } else {
+        console.log(
+          `  ${dim(`No ${MCP_FILENAME} found in parent directories.`)}`,
+        );
+        console.log(`  Use ${cyan("--create")} to Create One Here.`);
+        console.log();
+      }
+      Deno.exit(1);
+    }
+    return {
+      path: join(Deno.cwd(), MCP_FILENAME), scope: "project", label: "Project",
+      serversKey: "mcpServers", transformEntry: identity,
+    };
+  }
+
+  // --- User mode: auto-detect or use --editor ---
+  let editorId: EditorId;
+
+  if (args.editor) {
+    editorId = args.editor as EditorId;
+  } else {
+    const detected = await detectEditors();
+    if (detected.length === 0) {
+      if (args.json) {
+        console.log(
+          JSON.stringify({ error: "No Supported Editors Detected" }),
+        );
+      } else {
+        console.error(`  ${red("No Supported Editors Detected.")}`);
+        console.error(
+          `  ${dim("Use --editor to specify one, or --project for .mcp.json")}`,
+        );
+      }
+      Deno.exit(1);
+    }
+    editorId = detected.length === 1
+      ? detected[0]
+      : (args.yes || args.json)
+      ? detected[0]
+      : await promptEditorChoice(detected);
+  }
+
+  const editor = EDITORS[editorId];
+  return {
+    path: editor.configPath,
+    scope: "user",
+    label: editor.label,
+    serversKey: editor.serversKey,
+    transformEntry: editor.transformEntry,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Help
+// ---------------------------------------------------------------------------
+
+function printHelp(): void {
+  console.log(`
+${bold("ambit-mcp Setup")} — Add ambit MCP Server to Your Editor
+
+${bold("USAGE")}
+  ambit-mcp setup [options]
+
+${bold("OPTIONS")}
+  -n, --name <name>      Server Name ${dim("(default: ambit)")}
+  --editor <editor>      Target Editor ${dim("(default: auto-detect)")}
+  --project              Write to Project ${MCP_FILENAME} Instead
+  --create               Create ${MCP_FILENAME} if Not Found ${dim("(with --project)")}
+  --unsafe               Configure for Unsafe Mode ${dim("(default: safe)")}
+  --dry-run              Preview Changes Without Writing
+  --flake <ref>          Flake Reference ${dim(`(default: ${DEFAULT_FLAKE_REF})`)}
+  -y, --yes              Skip Confirmation Prompts
+  --json                 Output as JSON
+  --help                 Show This Help
+
+${bold("EDITORS")}
+  claude                 Claude Code ${dim(tildeify(EDITORS.claude.configPath))}
+  cursor                 Cursor ${dim(tildeify(EDITORS.cursor.configPath))}
+  windsurf               Windsurf ${dim(tildeify(EDITORS.windsurf.configPath))}
+  vscode                 VS Code ${dim(tildeify(EDITORS.vscode.configPath))}
+  claude-desktop         Claude Desktop ${dim(tildeify(EDITORS["claude-desktop"].configPath))}
+
+${bold("EXAMPLES")}
+  ambit-mcp setup                          ${dim("# user-level, auto-detect editor")}
+  ambit-mcp setup --editor cursor          ${dim("# user-level, Cursor")}
+  ambit-mcp setup --project --create       ${dim("# project-level .mcp.json")}
+  ambit-mcp setup --unsafe --name fly-raw  ${dim("# unsafe mode, custom name")}
+`);
+}
+
+// ---------------------------------------------------------------------------
 // Main
-// =============================================================================
+// ---------------------------------------------------------------------------
 
-async function main() {
+async function main(): Promise<void> {
   const args = parseArgs(Deno.args, {
-    string: ["name", "flake"],
-    boolean: ["help", "unsafe", "create", "dry-run", "yes", "json"],
+    string: ["name", "flake", "editor"],
+    boolean: ["help", "unsafe", "project", "create", "dry-run", "yes", "json"],
     alias: { n: "name", y: "yes" },
   });
 
   if (args.help) {
-    console.log(`
-${bold("ambit-mcp Setup")} — Add ambit MCP Server to ${MCP_FILENAME}
-
-${bold("USAGE")}
-  nix run .#setup [options]
-
-${bold("OPTIONS")}
-  -n, --name <server>   Server Name in Config ${dim("(default: ambit)")}
-  --unsafe              Configure for Unsafe Mode ${dim("(default: safe)")}
-  --create              Create ${MCP_FILENAME} if Not Found
-  --dry-run             Preview Changes Without Writing
-  --flake <path>        Path to the ambit-mcp Flake ${
-      dim("(default: auto-detect)")
-    }
-  -y, --yes             Skip Confirmation Prompts
-  --json                Output as JSON
-  --help                Show This Help
-
-${bold("EXAMPLES")}
-  nix run .#setup
-  nix run .#setup -- --unsafe --name fly-unsafe
-  nix run .#setup -- --create --yes
-  nix run .#setup -- --dry-run
-`);
+    printHelp();
     return;
   }
 
+  // --- Validate flags ---
+
+  if (args.editor && !EDITOR_IDS.includes(args.editor as EditorId)) {
+    const valid = EDITOR_IDS.join(", ");
+    if (args.json) {
+      console.log(
+        JSON.stringify({ error: `Unknown Editor: ${args.editor}`, valid }),
+      );
+    } else {
+      console.error(`  ${red("Unknown Editor:")} ${args.editor}`);
+      console.error(`  ${dim(`Valid: ${valid}`)}`);
+    }
+    Deno.exit(1);
+  }
+
+  if (args.project && args.editor) {
+    const msg = "--project and --editor Are Mutually Exclusive";
+    if (args.json) console.log(JSON.stringify({ error: msg }));
+    else die(msg);
+  }
+
+  if (args.create && !args.project) {
+    const msg = "--create Requires --project";
+    if (args.json) console.log(JSON.stringify({ error: msg }));
+    else die(msg);
+  }
+
+  // --- Build server entry ---
+
   const serverName = args.name ?? "ambit";
   const unsafe = args.unsafe ?? false;
-  const flakePath = resolveFlakePath(args.flake);
+  const flakeRef = args.flake ?? DEFAULT_FLAKE_REF;
 
-  // Build the MCP server config entry
-  const serverConfig: McpServer = {
+  const target = await resolveTarget(args);
+  const entry = target.transformEntry({
     command: "nix",
-    args: unsafe ? ["run", flakePath, "--", "--unsafe"] : ["run", flakePath],
-  };
+    args: unsafe ? ["run", flakeRef, "--", "--unsafe"] : ["run", flakeRef],
+  });
+
+  // --- Display header ---
 
   if (!args.json) {
     console.log();
@@ -168,100 +425,57 @@ ${bold("EXAMPLES")}
     console.log();
     console.log(`  Mode:   ${unsafe ? yellow("Unsafe") : green("Safe")}`);
     console.log(`  Server: ${cyan(serverName)}`);
-    console.log(`  Flake:  ${dim(flakePath)}`);
+    console.log(
+      `  Scope:  ${
+        target.scope === "user" ? cyan(target.label) : cyan("Project")
+      }`,
+    );
+    console.log(`  Target: ${dim(tildeify(target.path))}`);
+    console.log(`  Flake:  ${dim(flakeRef)}`);
     console.log();
   }
 
-  // Find .mcp.json
-  const foundPath = await findFileUp(MCP_FILENAME);
+  // --- Inspect existing config ---
 
-  let targetPath: string;
-  let existingConfig: McpConfig = { mcpServers: {} };
-  let isNewFile = false;
+  const fileIsNew = !(await pathExists(target.path, "file"));
 
-  if (!foundPath) {
-    if (!args.create) {
-      if (args.json) {
-        console.log(JSON.stringify({ error: `No ${MCP_FILENAME} Found` }));
-      } else {
+  if (!fileIsNew) {
+    const config = await readJson(target.path);
+    const servers =
+      (config[target.serversKey] ?? {}) as Record<string, unknown>;
+    const names = Object.keys(servers);
+
+    if (!args.json) {
+      console.log(`  ${green("\u2713")} Found ${tildeify(target.path)}`);
+      if (names.length > 0) {
+        console.log(`  Existing: ${names.map((s) => cyan(s)).join(", ")}`);
+      }
+    }
+
+    if (servers[serverName]) {
+      if (!args.json) {
         console.log(
-          `  ${dim(`No ${MCP_FILENAME} Found in Parent Directories.`)}`,
+          `\n  ${yellow("!")} Server '${serverName}' Already Exists.`,
         );
-        console.log(`  Use ${cyan("--create")} to Create One Here.`);
-        console.log();
       }
-      Deno.exit(1);
+      if (!args.yes && !args.json) {
+        if (!(await confirm("  Overwrite?"))) {
+          console.log("  Cancelled.");
+          return;
+        }
+      }
     }
-    targetPath = join(Deno.cwd(), MCP_FILENAME);
-    isNewFile = true;
-    if (!args.json) {
-      console.log(`  ${green("+")} Creating ${MCP_FILENAME}`);
-    }
-  } else {
-    targetPath = foundPath;
-    if (!args.json) {
-      console.log(`  ${green("✓")} Found ${relativePath(targetPath)}`);
-    }
+  } else if (!args.json) {
+    console.log(`  ${green("+")} Creating ${tildeify(target.path)}`);
   }
 
-  // Parse existing
-  if (!isNewFile) {
-    try {
-      const content = await Deno.readTextFile(targetPath);
-      existingConfig = JSON.parse(content);
-      if (typeof existingConfig !== "object" || existingConfig === null) {
-        existingConfig = { mcpServers: {} };
-      }
-      if (!existingConfig.mcpServers) {
-        existingConfig.mcpServers = {};
-      }
-    } catch (error) {
-      if (error instanceof SyntaxError) {
-        console.error(
-          `  ${red("Error:")} Invalid JSON in ${relativePath(targetPath)}`,
-        );
-        Deno.exit(1);
-      }
-      throw error;
-    }
-  }
+  // --- Preview ---
 
-  // Show existing servers
-  const existing = Object.keys(existingConfig.mcpServers ?? {});
-  if (existing.length > 0 && !args.json) {
-    console.log(`  Existing: ${existing.map((s) => cyan(s)).join(", ")}`);
-  }
-
-  // Check conflict
-  if (existingConfig.mcpServers?.[serverName]) {
-    if (!args.json) {
-      console.log();
-      console.log(`  ${yellow("!")} Server '${serverName}' Already Exists.`);
-    }
-    if (!args.yes && !args.json) {
-      const overwrite = await confirm("  Overwrite?");
-      if (!overwrite) {
-        console.log("  Cancelled.");
-        return;
-      }
-    }
-  }
-
-  // Build new config
-  const newConfig: McpConfig = {
-    ...existingConfig,
-    mcpServers: {
-      ...existingConfig.mcpServers,
-      [serverName]: serverConfig,
-    },
-  };
-
-  // Preview
   if (!args.json) {
     console.log();
     console.log(`  ${bold("Server Config:")}`);
     console.log();
-    for (const line of formatServer(serverName, serverConfig).split("\n")) {
+    for (const line of formatEntry(serverName, entry).split("\n")) {
       console.log(`    ${dim(line)}`);
     }
     console.log();
@@ -271,56 +485,53 @@ ${bold("EXAMPLES")}
     if (args.json) {
       console.log(JSON.stringify({
         dryRun: true,
+        scope: target.scope,
+        editor: target.label,
         serverName,
-        server: serverConfig,
-        targetPath,
+        server: entry,
+        targetPath: target.path,
       }));
     } else {
-      console.log(`  ${dim("Dry Run — No Changes Written.")}`);
+      console.log(`  ${dim("Dry run \u2014 no changes written.")}`);
       console.log();
     }
     return;
   }
 
-  // Confirm
+  // --- Confirm & write ---
+
   if (!args.yes && !args.json) {
-    const shouldWrite = await confirm("  Write Changes?");
-    if (!shouldWrite) {
+    if (!(await confirm("  Write Changes?"))) {
       console.log("  Cancelled.");
       return;
     }
   }
 
-  // Write
   try {
-    await Deno.writeTextFile(
-      targetPath,
-      JSON.stringify(newConfig, null, 2) + "\n",
-    );
-  } catch (error) {
-    if (error instanceof Deno.errors.PermissionDenied) {
-      console.error(
-        `  ${red("Error:")} Permission Denied Writing ${
-          relativePath(targetPath)
-        }`,
-      );
-      Deno.exit(1);
+    await upsertServer(target.path, target.serversKey, serverName, entry);
+  } catch (e) {
+    if (e instanceof Deno.errors.PermissionDenied) {
+      die(`Permission Denied Writing ${tildeify(target.path)}`);
     }
-    throw error;
+    throw e;
   }
+
+  // --- Result ---
 
   if (args.json) {
     console.log(JSON.stringify({
       written: true,
+      scope: target.scope,
+      editor: target.label,
       serverName,
-      server: serverConfig,
-      targetPath,
+      server: entry,
+      targetPath: target.path,
     }));
   } else {
     console.log();
     console.log(
-      `  ${green("✓")} Added ${cyan(serverName)} to ${
-        relativePath(targetPath)
+      `  ${green("\u2713")} Added ${cyan(serverName)} to ${
+        tildeify(target.path)
       }`,
     );
     console.log();

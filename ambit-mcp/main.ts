@@ -1,6 +1,6 @@
 import { parseArgs } from "@std/cli";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { buildTools, type Mode } from "./src/tools.ts";
 import { createHandlers } from "./src/handlers.ts";
 

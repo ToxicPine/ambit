@@ -15,6 +15,8 @@
     "jsr:@std/streams@^1.0.9": "1.0.16",
     "jsr:@std/toml@1": "1.0.11",
     "jsr:@zod/zod@^4.3.6": "4.3.6",
+    "npm:@modelcontextprotocol/sdk@1.25.3": "1.25.3_zod@4.3.6_ajv@8.17.1_express@5.2.1",
+    "npm:@modelcontextprotocol/sdk@1.26.0": "1.26.0_zod@4.3.6_hono@4.11.9_ajv@8.17.1_express@5.2.1",
     "npm:@modelcontextprotocol/sdk@^1.26.0": "1.26.0_zod@4.3.6_hono@4.11.9_ajv@8.17.1_express@5.2.1",
     "npm:puppeteer-core@*": "19.0.0",
     "npm:puppeteer-screen-recorder@3.0.6": "3.0.6_puppeteer@19.0.0",
@@ -147,6 +149,27 @@
         "hono"
       ]
     },
+    "@modelcontextprotocol/sdk@1.25.3_zod@4.3.6_ajv@8.17.1_express@5.2.1": {
+      "integrity": "sha512-vsAMBMERybvYgKbg/l4L1rhS7VXV1c0CtyJg72vwxONVX0l4ZfKVAnZEWTQixJGTzKnELjQ59e4NbdFDALRiAQ==",
+      "dependencies": [
+        "@hono/node-server",
+        "ajv",
+        "ajv-formats",
+        "content-type",
+        "cors",
+        "cross-spawn",
+        "eventsource",
+        "eventsource-parser",
+        "express",
+        "express-rate-limit@7.5.1_express@5.2.1",
+        "jose",
+        "json-schema-typed",
+        "pkce-challenge",
+        "raw-body",
+        "zod",
+        "zod-to-json-schema"
+      ]
+    },
     "@modelcontextprotocol/sdk@1.26.0_zod@4.3.6_hono@4.11.9_ajv@8.17.1_express@5.2.1": {
       "integrity": "sha512-Y5RmPncpiDtTXDbLKswIJzTqu2hyBKxTNsgKqKclDbhIgg1wgtf1fRuvxgTnRfcnxtvvgbIEcqUOzZrJ6iSReg==",
       "dependencies": [
@@ -159,7 +182,7 @@
         "eventsource",
         "eventsource-parser",
         "express",
-        "express-rate-limit",
+        "express-rate-limit@8.2.1_express@5.2.1",
         "hono",
         "jose",
         "json-schema-typed",
@@ -379,6 +402,12 @@
       "integrity": "sha512-CRT1WTyuQoD771GW56XEZFQ/ZoSfWid1alKGDYMmkt2yl8UXrVR4pspqWNEcqKvVIzg6PAltWjxcSSPrboA4iA==",
       "dependencies": [
         "eventsource-parser"
+      ]
+    },
+    "express-rate-limit@7.5.1_express@5.2.1": {
+      "integrity": "sha512-7iN8iPMDzOMHPUYllBEsQdWVB6fPDMPqwjBaFrgr4Jgr/+okjvzAy+UHlYYL/Vs0OsOrMkwS6PJDkFlJwoxUnw==",
+      "dependencies": [
+        "express"
       ]
     },
     "express-rate-limit@8.2.1_express@5.2.1": {

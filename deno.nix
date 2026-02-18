@@ -13,7 +13,7 @@
         config.allowUnfree = true;
       };
 
-      depsHash = "sha256-Jo5dD/uJ1EFnmuykDiO0hN9DJO632dpiQiiglbmJ7pY=";
+      depsHash = "sha256-5mMA8eUfyWt2wX+sspQtMQWrrdx0Xk1cgOfJko0AQTQ=";
 
       denoDeps = pkgs.stdenv.mkDerivation {
         name = "deno-workspace-deps";
