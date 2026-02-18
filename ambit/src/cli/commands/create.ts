@@ -24,7 +24,7 @@ import { resolveOrg } from "../../resolve.ts";
 
 const create = async (argv: string[]): Promise<void> => {
   const args = parseArgs(argv, {
-    string: ["org", "region", "api-key"],
+    string: ["org", "region", "api-key", "tag"],
     boolean: ["help", "yes", "json", "self-approve"],
     alias: { y: "yes" },
   });
@@ -40,6 +40,7 @@ ${bold("OPTIONS")}
   --org <org>         Fly.io organization slug
   --region <region>   Fly.io region (default: iad)
   --api-key <key>     Tailscale API access token (tskey-api-...)
+  --tag <tag>         Tailscale ACL tag for the router (default: tag:ambit-<network>)
   --self-approve      Approve subnet routes via API (when autoApprovers not configured)
   -y, --yes           Skip confirmation prompts
   --json              Output as JSON
@@ -69,7 +70,7 @@ ${bold("EXAMPLES")}
   if (!network) {
     return out.die("Network Name Required. Usage: ambit create <network>");
   }
-  const tag = getRouterTag(network);
+  const tag = args.tag || getRouterTag(network);
   const selfApprove = args["self-approve"] ?? false;
 
   out.blank()

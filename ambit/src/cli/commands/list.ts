@@ -18,7 +18,6 @@ import {
   type RouterTailscaleInfo,
 } from "../../discovery.ts";
 import { resolveOrg } from "../../resolve.ts";
-import { getRouterTag } from "../../schemas/config.ts";
 
 // =============================================================================
 // List Command
@@ -95,7 +94,7 @@ ${bold("OPTIONS")}
     const tsStatus = r.tailscale
       ? r.tailscale.online ? "online" : "offline"
       : "not found";
-    const tag = getRouterTag(r.network);
+    const tag = r.tailscale?.tags?.[0] ?? "unknown";
     return [
       r.network,
       r.appName,

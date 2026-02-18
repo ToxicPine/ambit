@@ -7,7 +7,6 @@ import { Table } from "@cliffy/table";
 import { bold } from "../../../lib/cli.ts";
 import { createOutput } from "../../../lib/output.ts";
 import { registerCommand } from "../mod.ts";
-import { getRouterTag } from "../../schemas/config.ts";
 import { createFlyProvider } from "../../providers/fly.ts";
 import { requireTailscaleProvider } from "../../credentials.ts";
 import {
@@ -62,7 +61,7 @@ ${bold("EXAMPLES")}
       network: string;
       router: RouterApp;
       machine: RouterMachineInfo | null;
-      tag: string;
+      tag: string | null;
       tailscale: RouterTailscaleInfo | null;
     }>(args.json);
 
@@ -81,14 +80,14 @@ ${bold("EXAMPLES")}
     // 3. Get tailscale state
     const ts = await getRouterTailscaleInfo(tailscale, app.appName);
 
-    const tag = getRouterTag(app.network);
+    const tag = ts?.tags?.[0] ?? null;
 
     out.blank()
       .header("ambit Status")
       .blank()
       .text(`  Network:       ${bold(app.network)}`)
       .text(`  TLD:           *.${app.network}`)
-      .text(`  Tag:           ${tag}`)
+      .text(`  Tag:           ${tag ?? "unknown"}`)
       .blank()
       .text(`  Router App:    ${app.appName}`)
       .text(`  Region:        ${machine?.region ?? "unknown"}`)

@@ -376,3 +376,4 @@ Deno.test("schemas are lenient — passthrough allows extra fields", () => {
   const result = FlyAuthSchema.parse(data);
   assertEquals(result.email, "user@example.com");
 });
+

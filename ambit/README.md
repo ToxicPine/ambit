@@ -74,6 +74,7 @@ This is the first command you run, it sets up your private network: a named slic
 | `--org <org>`       | Fly.io organization                                        |
 | `--region <region>` | Fly.io region (default: `iad`)                             |
 | `--api-key <key>`   | Tailscale API access token                                 |
+| `--tag <tag>`       | Tailscale ACL tag (default: `tag:ambit-<network>`)         |
 | `--self-approve`    | Approve routes via API when autoApprovers isn't configured |
 | `--yes`             | Skip confirmation prompts                                  |
 | `--json`            | Machine-readable JSON output                               |

@@ -849,14 +849,32 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
       // best-effort
     }
 
+    const subnet = machineInfo.private_ip
+      ? extractSubnet(machineInfo.private_ip)
+      : null;
+
+    // Get tag from Tailscale device (best-effort)
+    let tag: string | null = null;
+    try {
+      const credentials = getCredentialStore();
+      const apiKey = await credentials.getTailscaleApiKey();
+      if (apiKey) {
+        const ts = createTailscaleClient(apiKey);
+        const device = await ts.getDeviceByHostname(router.Name);
+        tag = device?.tags?.[0] ?? null;
+      }
+    } catch {
+      // best-effort
+    }
+
     return ok(`Router for Network '${args.network}'`, {
       network: args.network,
       app_name: router.Name,
       region: machineInfo.region ?? null,
       machine_state: machineInfo.state ?? router.Status,
       private_ip: machineInfo.private_ip ?? null,
-      subnet: null,
-      tag: null,
+      subnet,
+      tag,
     });
   }
 
@@ -872,7 +890,7 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
       const network = args.network as string;
       const region = (args.region as string) || "iad";
       const selfApprove = args.self_approve ?? false;
-      const tag = getRouterTag(network);
+      const tag = args.tag || getRouterTag(network);
 
       // 1. Get Tailscale API key from credential store
       const credentials = getCredentialStore();

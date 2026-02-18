@@ -9,6 +9,7 @@ import {
   runQuiet,
 } from "../../lib/command.ts";
 import { commandExists, die, Spinner } from "../../lib/cli.ts";
+import { dirname, resolve } from "@std/path";
 import {
   type FlyApp,
   type FlyAppInfo,
@@ -115,6 +116,8 @@ export interface FlyProvider {
   allocateFlycastIp(app: string, network: string): Promise<void>;
   getConfig(app: string): Promise<Record<string, unknown> | null>;
   deploySafe(app: string, options: SafeDeployOptions): Promise<void>;
+  listCerts(app: string): Promise<string[]>;
+  removeCert(app: string, hostname: string): Promise<void>;
   getFlyToken(): Promise<string>;
   listAppsWithNetwork(org: string): Promise<FlyAppInfo[]>;
 }
@@ -459,21 +462,20 @@ export const createFlyProvider = (): FlyProvider => {
     },
 
     async deploySafe(app: string, options: SafeDeployOptions): Promise<void> {
-      const args = [
-        "fly",
-        "deploy",
-        "-a",
-        app,
-        "--yes",
-        "--no-public-ips",
-      ];
+      const args = ["fly", "deploy"];
+
+      // When config is provided, use its parent directory as the build context
+      // so fly deploy finds the Dockerfile and COPY picks up the correct files
+      if (options.config) {
+        const configAbs = resolve(options.config);
+        args.push(dirname(configAbs));
+        args.push("--config", configAbs);
+      }
+
+      args.push("-a", app, "--yes", "--no-public-ips");
 
       if (options.image) {
         args.push("--image", options.image);
-      }
-
-      if (options.config) {
-        args.push("--config", options.config);
       }
 
       if (options.region) {
@@ -486,6 +488,41 @@ export const createFlyProvider = (): FlyProvider => {
         console.error(result.stderr);
         return die(`Deploy Failed for '${app}'`);
       }
+    },
+
+    async listCerts(app: string): Promise<string[]> {
+      const result = await runCommand([
+        "fly",
+        "certs",
+        "list",
+        "-a",
+        app,
+        "--json",
+      ]);
+      if (!result.success) return [];
+
+      try {
+        const certs = JSON.parse(result.stdout) as Array<{
+          Hostname?: string;
+        }>;
+        return certs
+          .map((c) => c.Hostname)
+          .filter((h): h is string => typeof h === "string");
+      } catch {
+        return [];
+      }
+    },
+
+    async removeCert(app: string, hostname: string): Promise<void> {
+      await runCommand([
+        "fly",
+        "certs",
+        "remove",
+        hostname,
+        "-a",
+        app,
+        "--yes",
+      ]);
     },
 
     async getFlyToken(): Promise<string> {

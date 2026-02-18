@@ -826,6 +826,10 @@ const safeOnly: ToolMap = {
       region: inputs.region.describe(
         "Region for the router machine. Default: 'iad'.",
       ),
+      tag: z.string().optional()
+        .describe(
+          "Tailscale ACL tag for the router. Default: 'tag:ambit-<network>'. Must already exist in tagOwners.",
+        ),
       self_approve: z.boolean().optional()
         .describe(
           "If true, approve subnet routes via Tailscale API instead of relying on autoApprovers in the ACL policy.",

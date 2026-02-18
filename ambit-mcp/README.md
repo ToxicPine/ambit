@@ -106,7 +106,7 @@ npx skills add ToxicPine/ambit-skills --skill ambit-mcp
 
 **`router_status`** — inputs: `network`, `org` Shows the detailed health of a specific router: machine state, Tailscale device info, advertised routes, and DNS configuration.
 
-**`router_deploy`** — inputs: `network`, `org`, `region`, `self_approve` Deploys a new Ambit router for a network. The network name becomes the TLD for apps on that network.
+**`router_deploy`** — inputs: `network`, `org`, `region`, `tag`, `self_approve` Deploys a new Ambit router for a network. The network name becomes the TLD for apps on that network. Optionally pass `tag` to use a custom Tailscale ACL tag (default: `tag:ambit-<network>`).
 
 **`router_destroy`** — inputs: `network`, `org` Tears down a router. Apps on the network are not deleted, only the router is removed.
 

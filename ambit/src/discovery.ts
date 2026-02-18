@@ -41,6 +41,7 @@ export interface RouterTailscaleInfo {
   ip: string;
   online: boolean;
   hostname: string;
+  tags?: string[];
 }
 
 // =============================================================================
@@ -125,6 +126,7 @@ export const getRouterTailscaleInfo = async (
       ip: device.addresses[0],
       online: device.online ?? false,
       hostname: device.hostname,
+      tags: device.tags,
     };
   } catch {
     return null;

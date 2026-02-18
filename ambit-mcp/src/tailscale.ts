@@ -18,6 +18,7 @@ export interface TailscaleDevice {
   addresses: string[];
   online?: boolean;
   lastSeen?: string;
+  tags?: string[];
   advertisedRoutes?: string[];
 }
 

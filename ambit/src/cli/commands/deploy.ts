@@ -65,6 +65,7 @@ ${bold("EXAMPLES")}
     created: boolean;
     audit: {
       public_ips_released: number;
+      certs_removed: number;
       flycast_allocations: Array<{ address: string; network: string }>;
       warnings: string[];
     };
@@ -252,7 +253,11 @@ ${bold("EXAMPLES")}
   auditSpinner.success("Audit Complete");
 
   if (audit.public_ips_released > 0) {
-    out.warn(`Released ${audit.public_ips_released} public IP(s)`);
+    out.warn(`Released ${audit.public_ips_released} Public IP(s)`);
+  }
+
+  if (audit.certs_removed > 0) {
+    out.ok(`Removed ${audit.certs_removed} Public Certificate(s)`);
   }
 
   for (const alloc of audit.flycast_allocations) {
@@ -276,6 +281,7 @@ ${bold("EXAMPLES")}
       created,
       audit: {
         public_ips_released: audit.public_ips_released,
+        certs_removed: audit.certs_removed,
         flycast_allocations: audit.flycast_allocations,
         warnings: audit.warnings,
       },
@@ -288,6 +294,7 @@ ${bold("EXAMPLES")}
       created,
       audit: {
         public_ips_released: audit.public_ips_released,
+        certs_removed: audit.certs_removed,
         flycast_allocations: audit.flycast_allocations,
         warnings: audit.warnings,
       },

@@ -6,7 +6,6 @@ import { parseArgs } from "@std/cli";
 import { bold, confirm } from "../../../lib/cli.ts";
 import { createOutput } from "../../../lib/output.ts";
 import { registerCommand } from "../mod.ts";
-import { getRouterTag } from "../../schemas/config.ts";
 import { createFlyProvider } from "../../providers/fly.ts";
 import { requireTailscaleProvider } from "../../credentials.ts";
 import { findRouterApp } from "../../discovery.ts";
@@ -66,14 +65,19 @@ ${bold("OPTIONS")}
 
   spinner.success(`Found Router: ${app.appName}`);
 
-  const tag = getRouterTag(app.network);
+  // Get tailscale device to read the actual tag
+  let tsDevice: Awaited<ReturnType<typeof tailscale.getDeviceByHostname>> = null;
+  try {
+    tsDevice = await tailscale.getDeviceByHostname(app.appName);
+  } catch { /* device may not exist */ }
+  const tag = tsDevice?.tags?.[0] ?? null;
 
   out.blank()
     .header("ambit Destroy")
     .blank()
     .text(`  Network:    ${app.network}`)
     .text(`  Router App: ${app.appName}`)
-    .text(`  Tag:        ${tag}`)
+    .text(`  Tag:        ${tag ?? "unknown"}`)
     .blank();
 
   if (!args.yes && !args.json) {
@@ -118,13 +122,21 @@ ${bold("OPTIONS")}
 
   out.done({ destroyed: true, appName: app.appName });
 
-  out.ok("Router Destroyed")
-    .blank()
-    .dim("If you added ACL policy entries for this router, remember to remove:")
-    .dim(`  tagOwners:     ${tag}`)
-    .dim(`  autoApprovers: routes for ${tag}`)
-    .dim(`  acls:          rules referencing ${tag}`)
-    .blank();
+  out.ok("Router Destroyed");
+
+  if (tag) {
+    out.blank()
+      .dim("If you added ACL policy entries for this router, remember to remove:")
+      .dim(`  tagOwners:     ${tag}`)
+      .dim(`  autoApprovers: routes for ${tag}`)
+      .dim(`  acls:          rules referencing ${tag}`)
+      .blank();
+  } else {
+    out.blank()
+      .dim("If you added ACL policy entries for this router, remember to remove")
+      .dim("the associated tag from tagOwners, autoApprovers, and acls.")
+      .blank();
+  }
 
   out.print();
 };

@@ -25,6 +25,7 @@ export interface PreflightResult {
 
 export interface DeployAuditResult {
   public_ips_released: number;
+  certs_removed: number;
   flycast_allocations: Array<{ address: string; network: string }>;
   warnings: string[];
 }
@@ -129,6 +130,7 @@ export async function auditDeploy(
 ): Promise<DeployAuditResult> {
   const result: DeployAuditResult = {
     public_ips_released: 0,
+    certs_removed: 0,
     flycast_allocations: [],
     warnings: [],
   };
@@ -158,7 +160,14 @@ export async function auditDeploy(
     }
   }
 
-  // Phase 2: Inspect merged config for dangerous patterns
+  // Phase 2: Remove auto-generated .fly.dev certs to keep the app fully private
+  const certs = await fly.listCerts(app);
+  for (const hostname of certs) {
+    await fly.removeCert(app, hostname);
+    result.certs_removed++;
+  }
+
+  // Phase 3: Inspect merged config for dangerous patterns
   const config = await fly.getConfig(app);
   if (config) {
     const services = config.services as
@@ -191,7 +200,7 @@ export async function auditDeploy(
     result.warnings.push("Could not inspect merged config.");
   }
 
-  // Phase 3: Verify Flycast allocation on target network
+  // Phase 4: Verify Flycast allocation on target network
   const hasTargetFlycast = result.flycast_allocations.some(
     (a) => a.network === targetNetwork,
   );

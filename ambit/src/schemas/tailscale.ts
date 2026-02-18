@@ -32,6 +32,7 @@ export const TailscaleDeviceSchema = z.object({
   name: z.string().optional(),
   user: z.string().optional(),
   authorized: z.boolean().optional(),
+  tags: z.array(z.string()).optional(),
   advertisedRoutes: z.array(z.string()).optional(),
   enabledRoutes: z.array(z.string()).optional(),
 }).passthrough();

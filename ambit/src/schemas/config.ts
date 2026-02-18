@@ -6,7 +6,8 @@
 // Derived Values
 // =============================================================================
 
-export const getRouterTag = (network: string): string => `tag:ambit-${network}`;
+export const getRouterTag = (network: string): string =>
+  `tag:ambit-${network}`;
 
 export const extractSubnet = (privateIp: string): string => {
   // privateIp format: fdaa:X:XXXX::Y
