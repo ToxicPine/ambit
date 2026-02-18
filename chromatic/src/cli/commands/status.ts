@@ -4,20 +4,20 @@
 
 import { parseArgs } from "@std/cli";
 import { Table } from "@cliffy/table";
-import { bold, dim, green, yellow, red, cyan } from "@ambit/cli/lib/cli";
+import { bold, cyan, dim, green, red, yellow } from "@ambit/cli/lib/cli";
 import { createOutput } from "@ambit/cli/lib/output";
 import { resolveOrg } from "@ambit/cli/src/resolve";
 import { registerCommand } from "../mod.ts";
 import { loadConfig } from "../../schemas/config.ts";
 import {
-  getInstanceStateSummary,
-  getMachineSizeSummary,
+  convertWsUrlToHostname,
+  fetchCdpVersionInfo,
+  findCdpApp,
   formatMachineSizeSummary,
   getCdpEndpoint,
   getCdpMachineEndpoint,
-  fetchCdpVersionInfo,
-  convertWsUrlToHostname,
-  findCdpApp,
+  getInstanceStateSummary,
+  getMachineSizeSummary,
   type Instance,
   type MachineState,
 } from "../../schemas/instance.ts";
@@ -111,7 +111,9 @@ ${bold("EXAMPLES")}
   const summary = getInstanceStateSummary(instance);
   const sizeSummary = getMachineSizeSummary(instance);
   const endpoint = getCdpEndpoint(instance.flyAppName, network);
-  const type = summary.total === 1 ? "browser" : `pool (${summary.total} machines)`;
+  const type = summary.total === 1
+    ? "browser"
+    : `pool (${summary.total} machines)`;
 
   out.blank()
     .header(`Instance: ${name}`)
@@ -119,7 +121,9 @@ ${bold("EXAMPLES")}
     .text(`Type:     ${type}`)
     .text(`Endpoint: ${endpoint}`)
     .blank()
-    .text(`Machines: ${summary.total} (${formatMachineSizeSummary(sizeSummary)})`);
+    .text(
+      `Machines: ${summary.total} (${formatMachineSizeSummary(sizeSummary)})`,
+    );
 
   if (instance.machines.length > 0) {
     out.blank();
@@ -143,14 +147,16 @@ ${bold("EXAMPLES")}
   out.blank();
 
   // Fetch live WebSocket URL from a running machine
-  const runningMachine = instance.machines.find((m) => m.state === "running" && m.privateIp);
+  const runningMachine = instance.machines.find((m) =>
+    m.state === "running" && m.privateIp
+  );
   if (runningMachine?.privateIp) {
     const cdpInfo = await fetchCdpVersionInfo(runningMachine.privateIp);
     if (cdpInfo) {
       const wsUrl = convertWsUrlToHostname(
         cdpInfo.webSocketDebuggerUrl,
         instance.flyAppName,
-        network
+        network,
       );
       out.header("Connect with Puppeteer:")
         .dim(`  const browser = await puppeteer.connect({`)
@@ -159,7 +165,7 @@ ${bold("EXAMPLES")}
         .blank();
     }
   } else if (instance.machines.some((m) => m.privateIp)) {
-    out.dim("Tip: Connect to a specific machine:");
+    out.dim("Tip: Connect to a Specific Machine:");
     const machineWithIp = instance.machines.find((m) => m.privateIp);
     if (machineWithIp?.privateIp) {
       out.dim(`  ${getCdpMachineEndpoint(machineWithIp.privateIp)}`);

@@ -3,9 +3,12 @@
 // =============================================================================
 
 import { z } from "zod";
-import { fileExists, ensureConfigDir } from "../lib/cli.ts";
+import { ensureConfigDir, fileExists } from "../lib/cli.ts";
 import { getConfigDir } from "./schemas/config.ts";
-import { createTailscaleProvider, type TailscaleProvider } from "./providers/tailscale.ts";
+import {
+  createTailscaleProvider,
+  type TailscaleProvider,
+} from "./providers/tailscale.ts";
 
 // =============================================================================
 // Schema
@@ -50,7 +53,10 @@ export const createConfigCredentialStore = (): CredentialStore => {
     async setTailscaleApiKey(key: string): Promise<void> {
       await ensureConfigDir();
       const path = getCredentialsPath();
-      await Deno.writeTextFile(path, JSON.stringify({ apiKey: key }, null, 2) + "\n");
+      await Deno.writeTextFile(
+        path,
+        JSON.stringify({ apiKey: key }, null, 2) + "\n",
+      );
     },
   };
 };

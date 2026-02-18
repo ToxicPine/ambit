@@ -10,11 +10,11 @@ import { resolveOrg } from "@ambit/cli/src/resolve";
 import { registerCommand } from "../mod.ts";
 import { loadConfig } from "../../schemas/config.ts";
 import {
-  getInstanceStateSummary,
   formatInstanceState,
   getCdpEndpoint,
-  listCdpApps,
+  getInstanceStateSummary,
   type Instance,
+  listCdpApps,
 } from "../../schemas/instance.ts";
 import { createFlyProvider } from "@ambit/cli/providers/fly";
 

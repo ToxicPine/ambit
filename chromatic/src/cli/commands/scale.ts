@@ -4,20 +4,19 @@
 
 import { parseArgs } from "@std/cli";
 import { z } from "zod";
-import {
-  bold,
-  confirm,
-  green,
-  red,
-} from "@ambit/cli/lib/cli";
+import { bold, confirm, green, red } from "@ambit/cli/lib/cli";
 import { createOutput } from "@ambit/cli/lib/output";
 import { resolveOrg } from "@ambit/cli/src/resolve";
 import { registerCommand } from "../mod.ts";
-import { loadConfig, getDefaultRegion, type MachineSize } from "../../schemas/config.ts";
 import {
-  getMachineSizeSummary,
-  formatMachineSizeSummary,
+  getDefaultRegion,
+  loadConfig,
+  type MachineSize,
+} from "../../schemas/config.ts";
+import {
   findCdpApp,
+  formatMachineSizeSummary,
+  getMachineSizeSummary,
   type MachineSizeSummary,
 } from "../../schemas/instance.ts";
 import { createFlyProvider } from "@ambit/cli/providers/fly";
@@ -34,7 +33,14 @@ const ScaleCountSchema = z.coerce.number().int().min(0).max(20);
 
 const scale = async (argv: string[]): Promise<void> => {
   const args = parseArgs(argv, {
-    string: ["shared-cpu-1x", "shared-cpu-2x", "shared-cpu-4x", "network", "org", "region"],
+    string: [
+      "shared-cpu-1x",
+      "shared-cpu-2x",
+      "shared-cpu-4x",
+      "network",
+      "org",
+      "region",
+    ],
     boolean: ["help", "yes", "json"],
     alias: { y: "yes" },
   });
@@ -132,8 +138,7 @@ ${bold("EXAMPLES")}
       "shared-cpu-4x": parse(args["shared-cpu-4x"]),
     };
 
-    const totalDesired =
-      desiredSummary["shared-cpu-1x"] +
+    const totalDesired = desiredSummary["shared-cpu-1x"] +
       desiredSummary["shared-cpu-2x"] +
       desiredSummary["shared-cpu-4x"];
 
@@ -144,17 +149,18 @@ ${bold("EXAMPLES")}
 
   // Calculate diff
   const diff: Record<MachineSize, number> = {
-    "shared-cpu-1x": desiredSummary["shared-cpu-1x"] - currentSummary["shared-cpu-1x"],
-    "shared-cpu-2x": desiredSummary["shared-cpu-2x"] - currentSummary["shared-cpu-2x"],
-    "shared-cpu-4x": desiredSummary["shared-cpu-4x"] - currentSummary["shared-cpu-4x"],
+    "shared-cpu-1x": desiredSummary["shared-cpu-1x"] -
+      currentSummary["shared-cpu-1x"],
+    "shared-cpu-2x": desiredSummary["shared-cpu-2x"] -
+      currentSummary["shared-cpu-2x"],
+    "shared-cpu-4x": desiredSummary["shared-cpu-4x"] -
+      currentSummary["shared-cpu-4x"],
   };
 
-  const totalCurrent =
-    currentSummary["shared-cpu-1x"] +
+  const totalCurrent = currentSummary["shared-cpu-1x"] +
     currentSummary["shared-cpu-2x"] +
     currentSummary["shared-cpu-4x"];
-  const totalDesired =
-    desiredSummary["shared-cpu-1x"] +
+  const totalDesired = desiredSummary["shared-cpu-1x"] +
     desiredSummary["shared-cpu-2x"] +
     desiredSummary["shared-cpu-4x"];
 
@@ -162,7 +168,13 @@ ${bold("EXAMPLES")}
   const toCreate: { size: MachineSize; count: number }[] = [];
   const toDestroy: { size: MachineSize; count: number }[] = [];
 
-  for (const size of ["shared-cpu-1x", "shared-cpu-2x", "shared-cpu-4x"] as MachineSize[]) {
+  for (
+    const size of [
+      "shared-cpu-1x",
+      "shared-cpu-2x",
+      "shared-cpu-4x",
+    ] as MachineSize[]
+  ) {
     const change = diff[size];
     if (change > 0) {
       toCreate.push({ size, count: change });
@@ -181,8 +193,16 @@ ${bold("EXAMPLES")}
   out.blank()
     .header(`Scaling: ${name}`)
     .blank()
-    .text(`Current:  ${formatMachineSizeSummary(currentSummary)} (${totalCurrent} total)`)
-    .text(`Desired:  ${formatMachineSizeSummary(desiredSummary)} (${totalDesired} total)`)
+    .text(
+      `Current:  ${
+        formatMachineSizeSummary(currentSummary)
+      } (${totalCurrent} total)`,
+    )
+    .text(
+      `Desired:  ${
+        formatMachineSizeSummary(desiredSummary)
+      } (${totalDesired} total)`,
+    )
     .blank()
     .text("Changes:");
 
@@ -245,6 +265,7 @@ ${bold("EXAMPLES")}
 registerCommand({
   name: "scale",
   description: "Scale machines in a browser pool",
-  usage: "chromatic scale <name> [count] [--shared-cpu-Nx N] [--network NAME] [--org ORG]",
+  usage:
+    "chromatic scale <name> [count] [--shared-cpu-Nx N] [--network NAME] [--org ORG]",
   run: scale,
 });

@@ -74,7 +74,9 @@ app = "my-app"
     handlers = ["tls", "http"]
 `;
   const result = scanFlyToml(toml);
-  const hasPortError = result.errors.some((e) => e.includes("TLS handler on port 443"));
+  const hasPortError = result.errors.some((e) =>
+    e.includes("TLS handler on port 443")
+  );
   assertEquals(hasPortError, true);
 });
 
@@ -92,7 +94,9 @@ app = "my-app"
 `;
   const result = scanFlyToml(toml);
   assertEquals(result.errors.length, 0);
-  const hasServicesWarn = result.warnings.some((w) => w.includes("[[services]]"));
+  const hasServicesWarn = result.warnings.some((w) =>
+    w.includes("[[services]]")
+  );
   assertEquals(hasServicesWarn, true);
 });
 

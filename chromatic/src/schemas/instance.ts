@@ -11,7 +11,12 @@ import type { FlyAppInfo } from "@ambit/cli/schemas/fly";
 // Machine State
 // =============================================================================
 
-export const MachineStateEnum = z.enum(["creating", "running", "frozen", "failed"]);
+export const MachineStateEnum = z.enum([
+  "creating",
+  "running",
+  "frozen",
+  "failed",
+]);
 
 export type MachineState = z.infer<typeof MachineStateEnum>;
 
@@ -54,7 +59,9 @@ export interface InstanceStateSummary {
   failed: number;
 }
 
-export const getInstanceStateSummary = (instance: Instance): InstanceStateSummary => {
+export const getInstanceStateSummary = (
+  instance: Instance,
+): InstanceStateSummary => {
   const summary: InstanceStateSummary = {
     total: instance.machines.length,
     running: 0,
@@ -111,7 +118,9 @@ export interface MachineSizeSummary {
   "shared-cpu-4x": number;
 }
 
-export const getMachineSizeSummary = (instance: Instance): MachineSizeSummary => {
+export const getMachineSizeSummary = (
+  instance: Instance,
+): MachineSizeSummary => {
   const summary: MachineSizeSummary = {
     "shared-cpu-1x": 0,
     "shared-cpu-2x": 0,
@@ -125,7 +134,9 @@ export const getMachineSizeSummary = (instance: Instance): MachineSizeSummary =>
   return summary;
 };
 
-export const formatMachineSizeSummary = (summary: MachineSizeSummary): string => {
+export const formatMachineSizeSummary = (
+  summary: MachineSizeSummary,
+): string => {
   const parts: string[] = [];
   if (summary["shared-cpu-1x"] > 0) {
     parts.push(`${summary["shared-cpu-1x"]}x shared-cpu-1x`);
@@ -148,10 +159,12 @@ export const InstanceNameSchema = z.string()
   .max(30, "Name must be at most 30 characters")
   .regex(
     /^[a-z0-9][a-z0-9-]*[a-z0-9]$/,
-    "Name must start and end with alphanumeric, contain only lowercase letters, numbers, and hyphens"
+    "Name must start and end with alphanumeric, contain only lowercase letters, numbers, and hyphens",
   );
 
-export const validateInstanceName = (name: string): { valid: boolean; error?: string } => {
+export const validateInstanceName = (
+  name: string,
+): { valid: boolean; error?: string } => {
   const result = InstanceNameSchema.safeParse(name);
   if (result.success) return { valid: true };
   return { valid: false, error: result.error.issues[0]?.message };
@@ -167,7 +180,10 @@ export const isCdpApp = (appName: string): boolean => {
   return appName.startsWith(CDP_APP_PREFIX);
 };
 
-export const getCdpAppName = (instanceName: string, randomSuffix: string): string => {
+export const getCdpAppName = (
+  instanceName: string,
+  randomSuffix: string,
+): string => {
   return `${CDP_APP_PREFIX}${instanceName}-${randomSuffix}`;
 };
 
@@ -203,7 +219,7 @@ export interface CdpVersionInfo {
 }
 
 export const fetchCdpVersionInfo = async (
-  privateIp: string
+  privateIp: string,
 ): Promise<CdpVersionInfo | null> => {
   try {
     const response = await fetch(`http://[${privateIp}]:9222/json/version`, {
@@ -225,7 +241,7 @@ export const fetchCdpVersionInfo = async (
 export const convertWsUrlToHostname = (
   wsUrl: string,
   hostname: string,
-  network: string
+  network: string,
 ): string => {
   // wsUrl format: ws://[fdaa:...]:9222/devtools/browser/uuid
   // We want: ws://hostname.network:9222/devtools/browser/uuid
@@ -241,8 +257,8 @@ export const convertWsUrlToHostname = (
 // =============================================================================
 
 export interface CdpApp {
-  name: string;        // instance name ("my-browser")
-  flyAppName: string;  // full Fly app ("chromatic-cdp-my-browser-a1b2")
+  name: string; // instance name ("my-browser")
+  flyAppName: string; // full Fly app ("chromatic-cdp-my-browser-a1b2")
   network: string;
 }
 

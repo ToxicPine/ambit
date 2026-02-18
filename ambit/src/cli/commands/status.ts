@@ -11,10 +11,10 @@ import { getRouterTag } from "../../schemas/config.ts";
 import { createFlyProvider } from "../../providers/fly.ts";
 import { requireTailscaleProvider } from "../../credentials.ts";
 import {
-  listRouterApps,
   findRouterApp,
   getRouterMachineInfo,
   getRouterTailscaleInfo,
+  listRouterApps,
   type RouterApp,
   type RouterMachineInfo,
   type RouterTailscaleInfo,
@@ -94,7 +94,13 @@ ${bold("EXAMPLES")}
       .text(`  Region:        ${machine?.region ?? "unknown"}`)
       .text(`  Machine State: ${machine?.state ?? "unknown"}`)
       .text(`  Private IP:    ${machine?.privateIp ?? "unknown"}`)
-      .text(`  SOCKS Proxy:   ${machine?.privateIp ? `socks5://[${machine.privateIp}]:1080` : "unknown"}`);
+      .text(
+        `  SOCKS Proxy:   ${
+          machine?.privateIp
+            ? `socks5://[${machine.privateIp}]:1080`
+            : "unknown"
+        }`,
+      );
 
     if (machine?.subnet) {
       out.text(`  Subnet:        ${machine.subnet}`);
@@ -125,7 +131,10 @@ ${bold("EXAMPLES")}
     // Summary Table of All Routers
     // ========================================================================
     const out = createOutput<{
-      routers: (RouterApp & { machine: RouterMachineInfo | null; tailscale: RouterTailscaleInfo | null })[];
+      routers: (RouterApp & {
+        machine: RouterMachineInfo | null;
+        tailscale: RouterTailscaleInfo | null;
+      })[];
     }>(args.json);
     const tailscale = await requireTailscaleProvider(out);
     const org = await resolveOrg(fly, args, out);
@@ -133,7 +142,9 @@ ${bold("EXAMPLES")}
     // 1. Find all router apps
     const spinner = out.spinner("Discovering Routers");
     const routerApps = await listRouterApps(fly, org);
-    spinner.success(`Found ${routerApps.length} Router${routerApps.length !== 1 ? "s" : ""}`);
+    spinner.success(
+      `Found ${routerApps.length} Router${routerApps.length !== 1 ? "s" : ""}`,
+    );
 
     if (routerApps.length === 0) {
       out.blank()
@@ -147,7 +158,10 @@ ${bold("EXAMPLES")}
     }
 
     // 2. Get machine + tailscale state for each
-    const routers: (RouterApp & { machine: RouterMachineInfo | null; tailscale: RouterTailscaleInfo | null })[] = [];
+    const routers: (RouterApp & {
+      machine: RouterMachineInfo | null;
+      tailscale: RouterTailscaleInfo | null;
+    })[] = [];
 
     for (const app of routerApps) {
       const machine = await getRouterMachineInfo(fly, app.appName);

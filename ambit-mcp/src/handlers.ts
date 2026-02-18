@@ -8,22 +8,37 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { Mode } from "./tools.ts";
 import { exec, execJson, execNdjson } from "./exec.ts";
-import { loadConfig, getDefaultNetwork, getDefaultOrg } from "./config.ts";
+import { getDefaultNetwork, getDefaultOrg, loadConfig } from "./config.ts";
 import { assertNotRouter, auditDeploy } from "./guard.ts";
 import {
-  FlyAuthSchema,
   FlyAppListSchema,
   FlyAppStatusSchema,
-  FlyMachineListSchema,
-  FlyIpListSchema,
-  FlyIpAllocateSchema,
-  FlySecretListSchema,
-  FlyVolumeListSchema,
-  FlyVolumeCreateSchema,
-  FlyScaleShowSchema,
-  FlyLogEntrySchema,
+  FlyAuthSchema,
   FlyCertListSchema,
+  FlyIpAllocateSchema,
+  FlyIpListSchema,
+  FlyLogEntrySchema,
+  FlyMachineListSchema,
+  FlyScaleShowSchema,
+  FlySecretListSchema,
+  FlyVolumeCreateSchema,
+  FlyVolumeListSchema,
 } from "./schemas.ts";
+
+// @ambit/cli — safe imports (pure functions / no die() calls)
+import { extractSubnet, getRouterTag } from "@ambit/cli/schemas/config";
+import { getRouterAppName } from "@ambit/cli/providers/fly";
+import {
+  isAcceptRoutesEnabled,
+  isTailscaleInstalled,
+} from "@ambit/cli/providers/tailscale";
+import { randomId } from "@ambit/cli/lib/cli";
+import { getRouterDockerDir } from "@ambit/cli/lib/paths";
+import { getCredentialStore } from "@ambit/cli/src/credentials";
+import { runCommand } from "@ambit/cli/lib/command";
+
+// MCP-safe Tailscale client (throws instead of die())
+import { createTailscaleClient, waitForDevice } from "./tailscale.ts";
 
 // =============================================================================
 // Helpers
@@ -74,7 +89,7 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
         email: data.email,
       });
     } catch {
-      return ok("Not authenticated. Run 'fly auth login' in your terminal.", {
+      return ok("Not Authenticated. Run 'fly auth login' in your terminal.", {
         authenticated: false,
       });
     }
@@ -141,7 +156,7 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
       if (!network) {
         return err(
           "No ambit network configured. Deploy a router first with " +
-          "'ambit deploy' to create a network.",
+            "'ambit deploy' to create a network.",
         );
       }
     } else {
@@ -154,10 +169,10 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
 
     const result = await exec(cmdArgs);
     if (!result.success) {
-      return err(`Failed to create app: ${result.stderr || result.stdout}`);
+      return err(`Failed to Create App: ${result.stderr || result.stdout}`);
     }
 
-    return ok(`Created app ${args.name}`, {
+    return ok(`Created App ${args.name}`, {
       name: args.name,
       network: network ?? null,
       org: org ?? "",
@@ -168,9 +183,9 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
     guard(args.app);
     const result = await exec(["apps", "destroy", args.app, "--yes"]);
     if (!result.success) {
-      return err(`Failed to destroy app: ${result.stderr || result.stdout}`);
+      return err(`Failed to Destroy App: ${result.stderr || result.stdout}`);
     }
-    return ok(`Destroyed app ${args.app}`, { ok: true, app: args.app });
+    return ok(`Destroyed App ${args.app}`, { ok: true, app: args.app });
   }
 
   // =========================================================================
@@ -199,12 +214,16 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
   async function fly_machine_start(args: Args): Promise<CallToolResult> {
     guard(args.app);
     const result = await exec([
-      "machines", "start", args.machine_id, "-a", args.app,
+      "machines",
+      "start",
+      args.machine_id,
+      "-a",
+      args.app,
     ]);
     if (!result.success) {
-      return err(`Failed to start machine: ${result.stderr || result.stdout}`);
+      return err(`Failed to Start Machine: ${result.stderr || result.stdout}`);
     }
-    return ok(`Started machine ${args.machine_id}`, {
+    return ok(`Started Machine ${args.machine_id}`, {
       ok: true,
       machine_id: args.machine_id,
     });
@@ -213,12 +232,16 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
   async function fly_machine_stop(args: Args): Promise<CallToolResult> {
     guard(args.app);
     const result = await exec([
-      "machines", "stop", args.machine_id, "-a", args.app,
+      "machines",
+      "stop",
+      args.machine_id,
+      "-a",
+      args.app,
     ]);
     if (!result.success) {
-      return err(`Failed to stop machine: ${result.stderr || result.stdout}`);
+      return err(`Failed to Stop Machine: ${result.stderr || result.stdout}`);
     }
-    return ok(`Stopped machine ${args.machine_id}`, {
+    return ok(`Stopped Machine ${args.machine_id}`, {
       ok: true,
       machine_id: args.machine_id,
     });
@@ -231,9 +254,11 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
 
     const result = await exec(cmdArgs);
     if (!result.success) {
-      return err(`Failed to destroy machine: ${result.stderr || result.stdout}`);
+      return err(
+        `Failed to Destroy Machine: ${result.stderr || result.stdout}`,
+      );
     }
-    return ok(`Destroyed machine ${args.machine_id}`, {
+    return ok(`Destroyed Machine ${args.machine_id}`, {
       ok: true,
       machine_id: args.machine_id,
     });
@@ -242,9 +267,12 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
   async function fly_machine_exec(args: Args): Promise<CallToolResult> {
     guard(args.app);
     const cmdArgs = [
-      "machine", "exec", args.machine_id,
+      "machine",
+      "exec",
+      args.machine_id,
       ...args.command,
-      "-a", args.app,
+      "-a",
+      args.app,
     ];
 
     const result = await exec(cmdArgs);
@@ -281,10 +309,15 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
   async function fly_ip_release(args: Args): Promise<CallToolResult> {
     guard(args.app);
     const result = await exec([
-      "ips", "release", args.address, "-a", args.app, "--yes",
+      "ips",
+      "release",
+      args.address,
+      "-a",
+      args.app,
+      "--yes",
     ]);
     if (!result.success) {
-      return err(`Failed to release IP: ${result.stderr || result.stdout}`);
+      return err(`Failed to Release IP: ${result.stderr || result.stdout}`);
     }
     return ok(`Released ${args.address}`, { ok: true, address: args.address });
   }
@@ -293,22 +326,31 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
     guard(args.app);
     // Safe mode: always --private --network <name>
     const result = await exec([
-      "ips", "allocate-v6", "--private",
-      "--network", args.network,
-      "-a", args.app,
+      "ips",
+      "allocate-v6",
+      "--private",
+      "--network",
+      args.network,
+      "-a",
+      args.app,
       "--json",
     ]);
     if (!result.success) {
-      return err(`Failed to allocate Flycast IP: ${result.stderr || result.stdout}`);
+      return err(
+        `Failed to Allocate Flycast IP: ${result.stderr || result.stdout}`,
+      );
     }
 
     try {
       const ip = FlyIpAllocateSchema.parse(JSON.parse(result.stdout));
-      return ok(`Allocated Flycast IP ${ip.Address} on network ${args.network}`, {
-        address: ip.Address,
-        type: ip.Type,
-        network: args.network,
-      });
+      return ok(
+        `Allocated Flycast IP ${ip.Address} on network ${args.network}`,
+        {
+          address: ip.Address,
+          type: ip.Type,
+          network: args.network,
+        },
+      );
     } catch {
       // fly ips allocate-v6 may not return JSON; parse text
       return ok(`Allocated Flycast IP on network ${args.network}`, {
@@ -328,7 +370,7 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
 
     const result = await exec(cmdArgs);
     if (!result.success) {
-      return err(`Failed to allocate IPv6: ${result.stderr || result.stdout}`);
+      return err(`Failed to Allocate IPv6: ${result.stderr || result.stdout}`);
     }
 
     try {
@@ -356,7 +398,7 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
 
     const result = await exec(cmdArgs);
     if (!result.success) {
-      return err(`Failed to allocate IPv4: ${result.stderr || result.stdout}`);
+      return err(`Failed to Allocate IPv4: ${result.stderr || result.stdout}`);
     }
 
     try {
@@ -383,7 +425,7 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
 
     const result = await exec(cmdArgs);
     if (!result.success) {
-      return err(`Failed to allocate IPs: ${result.stderr || result.stdout}`);
+      return err(`Failed to Allocate IPs: ${result.stderr || result.stdout}`);
     }
 
     // This command may return multiple IPs
@@ -430,7 +472,7 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
 
     const result = await exec(cmdArgs);
     if (!result.success) {
-      return err(`Failed to set secrets: ${result.stderr || result.stdout}`);
+      return err(`Failed to Set Secrets: ${result.stderr || result.stdout}`);
     }
     return ok(`Set ${pairs.length} secret(s)`, {
       ok: true,
@@ -443,7 +485,7 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
     const keys = args.keys as string[];
     const result = await exec(["secrets", "unset", ...keys, "-a", args.app]);
     if (!result.success) {
-      return err(`Failed to unset secrets: ${result.stderr || result.stdout}`);
+      return err(`Failed to Unset Secrets: ${result.stderr || result.stdout}`);
     }
     return ok(`Unset ${keys.length} secret(s)`, {
       ok: true,
@@ -475,14 +517,19 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
   async function fly_scale_count(args: Args): Promise<CallToolResult> {
     guard(args.app);
     const cmdArgs = [
-      "scale", "count", String(args.count), "-a", args.app, "--yes",
+      "scale",
+      "count",
+      String(args.count),
+      "-a",
+      args.app,
+      "--yes",
     ];
     if (args.region) cmdArgs.push("--region", args.region);
     if (args.process_group) cmdArgs.push("--process-group", args.process_group);
 
     const result = await exec(cmdArgs);
     if (!result.success) {
-      return err(`Failed to scale: ${result.stderr || result.stdout}`);
+      return err(`Failed to Scale: ${result.stderr || result.stdout}`);
     }
     return ok(`Scaled to ${args.count} machine(s)`, { ok: true });
   }
@@ -494,7 +541,7 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
 
     const result = await exec(cmdArgs);
     if (!result.success) {
-      return err(`Failed to scale VM: ${result.stderr || result.stdout}`);
+      return err(`Failed to Scale VM: ${result.stderr || result.stdout}`);
     }
     return ok(`Scaled VM to ${args.size}`, { ok: true });
   }
@@ -525,15 +572,20 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
     guard(args.app);
     const name = args.name ?? "data";
     const cmdArgs = [
-      "volumes", "create", name,
-      "-a", args.app,
-      "--region", args.region,
-      "--json", "--yes",
+      "volumes",
+      "create",
+      name,
+      "-a",
+      args.app,
+      "--region",
+      args.region,
+      "--json",
+      "--yes",
     ];
     if (args.size_gb) cmdArgs.push("--size", String(args.size_gb));
 
     const data = await execJson(cmdArgs, FlyVolumeCreateSchema);
-    return ok(`Created volume ${data.id}`, {
+    return ok(`Created Volume ${data.id}`, {
       id: data.id,
       name: data.name,
       size_gb: data.size_gb,
@@ -546,16 +598,21 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
     if (args.confirm !== args.volume_id) {
       return err(
         `Confirmation failed: 'confirm' must exactly match 'volume_id'. ` +
-        `Got confirm="${args.confirm}", volume_id="${args.volume_id}".`,
+          `Got confirm="${args.confirm}", volume_id="${args.volume_id}".`,
       );
     }
     const result = await exec([
-      "volumes", "destroy", args.volume_id, "-a", args.app, "--yes",
+      "volumes",
+      "destroy",
+      args.volume_id,
+      "-a",
+      args.app,
+      "--yes",
     ]);
     if (!result.success) {
-      return err(`Failed to destroy volume: ${result.stderr || result.stdout}`);
+      return err(`Failed to Destroy Volume: ${result.stderr || result.stdout}`);
     }
-    return ok(`Destroyed volume ${args.volume_id}`, {
+    return ok(`Destroyed Volume ${args.volume_id}`, {
       ok: true,
       volume_id: args.volume_id,
     });
@@ -569,13 +626,13 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
     guard(args.app);
     const result = await exec(["config", "show", "-a", args.app]);
     if (!result.success) {
-      return err(`Failed to get config: ${result.stderr || result.stdout}`);
+      return err(`Failed to Get Config: ${result.stderr || result.stdout}`);
     }
     try {
       const config = JSON.parse(result.stdout);
       return ok(`Config for ${args.app}`, { config });
     } catch {
-      return err(`Invalid config JSON: ${result.stdout.slice(0, 200)}`);
+      return err(`Invalid Config JSON: ${result.stdout.slice(0, 200)}`);
     }
   }
 
@@ -597,7 +654,7 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
       region: e.region ?? "",
       instance: e.instance ?? "",
     }));
-    return ok(`${normalized.length} log entries`, { entries: normalized });
+    return ok(`${normalized.length} Log Entries`, { entries: normalized });
   }
 
   // =========================================================================
@@ -608,8 +665,12 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
     guard(args.app);
 
     const cmdArgs = [
-      "deploy", "-a", args.app,
-      "--yes", "--no-public-ips", "--flycast",
+      "deploy",
+      "-a",
+      args.app,
+      "--yes",
+      "--no-public-ips",
+      "--flycast",
     ];
     if (args.image) cmdArgs.push("--image", args.image);
     if (args.dockerfile) cmdArgs.push("--dockerfile", args.dockerfile);
@@ -621,14 +682,18 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
       }
     }
     if (args.build_args) {
-      for (const [k, v] of Object.entries(args.build_args as Record<string, string>)) {
+      for (
+        const [k, v] of Object.entries(
+          args.build_args as Record<string, string>,
+        )
+      ) {
         cmdArgs.push("--build-arg", `${k}=${v}`);
       }
     }
 
     const result = await exec(cmdArgs);
     if (!result.success) {
-      return err(`Deploy failed: ${result.stderr || result.stdout}`);
+      return err(`Deploy Failed: ${result.stderr || result.stdout}`);
     }
 
     // Post-flight audit
@@ -637,8 +702,8 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
     if (audit.public_ips_released > 0) {
       return err(
         `Deploy succeeded but ${audit.public_ips_released} public IP(s) were found ` +
-        `and released. This should not happen with --no-public-ips. ` +
-        `Check fly.toml and deployment config.`,
+          `and released. This should not happen with --no-public-ips. ` +
+          `Check fly.toml and deployment config.`,
       );
     }
 
@@ -660,14 +725,18 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
       }
     }
     if (args.build_args) {
-      for (const [k, v] of Object.entries(args.build_args as Record<string, string>)) {
+      for (
+        const [k, v] of Object.entries(
+          args.build_args as Record<string, string>,
+        )
+      ) {
         cmdArgs.push("--build-arg", `${k}=${v}`);
       }
     }
 
     const result = await exec(cmdArgs);
     if (!result.success) {
-      return err(`Deploy failed: ${result.stderr || result.stdout}`);
+      return err(`Deploy Failed: ${result.stderr || result.stdout}`);
     }
     return ok(`Deployed ${args.app}`, { ok: true });
   }
@@ -690,24 +759,33 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
 
   async function fly_certs_add(args: Args): Promise<CallToolResult> {
     const result = await exec([
-      "certs", "add", args.hostname, "-a", args.app,
+      "certs",
+      "add",
+      args.hostname,
+      "-a",
+      args.app,
     ]);
     if (!result.success) {
-      return err(`Failed to add cert: ${result.stderr || result.stdout}`);
+      return err(`Failed to Add Cert: ${result.stderr || result.stdout}`);
     }
-    return ok(`Added certificate for ${args.hostname}`, {
+    return ok(`Added Certificate for ${args.hostname}`, {
       hostname: args.hostname,
     });
   }
 
   async function fly_certs_remove(args: Args): Promise<CallToolResult> {
     const result = await exec([
-      "certs", "remove", args.hostname, "-a", args.app, "--yes",
+      "certs",
+      "remove",
+      args.hostname,
+      "-a",
+      args.app,
+      "--yes",
     ]);
     if (!result.success) {
-      return err(`Failed to remove cert: ${result.stderr || result.stdout}`);
+      return err(`Failed to Remove Cert: ${result.stderr || result.stdout}`);
     }
-    return ok(`Removed certificate for ${args.hostname}`, {
+    return ok(`Removed Certificate for ${args.hostname}`, {
       ok: true,
       hostname: args.hostname,
     });
@@ -715,9 +793,6 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
 
   // =========================================================================
   // Router tools (safe only)
-  // =========================================================================
-  // These are stubs — router management is complex and will be implemented
-  // against the ambit CLI library in a future iteration.
   // =========================================================================
 
   async function router_list(args: Args): Promise<CallToolResult> {
@@ -729,7 +804,8 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
     const routers = apps
       .filter((a) => a.Name.startsWith("ambit-"))
       .map((a) => ({
-        network: a.Network ?? a.Name.replace("ambit-", "").replace(/-[a-z0-9]+$/, ""),
+        network: a.Network ??
+          a.Name.replace("ambit-", "").replace(/-[a-z0-9]+$/, ""),
         app_name: a.Name,
         region: null,
         machine_state: a.Status,
@@ -751,11 +827,12 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
     );
 
     if (!router) {
-      return err(`No router found for network '${args.network}'`);
+      return err(`No Router Found for Network '${args.network}'`);
     }
 
     // Get machine details
-    let machineInfo: { region?: string; state?: string; private_ip?: string } = {};
+    let machineInfo: { region?: string; state?: string; private_ip?: string } =
+      {};
     try {
       const machines = await execJson(
         ["machines", "list", "-a", router.Name, "--json"],
@@ -772,7 +849,7 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
       // best-effort
     }
 
-    return ok(`Router for network '${args.network}'`, {
+    return ok(`Router for Network '${args.network}'`, {
       network: args.network,
       app_name: router.Name,
       region: machineInfo.region ?? null,
@@ -783,33 +860,377 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
     });
   }
 
-  function router_deploy(_args: Args): Promise<CallToolResult> {
-    // Router deployment is complex (create app, set secrets, deploy container,
-    // wait for tailnet join, configure DNS). Deferred to ambit CLI integration.
-    return Promise.resolve(
-      err(
-        "Router deployment is not yet implemented in the MCP server. " +
-        "Use 'ambit create' from the CLI.",
-      ),
-    );
+  async function router_deploy(args: Args): Promise<CallToolResult> {
+    try {
+      const config = await loadConfig();
+      const org = args.org ?? getDefaultOrg(config);
+      if (!org) {
+        return err(
+          "Organization Is Required. Set it in ambit config or pass 'org'.",
+        );
+      }
+      const network = args.network as string;
+      const region = (args.region as string) || "iad";
+      const selfApprove = args.self_approve ?? false;
+      const tag = getRouterTag(network);
+
+      // 1. Get Tailscale API key from credential store
+      const credentials = getCredentialStore();
+      const apiKey = await credentials.getTailscaleApiKey();
+      if (!apiKey) {
+        return err(
+          "Tailscale API Key Not Found. Set TAILSCALE_API_KEY env var or " +
+            "run 'ambit create' from the CLI to configure credentials.",
+        );
+      }
+
+      const ts = createTailscaleClient(apiKey);
+
+      // 2. Validate API key
+      if (!(await ts.validateApiKey())) {
+        return err("Invalid Tailscale API Key. Check Your API Access Token.");
+      }
+
+      // 3. Check tagOwners for the router tag
+      if (!(await ts.isTagOwnerConfigured(tag))) {
+        return err(
+          `Tag ${tag} Is Not Configured in Tailscale ACL tagOwners. ` +
+            `Add it before creating a router: ` +
+            `"tagOwners": { "${tag}": ["autogroup:admin"] }`,
+        );
+      }
+
+      // 4. Check autoApprovers (unless self_approve)
+      if (!selfApprove && !(await ts.isAutoApproverConfigured(tag))) {
+        return err(
+          `Tag ${tag} Is Not in autoApprovers. Either configure it in your ` +
+            `Tailscale ACL or set self_approve: true to approve routes via API.`,
+        );
+      }
+
+      // 5. Create Fly app on custom network
+      const appName = getRouterAppName(network, randomId(6));
+      const createResult = await exec([
+        "apps",
+        "create",
+        appName,
+        "--org",
+        org,
+        "--network",
+        network,
+        "--json",
+      ]);
+      if (!createResult.success) {
+        return err(
+          `Failed to Create App: ${createResult.stderr || createResult.stdout}`,
+        );
+      }
+
+      // 6. Set secrets (staged — applied on deploy)
+      const secretResult = await exec([
+        "secrets",
+        "set",
+        `TAILSCALE_API_TOKEN=${apiKey}`,
+        `NETWORK_NAME=${network}`,
+        `TAILSCALE_TAGS=${tag}`,
+        "-a",
+        appName,
+        "--stage",
+      ]);
+      if (!secretResult.success) {
+        return err(
+          `Failed to Set Secrets: ${
+            secretResult.stderr || secretResult.stdout
+          }`,
+        );
+      }
+
+      // 7. Deploy router container
+      const dockerDir = getRouterDockerDir();
+      const deployResult = await exec([
+        "deploy",
+        dockerDir,
+        "-a",
+        appName,
+        "--yes",
+        "--ha=false",
+        "--primary-region",
+        region,
+      ]);
+      if (!deployResult.success) {
+        return err(
+          `Router Deploy Failed: ${deployResult.stderr || deployResult.stdout}`,
+        );
+      }
+
+      // 8. Wait for device to join tailnet
+      const device = await waitForDevice(ts, appName, 180000);
+
+      // 9. Get subnet from machine's private IP
+      let subnet: string | undefined;
+      try {
+        const machines = await execJson(
+          ["machines", "list", "-a", appName, "--json"],
+          FlyMachineListSchema,
+        );
+        const routerMachine = machines.find((m) => m.private_ip);
+        if (routerMachine?.private_ip) {
+          subnet = extractSubnet(routerMachine.private_ip);
+        }
+      } catch {
+        // best-effort — subnet is optional in the output
+      }
+
+      // 10. If self_approve, approve routes via API
+      if (selfApprove && subnet) {
+        await ts.approveSubnetRoutes(device.id, [subnet]);
+      }
+
+      // 11. Configure split DNS
+      await ts.setSplitDns(network, [device.addresses[0]]);
+
+      return ok(`Deployed Router for Network '${network}'`, {
+        network,
+        app_name: appName,
+        tag,
+        subnet,
+      });
+    } catch (e) {
+      return err(
+        `Router Deploy Failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   }
 
-  function router_destroy(_args: Args): Promise<CallToolResult> {
-    return Promise.resolve(
-      err(
-        "Router destruction is not yet implemented in the MCP server. " +
-        "Use 'ambit destroy' from the CLI.",
-      ),
-    );
+  async function router_destroy(args: Args): Promise<CallToolResult> {
+    try {
+      const config = await loadConfig();
+      const org = args.org ?? getDefaultOrg(config);
+      const network = args.network as string;
+
+      // 1. Get Tailscale API key
+      const credentials = getCredentialStore();
+      const apiKey = await credentials.getTailscaleApiKey();
+      if (!apiKey) {
+        return err(
+          "Tailscale API Key Not Found. Set TAILSCALE_API_KEY env var or " +
+            "run 'ambit create' from the CLI to configure credentials.",
+        );
+      }
+
+      const ts = createTailscaleClient(apiKey);
+
+      // 2. Find the router app for this network
+      const listArgs = ["apps", "list", "--json"];
+      if (org) listArgs.push("--org", org);
+      const apps = await execJson(listArgs, FlyAppListSchema);
+      const router = apps.find(
+        (a) => a.Name.startsWith("ambit-") && a.Network === network,
+      );
+
+      if (!router) {
+        return err(`No Router Found for Network '${network}'`);
+      }
+
+      // 3. Clear split DNS
+      try {
+        await ts.clearSplitDns(network);
+      } catch {
+        // Already cleared or not configured
+      }
+
+      // 4. Remove Tailscale device
+      try {
+        const device = await ts.getDeviceByHostname(router.Name);
+        if (device) {
+          await ts.deleteDevice(device.id);
+        }
+      } catch {
+        // Device may already be gone
+      }
+
+      // 5. Destroy Fly app
+      const destroyResult = await exec([
+        "apps",
+        "destroy",
+        router.Name,
+        "--yes",
+      ]);
+      if (!destroyResult.success) {
+        return err(
+          `Failed to Destroy App: ${
+            destroyResult.stderr || destroyResult.stdout
+          }`,
+        );
+      }
+
+      return ok(`Destroyed Router for Network '${network}'`, {
+        ok: true,
+        network,
+      });
+    } catch (e) {
+      return err(
+        `Router Destroy Failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   }
 
-  function router_doctor(_args: Args): Promise<CallToolResult> {
-    return Promise.resolve(
-      err(
-        "Router doctor is not yet implemented in the MCP server. " +
-        "Use 'ambit doctor' from the CLI.",
-      ),
-    );
+  async function router_doctor(args: Args): Promise<CallToolResult> {
+    try {
+      const checks: { name: string; passed: boolean; hint?: string }[] = [];
+      const check = (name: string, passed: boolean, hint?: string) => {
+        checks.push(hint ? { name, passed, hint } : { name, passed });
+      };
+
+      // 1. Check Tailscale CLI installed
+      check(
+        "Tailscale Installed",
+        await isTailscaleInstalled(),
+        "Install from https://tailscale.com/download",
+      );
+
+      // 2. Check Tailscale connected
+      const tsStatus = await runCommand(["tailscale", "status", "--json"]);
+      let tsConnected = false;
+      if (tsStatus.success) {
+        try {
+          const parsed = JSON.parse(tsStatus.stdout);
+          tsConnected = parsed.BackendState === "Running";
+        } catch { /* ignore parse error */ }
+      }
+      check("Tailscale Connected", tsConnected, "Run: tailscale up");
+
+      // 3. Check accept-routes enabled
+      check(
+        "Accept Routes Enabled",
+        await isAcceptRoutesEnabled(),
+        "Run: sudo tailscale set --accept-routes",
+      );
+
+      // 4. Check credentials available
+      const credentials = getCredentialStore();
+      const apiKey = await credentials.getTailscaleApiKey();
+      check(
+        "Tailscale API Key Available",
+        !!apiKey,
+        "Set TAILSCALE_API_KEY env var or run 'ambit create' to configure",
+      );
+
+      // 5. Router checks (only if we have credentials)
+      if (apiKey) {
+        const ts = createTailscaleClient(apiKey);
+        const config = await loadConfig();
+        const org = args.org ?? getDefaultOrg(config);
+
+        if (args.network) {
+          // Check specific network
+          const listArgs = ["apps", "list", "--json"];
+          if (org) listArgs.push("--org", org);
+          const apps = await execJson(listArgs, FlyAppListSchema);
+          const router = apps.find(
+            (a) => a.Name.startsWith("ambit-") && a.Network === args.network,
+          );
+
+          check(
+            `Router Exists (${args.network})`,
+            !!router,
+            `Create with: ambit create ${args.network}`,
+          );
+
+          if (router) {
+            // Check machine running
+            try {
+              const machines = await execJson(
+                ["machines", "list", "-a", router.Name, "--json"],
+                FlyMachineListSchema,
+              );
+              const machine = machines[0];
+              check(
+                `Router Running (${args.network})`,
+                machine?.state === "started",
+                machine
+                  ? `Machine state: ${machine.state}`
+                  : "No machine found",
+              );
+            } catch {
+              check(
+                `Router Running (${args.network})`,
+                false,
+                "Could not check machine status",
+              );
+            }
+
+            // Check in tailnet
+            try {
+              const device = await ts.getDeviceByHostname(router.Name);
+              check(
+                `Router in Tailnet (${args.network})`,
+                device !== null,
+                "Router may still be starting, or check router logs",
+              );
+            } catch {
+              check(
+                `Router in Tailnet (${args.network})`,
+                false,
+                "Could not check tailnet status",
+              );
+            }
+          }
+        } else {
+          // Check all networks
+          const listArgs = ["apps", "list", "--json"];
+          if (org) listArgs.push("--org", org);
+          const apps = await execJson(listArgs, FlyAppListSchema);
+          const routerApps = apps.filter((a) => a.Name.startsWith("ambit-"));
+
+          if (routerApps.length === 0) {
+            check(
+              "Routers Discovered",
+              false,
+              "Run: ambit create <network>",
+            );
+          } else {
+            let runningCount = 0;
+            let inTailnetCount = 0;
+
+            for (const app of routerApps) {
+              try {
+                const machines = await execJson(
+                  ["machines", "list", "-a", app.Name, "--json"],
+                  FlyMachineListSchema,
+                );
+                if (machines[0]?.state === "started") runningCount++;
+              } catch { /* skip */ }
+
+              try {
+                const device = await ts.getDeviceByHostname(app.Name);
+                if (device) inTailnetCount++;
+              } catch { /* skip */ }
+            }
+
+            check(
+              "Routers Discovered",
+              runningCount > 0,
+              `${routerApps.length} Router(s): ${runningCount} Running, ` +
+                `${inTailnetCount} in Tailnet`,
+            );
+          }
+        }
+      }
+
+      const healthy = checks.every((c) => c.passed);
+      const issues = checks.filter((c) => !c.passed).length;
+      return ok(
+        healthy
+          ? "All Checks Passed"
+          : `${issues} Issue${issues > 1 ? "s" : ""} Found`,
+        { checks, healthy },
+      );
+    } catch (e) {
+      return err(
+        `Router Doctor Failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   }
 
   async function router_logs(args: Args): Promise<CallToolResult> {
@@ -823,7 +1244,7 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
     );
 
     if (!router) {
-      return err(`No router found for network '${args.network}'`);
+      return err(`No Router Found for Network '${args.network}'`);
     }
 
     const logArgs = ["logs", "-a", router.Name, "--no-tail", "--json"];
@@ -835,7 +1256,9 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
       region: e.region ?? "",
       instance: e.instance ?? "",
     }));
-    return ok(`${normalized.length} router log entries`, { entries: normalized });
+    return ok(`${normalized.length} Router Log Entries`, {
+      entries: normalized,
+    });
   }
 
   // =========================================================================

@@ -46,7 +46,7 @@ export const createPlaywrightMcpServer = (cdpEndpoint: string): McpServer => ({
 export const mergeMcpConfig = (
   existing: McpConfig,
   serverName: string,
-  server: McpServer
+  server: McpServer,
 ): McpConfig => {
   return {
     ...existing,

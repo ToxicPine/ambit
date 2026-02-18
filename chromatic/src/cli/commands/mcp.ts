@@ -3,29 +3,21 @@
 // =============================================================================
 
 import { parseArgs } from "@std/cli";
-import {
-  bold,
-  dim,
-  cyan,
-  confirm,
-} from "@ambit/cli/lib/cli";
+import { bold, confirm, cyan, dim } from "@ambit/cli/lib/cli";
 import { createOutput } from "@ambit/cli/lib/output";
 import { resolveOrg } from "@ambit/cli/src/resolve";
 import { findFileUp, getRelativePath } from "../../../lib/find.ts";
 import { registerCommand } from "../mod.ts";
 import { loadConfig } from "../../schemas/config.ts";
+import { findCdpApp, getCdpEndpoint } from "../../schemas/instance.ts";
 import {
-  getCdpEndpoint,
-  findCdpApp,
-} from "../../schemas/instance.ts";
-import {
-  McpConfigSchema,
   createPlaywrightMcpServer,
-  mergeMcpConfig,
+  formatServerConfig,
   hasServer,
   listServers,
-  formatServerConfig,
   type McpConfig,
+  McpConfigSchema,
+  mergeMcpConfig,
 } from "../../schemas/mcp.ts";
 import { createFlyProvider } from "@ambit/cli/providers/fly";
 
@@ -117,8 +109,10 @@ ${bold("EXAMPLES")}
     if (!args.create) {
       out.dim(`No ${MCP_FILENAME} Found in Parent Directories`)
         .blank()
-        .text(`Use ${cyan("--create")} to create one in the current directory.`);
-      out.fail(`No ${MCP_FILENAME} found`);
+        .text(
+          `Use ${cyan("--create")} to create one in the current directory.`,
+        );
+      out.fail(`No ${MCP_FILENAME} Found`);
       out.print();
       return;
     }
@@ -154,7 +148,9 @@ ${bold("EXAMPLES")}
   // Show existing servers
   const existingServers = listServers(existingConfig);
   if (existingServers.length > 0) {
-    out.blank().text(`Existing Servers: ${existingServers.map((s) => cyan(s)).join(", ")}`);
+    out.blank().text(
+      `Existing Servers: ${existingServers.map((s) => cyan(s)).join(", ")}`,
+    );
   }
 
   // Check for name conflict
@@ -207,7 +203,10 @@ ${bold("EXAMPLES")}
 
   // Write
   try {
-    await Deno.writeTextFile(targetPath, JSON.stringify(newConfig, null, 2) + "\n");
+    await Deno.writeTextFile(
+      targetPath,
+      JSON.stringify(newConfig, null, 2) + "\n",
+    );
   } catch (error) {
     if (error instanceof Deno.errors.PermissionDenied) {
       return out.die("Permission Denied");
@@ -227,6 +226,7 @@ ${bold("EXAMPLES")}
 registerCommand({
   name: "mcp",
   description: "Add a browser to your .mcp.json for AI agents",
-  usage: "chromatic mcp <name> [--name SERVER] [--create] [--network NAME] [--org ORG] [--yes]",
+  usage:
+    "chromatic mcp <name> [--name SERVER] [--create] [--network NAME] [--org ORG] [--yes]",
   run: mcp,
 });

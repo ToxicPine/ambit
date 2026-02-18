@@ -4,23 +4,23 @@
 
 import { parseArgs } from "@std/cli";
 import { z } from "zod";
-import {
-  bold,
-  dim,
-  randomId,
-  Spinner,
-} from "@ambit/cli/lib/cli";
+import { bold, dim, randomId, Spinner } from "@ambit/cli/lib/cli";
 import { createOutput } from "@ambit/cli/lib/output";
 import { resolveOrg } from "@ambit/cli/src/resolve";
 import { registerCommand } from "../mod.ts";
-import { loadConfig, MachineSizeEnum, getDefaultRegion, type MachineSize } from "../../schemas/config.ts";
 import {
-  InstanceNameSchema,
-  getCdpEndpoint,
-  getCdpAppName,
-  findCdpApp,
-  fetchCdpVersionInfo,
+  getDefaultRegion,
+  loadConfig,
+  type MachineSize,
+  MachineSizeEnum,
+} from "../../schemas/config.ts";
+import {
   convertWsUrlToHostname,
+  fetchCdpVersionInfo,
+  findCdpApp,
+  getCdpAppName,
+  getCdpEndpoint,
+  InstanceNameSchema,
 } from "../../schemas/instance.ts";
 import { createFlyProvider } from "@ambit/cli/providers/fly";
 import { findRouterApp, getRouterMachineInfo } from "@ambit/cli/src/discovery";
@@ -78,7 +78,13 @@ ${bold("EXAMPLES")}
     name: string;
     flyAppName: string;
     endpoint: string;
-    machines: { id: string; state: string; size: string; region: string; privateIp?: string }[];
+    machines: {
+      id: string;
+      state: string;
+      size: string;
+      region: string;
+      privateIp?: string;
+    }[];
   }>(args.json);
 
   const rawName = args._[0] as string | undefined;
@@ -88,7 +94,9 @@ ${bold("EXAMPLES")}
 
   const nameResult = InstanceNameSchema.safeParse(rawName);
   if (!nameResult.success) {
-    return out.die(nameResult.error.issues[0]?.message ?? "Invalid Instance Name");
+    return out.die(
+      nameResult.error.issues[0]?.message ?? "Invalid Instance Name",
+    );
   }
   const name = nameResult.data;
 
@@ -177,7 +185,9 @@ ${bold("EXAMPLES")}
 
   // Fetch live WebSocket URL
   const machines = await fly.listMachinesMapped(appName);
-  const runningMachine = machines.find((m) => m.state === "running" && m.privateIp);
+  const runningMachine = machines.find((m) =>
+    m.state === "running" && m.privateIp
+  );
 
   let wsEndpoint = getCdpEndpoint(appName, network);
   if (runningMachine?.privateIp) {
@@ -186,7 +196,7 @@ ${bold("EXAMPLES")}
       wsEndpoint = convertWsUrlToHostname(
         cdpInfo.webSocketDebuggerUrl,
         appName,
-        network
+        network,
       );
     }
   }
@@ -226,6 +236,7 @@ ${bold("EXAMPLES")}
 registerCommand({
   name: "create",
   description: "Create a browser (1 machine) or browser pool (N machines)",
-  usage: "chromatic create <name> [--count N] [--size SIZE] [--network NAME] [--org ORG] [--json]",
+  usage:
+    "chromatic create <name> [--count N] [--size SIZE] [--network NAME] [--org ORG] [--json]",
   run: create,
 });

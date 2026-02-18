@@ -9,15 +9,15 @@ import { runCommand } from "../../../lib/command.ts";
 import { registerCommand } from "../mod.ts";
 import { createFlyProvider } from "../../providers/fly.ts";
 import {
-  isTailscaleInstalled,
   isAcceptRoutesEnabled,
+  isTailscaleInstalled,
 } from "../../providers/tailscale.ts";
 import { requireTailscaleProvider } from "../../credentials.ts";
 import {
-  listRouterApps,
   findRouterApp,
   getRouterMachineInfo,
   getRouterTailscaleInfo,
+  listRouterApps,
 } from "../../discovery.ts";
 import { resolveOrg } from "../../resolve.ts";
 
@@ -133,7 +133,9 @@ ${bold("CHECKS")}
       machine ? `Machine state: ${machine.state}` : "No machine found",
     );
 
-    const ts = app ? await getRouterTailscaleInfo(tailscale, app.appName) : null;
+    const ts = app
+      ? await getRouterTailscaleInfo(tailscale, app.appName)
+      : null;
     report(
       `Router in Tailnet (${args.network})`,
       ts !== null,
@@ -172,7 +174,9 @@ ${bold("CHECKS")}
   if (issues === 0) {
     out.done({ checks: results });
   } else {
-    out.fail(`${issues} Issue${issues > 1 ? "s" : ""} Found`, { checks: results });
+    out.fail(`${issues} Issue${issues > 1 ? "s" : ""} Found`, {
+      checks: results,
+    });
   }
 
   out.blank();

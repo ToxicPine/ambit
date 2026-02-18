@@ -3,17 +3,17 @@
 // =============================================================================
 
 import { parseArgs } from "@std/cli";
-import { bold, readSecret, randomId } from "../../../lib/cli.ts";
+import { bold, randomId, readSecret } from "../../../lib/cli.ts";
 import { createOutput } from "../../../lib/output.ts";
 import { registerCommand } from "../mod.ts";
-import { getRouterTag, extractSubnet } from "../../schemas/config.ts";
+import { extractSubnet, getRouterTag } from "../../schemas/config.ts";
 import { createFlyProvider, getRouterAppName } from "../../providers/fly.ts";
 import {
   createTailscaleProvider,
-  waitForDevice,
-  isTailscaleInstalled,
-  isAcceptRoutesEnabled,
   enableAcceptRoutes,
+  isAcceptRoutesEnabled,
+  isTailscaleInstalled,
+  waitForDevice,
 } from "../../providers/tailscale.ts";
 import { getCredentialStore } from "../../credentials.ts";
 import { resolveOrg } from "../../resolve.ts";
@@ -67,7 +67,7 @@ ${bold("EXAMPLES")}
 
   const network = args._[0] as string | undefined;
   if (!network) {
-    return out.die("Network name is required. Usage: ambit create <network>");
+    return out.die("Network Name Required. Usage: ambit create <network>");
   }
   const tag = getRouterTag(network);
   const selfApprove = args["self-approve"] ?? false;
@@ -108,7 +108,9 @@ ${bold("EXAMPLES")}
       return out.die("--api-key Is Required in JSON Mode");
     }
 
-    out.dim("ambit needs an API access token (not an auth key) to manage your tailnet.")
+    out.dim(
+      "ambit needs an API access token (not an auth key) to manage your tailnet.",
+    )
       .dim("Create one at: https://login.tailscale.com/admin/settings/keys")
       .blank();
 
@@ -119,7 +121,9 @@ ${bold("EXAMPLES")}
   }
 
   if (!apiKey.startsWith("tskey-api-")) {
-    return out.die("Invalid Token Format. Expected 'tskey-api-...' (API access token, not auth key)");
+    return out.die(
+      "Invalid Token Format. Expected 'tskey-api-...' (API access token, not auth key)",
+    );
   }
 
   const tailscale = createTailscaleProvider("-", apiKey);
@@ -164,17 +168,23 @@ ${bold("EXAMPLES")}
   // ==========================================================================
 
   if (!selfApprove) {
-    const autoApproverSpinner = out.spinner("Checking autoApprovers Configuration");
+    const autoApproverSpinner = out.spinner(
+      "Checking autoApprovers Configuration",
+    );
     const hasAutoApprover = await tailscale.isAutoApproverConfigured(tag);
 
     if (!hasAutoApprover) {
       autoApproverSpinner.fail("autoApprovers Not Configured");
       out.blank()
-        .text(`  The tag ${tag} is not listed in your Tailscale ACL autoApprovers.`)
+        .text(
+          `  The tag ${tag} is not listed in your Tailscale ACL autoApprovers.`,
+        )
         .text("  Routes advertised by the router will not be auto-approved.")
         .blank()
         .text("  Either configure autoApprovers in your Tailscale ACL policy:")
-        .dim(`    "autoApprovers": { "routes": { "fdaa:X:XXXX::/48": ["${tag}"] } }`)
+        .dim(
+          `    "autoApprovers": { "routes": { "fdaa:X:XXXX::/48": ["${tag}"] } }`,
+        )
         .blank()
         .text("  Or re-run with --self-approve to approve routes via API:")
         .dim(`    ambit create ${network} --self-approve`)
@@ -314,8 +324,12 @@ ${bold("EXAMPLES")}
       .text(`  "autoApprovers": { "routes": { "${subnet}": ["${tag}"] } }`)
       .blank()
       .dim("  To restrict access, add ACL rules:")
-      .dim(`    {"action": "accept", "src": ["group:YOUR_GROUP"], "dst": ["${tag}:53"]}`)
-      .dim(`    {"action": "accept", "src": ["group:YOUR_GROUP"], "dst": ["${subnet}:*"]}`)
+      .dim(
+        `    {"action": "accept", "src": ["group:YOUR_GROUP"], "dst": ["${tag}:53"]}`,
+      )
+      .dim(
+        `    {"action": "accept", "src": ["group:YOUR_GROUP"], "dst": ["${subnet}:*"]}`,
+      )
       .blank();
   } else if (subnet) {
     out.header("Recommended ACL Rules:")
@@ -323,8 +337,12 @@ ${bold("EXAMPLES")}
       .dim("  To restrict access, add ACL rules to your policy file:")
       .dim("  https://login.tailscale.com/admin/acls/file")
       .blank()
-      .dim(`    {"action": "accept", "src": ["group:YOUR_GROUP"], "dst": ["${tag}:53"]}`)
-      .dim(`    {"action": "accept", "src": ["group:YOUR_GROUP"], "dst": ["${subnet}:*"]}`)
+      .dim(
+        `    {"action": "accept", "src": ["group:YOUR_GROUP"], "dst": ["${tag}:53"]}`,
+      )
+      .dim(
+        `    {"action": "accept", "src": ["group:YOUR_GROUP"], "dst": ["${subnet}:*"]}`,
+      )
       .blank();
   }
 

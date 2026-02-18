@@ -47,7 +47,9 @@ export async function execJson<T>(
   const result = await exec(args);
   if (!result.success) {
     throw new Error(
-      `fly ${args[0]} failed (exit ${result.code}): ${result.stderr || result.stdout}`,
+      `fly ${args[0]} failed (exit ${result.code}): ${
+        result.stderr || result.stdout
+      }`,
     );
   }
   const parsed = JSON.parse(result.stdout);
@@ -65,7 +67,9 @@ export async function execNdjson<T>(
   const result = await exec(args);
   if (!result.success) {
     throw new Error(
-      `fly ${args[0]} failed (exit ${result.code}): ${result.stderr || result.stdout}`,
+      `fly ${args[0]} failed (exit ${result.code}): ${
+        result.stderr || result.stdout
+      }`,
     );
   }
   const lines = result.stdout.trim().split("\n").filter((l) => l.length > 0);

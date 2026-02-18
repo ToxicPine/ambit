@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { parseArgs } from "@std/cli";
-import { bold, dim, die } from "../../lib/cli.ts";
+import { bold, die, dim } from "../../lib/cli.ts";
 
 // =============================================================================
 // Command Interface

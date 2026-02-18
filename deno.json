@@ -1,3 +1,6 @@
 {
-  "workspace": ["./ambit", "./ambit-mcp", "./chromatic"]
+  "workspace": ["./ambit", "./ambit-mcp", "./chromatic", "./test-app"],
+  "fmt": {
+    "exclude": ["**/*.md"]
+  }
 }

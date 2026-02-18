@@ -57,14 +57,18 @@ export const FlyMachineConfigSchema = z.object({
   guest: FlyMachineGuestSchema.optional(),
   metadata: z.record(z.string(), z.string()).optional(),
   auto_destroy: z.boolean().optional(),
-  services: z.array(z.object({
-    ports: z.array(z.object({
-      port: z.number(),
-      handlers: z.array(z.string()).optional(),
-    }).passthrough()).optional(),
-    protocol: z.string().optional(),
-    internal_port: z.number().optional(),
-  }).passthrough()).optional(),
+  services: z.array(
+    z.object({
+      ports: z.array(
+        z.object({
+          port: z.number(),
+          handlers: z.array(z.string()).optional(),
+        }).passthrough(),
+      ).optional(),
+      protocol: z.string().optional(),
+      internal_port: z.number().optional(),
+    }).passthrough(),
+  ).optional(),
 }).passthrough();
 
 export const FlyMachineSchema = z.object({
@@ -106,7 +110,7 @@ export const FlyDeploySchema = z.object({
  * Fly states: created, starting, started, stopping, stopped, destroying, destroyed
  */
 export const mapFlyMachineState = (
-  flyState: string
+  flyState: string,
 ): "creating" | "running" | "frozen" | "failed" => {
   switch (flyState.toLowerCase()) {
     case "started":
@@ -134,7 +138,7 @@ export const mapFlyMachineState = (
  * Map Fly guest config to machine size enum.
  */
 export const mapFlyMachineSize = (
-  guest?: z.infer<typeof FlyMachineGuestSchema>
+  guest?: z.infer<typeof FlyMachineGuestSchema>,
 ): "shared-cpu-1x" | "shared-cpu-2x" | "shared-cpu-4x" => {
   if (!guest) return "shared-cpu-1x";
 

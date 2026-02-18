@@ -2,7 +2,15 @@
 // Output - Unified Output Handling for CLI Commands
 // =============================================================================
 
-import { statusOk, statusErr, statusInfo, statusWarn, bold, dim, Spinner } from "./cli.ts";
+import {
+  bold,
+  dim,
+  Spinner,
+  statusErr,
+  statusInfo,
+  statusOk,
+  statusWarn,
+} from "./cli.ts";
 
 // =============================================================================
 // Result Types - Discriminated Union Base Types
@@ -16,7 +24,10 @@ export type ErrorResult = { ok: false; error: string };
 // =============================================================================
 
 export class Output<T extends Record<string, unknown>> {
-  private result: SuccessResult<T> | (ErrorResult & Record<string, unknown>) | null = null;
+  private result:
+    | SuccessResult<T>
+    | (ErrorResult & Record<string, unknown>)
+    | null = null;
   private jsonMode: boolean;
 
   constructor(jsonMode: boolean) {
@@ -84,7 +95,9 @@ export class Output<T extends Record<string, unknown>> {
   }
 
   // JSON-aware spinner — no-op in JSON mode
-  spinner(message: string): { success(msg: string): void; fail(msg: string): void; stop(): void } {
+  spinner(
+    message: string,
+  ): { success(msg: string): void; fail(msg: string): void; stop(): void } {
     if (this.jsonMode) {
       return { success: () => {}, fail: () => {}, stop: () => {} };
     }

@@ -63,7 +63,10 @@ export const TailscaleDnsPreferencesSchema = z.object({
   magicDNS: z.boolean().optional(),
 });
 
-export const TailscaleSplitDnsSchema = z.record(z.string(), z.array(z.string()));
+export const TailscaleSplitDnsSchema = z.record(
+  z.string(),
+  z.array(z.string()),
+);
 
 export type TailscaleSplitDns = z.infer<typeof TailscaleSplitDnsSchema>;
 

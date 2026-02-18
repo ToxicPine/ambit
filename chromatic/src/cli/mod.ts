@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { parseArgs } from "@std/cli";
-import { bold, dim, die } from "@ambit/cli/lib/cli";
+import { bold, die, dim } from "@ambit/cli/lib/cli";
 
 // =============================================================================
 // Command Interface

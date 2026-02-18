@@ -77,7 +77,7 @@ async function gitMakeTree(entries: string): Promise<string> {
 async function gitMakeCommit(
   tree: string,
   parent: string,
-  message: string
+  message: string,
 ): Promise<string> {
   const cmd = new Deno.Command("git", {
     args: ["commit-tree", tree, "-p", parent, "-m", message],
@@ -145,7 +145,7 @@ function applyVersionUpdate(
   content: string,
   pattern: RegExp,
   oldVersion: string,
-  newVersion: string
+  newVersion: string,
 ): string {
   const oldPattern = pattern.source.replace("([\\d.]+)", oldVersion);
   const newValue = pattern.source
@@ -162,7 +162,7 @@ function applyVersionUpdate(
 async function createUpdateBranch(
   branchName: string,
   commitMessage: string,
-  dockerfiles: Record<string, string>
+  dockerfiles: Record<string, string>,
 ): Promise<string> {
   const headCommit = await git("rev-parse", "HEAD");
   const headTree = await git("rev-parse", "HEAD^{tree}");
@@ -235,7 +235,7 @@ Options:
       pattern: /ARG TAILSCALE_VERSION=([\d.]+)/,
       current: extractVersion(
         dockerfiles.router,
-        /ARG TAILSCALE_VERSION=([\d.]+)/
+        /ARG TAILSCALE_VERSION=([\d.]+)/,
       ),
       getLatest: () => getGitHubLatest("tailscale/tailscale"),
     },
@@ -245,7 +245,7 @@ Options:
       pattern: /ARG COREDNS_VERSION=([\d.]+)/,
       current: extractVersion(
         dockerfiles.router,
-        /ARG COREDNS_VERSION=([\d.]+)/
+        /ARG COREDNS_VERSION=([\d.]+)/,
       ),
       getLatest: () => getGitHubLatest("coredns/coredns"),
     },
@@ -263,7 +263,9 @@ Options:
       const status = isOutdated ? "Outdated" : "Ok";
 
       console.log(
-        `${check.name.padEnd(15)} ${check.current.padEnd(10)} -> ${check.latest.padEnd(10)} ${status}`
+        `${check.name.padEnd(15)} ${check.current.padEnd(10)} -> ${
+          check.latest.padEnd(10)
+        } ${status}`,
       );
 
       if (isOutdated) {
@@ -274,7 +276,7 @@ Options:
             dockerfiles[check.dockerfile],
             check.pattern,
             check.current,
-            check.latest
+            check.latest,
           );
         }
       }
@@ -296,7 +298,7 @@ Options:
     const commitHash = await createUpdateBranch(
       branchName,
       commitMessage,
-      dockerfiles
+      dockerfiles,
     );
 
     console.log(`\nDone. Branch '${branchName}' Created With Updates.`);

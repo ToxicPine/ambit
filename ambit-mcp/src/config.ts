@@ -44,6 +44,8 @@ export function getDefaultOrg(config: ambitConfig | null): string | undefined {
 }
 
 /** Get the default network from config, or undefined. */
-export function getDefaultNetwork(config: ambitConfig | null): string | undefined {
+export function getDefaultNetwork(
+  config: ambitConfig | null,
+): string | undefined {
   return config?.network;
 }

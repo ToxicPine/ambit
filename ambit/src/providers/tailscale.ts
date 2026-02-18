@@ -5,10 +5,10 @@
 import { commandExists, die } from "../../lib/cli.ts";
 import { runCommand } from "../../lib/command.ts";
 import {
-  TailscaleDevicesListSchema,
+  type AuthKeyCapabilities,
   createAuthKeyPayload,
   type TailscaleDevice,
-  type AuthKeyCapabilities,
+  TailscaleDevicesListSchema,
 } from "../schemas/tailscale.ts";
 
 // =============================================================================
@@ -52,7 +52,7 @@ interface ApiResponse<T> {
 
 export const createTailscaleProvider = (
   tailnet: string,
-  apiKey: string
+  apiKey: string,
 ): TailscaleProvider => {
   const headers = (): HeadersInit => ({
     "Content-Type": "application/json",
@@ -63,7 +63,7 @@ export const createTailscaleProvider = (
   const request = async <T>(
     method: string,
     path: string,
-    body?: object
+    body?: object,
   ): Promise<ApiResponse<T>> => {
     try {
       const response = await fetch(`${API_BASE}${path}`, {
@@ -100,7 +100,10 @@ export const createTailscaleProvider = (
 
   return {
     async validateApiKey(): Promise<boolean> {
-      const result = await request<unknown>("GET", `/tailnet/${effectiveTailnet}/devices`);
+      const result = await request<unknown>(
+        "GET",
+        `/tailnet/${effectiveTailnet}/devices`,
+      );
       return result.ok;
     },
 
@@ -109,7 +112,7 @@ export const createTailscaleProvider = (
       const result = await request<{ key: string }>(
         "POST",
         `/tailnet/${effectiveTailnet}/keys`,
-        payload
+        payload,
       );
 
       if (!result.ok || !result.data?.key) {
@@ -122,7 +125,7 @@ export const createTailscaleProvider = (
     async listDevices(): Promise<TailscaleDevice[]> {
       const result = await request<{ devices: unknown[] }>(
         "GET",
-        `/tailnet/${effectiveTailnet}/devices`
+        `/tailnet/${effectiveTailnet}/devices`,
       );
 
       if (!result.ok) {
@@ -133,7 +136,9 @@ export const createTailscaleProvider = (
       return parsed.success ? parsed.data.devices : [];
     },
 
-    async getDeviceByHostname(hostname: string): Promise<TailscaleDevice | null> {
+    async getDeviceByHostname(
+      hostname: string,
+    ): Promise<TailscaleDevice | null> {
       const devices = await this.listDevices();
 
       // Exact match first (expected with persistent state)
@@ -162,11 +167,14 @@ export const createTailscaleProvider = (
       }
     },
 
-    async approveSubnetRoutes(deviceId: string, routes: string[]): Promise<void> {
+    async approveSubnetRoutes(
+      deviceId: string,
+      routes: string[],
+    ): Promise<void> {
       const result = await request<void>(
         "POST",
         `/device/${deviceId}/routes`,
-        { routes }
+        { routes },
       );
 
       if (!result.ok) {
@@ -179,7 +187,7 @@ export const createTailscaleProvider = (
       const result = await request<void>(
         "PATCH",
         `/tailnet/${effectiveTailnet}/dns/split-dns`,
-        { [domain]: nameservers }
+        { [domain]: nameservers },
       );
 
       if (!result.ok) {
@@ -191,7 +199,7 @@ export const createTailscaleProvider = (
       const result = await request<void>(
         "PATCH",
         `/tailnet/${effectiveTailnet}/dns/split-dns`,
-        { [domain]: null }
+        { [domain]: null },
       );
 
       if (!result.ok) {
@@ -202,7 +210,7 @@ export const createTailscaleProvider = (
     async getPolicyFile(): Promise<Record<string, unknown> | null> {
       const result = await request<Record<string, unknown>>(
         "GET",
-        `/tailnet/${effectiveTailnet}/acl`
+        `/tailnet/${effectiveTailnet}/acl`,
       );
       if (!result.ok || !result.data) {
         return null;
@@ -214,7 +222,9 @@ export const createTailscaleProvider = (
       const policy = await this.getPolicyFile();
       if (!policy) return false;
 
-      const tagOwners = policy.tagOwners as Record<string, string[]> | undefined;
+      const tagOwners = policy.tagOwners as
+        | Record<string, string[]>
+        | undefined;
       if (!tagOwners) return false;
 
       return tag in tagOwners;
@@ -235,7 +245,7 @@ export const createTailscaleProvider = (
       if (!routes) return false;
 
       return Object.values(routes).some(
-        (approvers) => Array.isArray(approvers) && approvers.includes(tag)
+        (approvers) => Array.isArray(approvers) && approvers.includes(tag),
       );
     },
   };
@@ -248,7 +258,7 @@ export const createTailscaleProvider = (
 export const waitForDevice = async (
   provider: TailscaleProvider,
   hostname: string,
-  timeoutMs: number = 120000
+  timeoutMs: number = 120000,
 ): Promise<TailscaleDevice> => {
   const startTime = Date.now();
   const pollInterval = 5000;

@@ -17,7 +17,7 @@ export function assertNotRouter(app: string): void {
   if (app.startsWith("ambit-")) {
     throw new Error(
       "Cannot operate on ambit infrastructure apps (ambit-* prefix). " +
-      "Use the ambit CLI to manage routers.",
+        "Use the ambit CLI to manage routers.",
     );
   }
 }
@@ -75,7 +75,7 @@ export async function auditDeploy(app: string): Promise<DeployAuditResult> {
         if (hasTlsHandler) {
           result.warnings.push(
             "Service config has TLS handler on port 443. " +
-            "Safe only because no public IPs are allocated.",
+              "Safe only because no public IPs are allocated.",
           );
         }
       }
@@ -84,7 +84,7 @@ export async function auditDeploy(app: string): Promise<DeployAuditResult> {
       if (parsed.http_service?.force_https) {
         result.warnings.push(
           "http_service.force_https is enabled. Has no effect on Flycast " +
-          "and suggests config was written for public deployment.",
+            "and suggests config was written for public deployment.",
         );
       }
     }
@@ -97,7 +97,7 @@ export async function auditDeploy(app: string): Promise<DeployAuditResult> {
   if (result.flycast_allocations.length === 0) {
     result.warnings.push(
       "No Flycast IP allocated. App is not reachable via Flycast. " +
-      "Use fly_ip_allocate_flycast to allocate one.",
+        "Use fly_ip_allocate_flycast to allocate one.",
     );
   }
 

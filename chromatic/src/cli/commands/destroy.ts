@@ -3,20 +3,12 @@
 // =============================================================================
 
 import { parseArgs } from "@std/cli";
-import {
-  bold,
-  confirm,
-  red,
-  Spinner,
-} from "@ambit/cli/lib/cli";
+import { bold, confirm, red, Spinner } from "@ambit/cli/lib/cli";
 import { createOutput } from "@ambit/cli/lib/output";
 import { resolveOrg } from "@ambit/cli/src/resolve";
 import { registerCommand } from "../mod.ts";
 import { loadConfig } from "../../schemas/config.ts";
-import {
-  getInstanceStateSummary,
-  findCdpApp,
-} from "../../schemas/instance.ts";
+import { findCdpApp, getInstanceStateSummary } from "../../schemas/instance.ts";
 import { createFlyProvider } from "@ambit/cli/providers/fly";
 
 // =============================================================================
@@ -127,6 +119,7 @@ ${bold("EXAMPLES")}
 registerCommand({
   name: "destroy",
   description: "Delete a browser or pool and all its machines",
-  usage: "chromatic destroy <name> [--force] [--network NAME] [--org ORG] [--json]",
+  usage:
+    "chromatic destroy <name> [--force] [--network NAME] [--org ORG] [--json]",
   run: destroy,
 });

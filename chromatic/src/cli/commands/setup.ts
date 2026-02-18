@@ -3,11 +3,7 @@
 // =============================================================================
 
 import { parseArgs } from "@std/cli";
-import {
-  bold,
-  dim,
-  prompt,
-} from "@ambit/cli/lib/cli";
+import { bold, dim, prompt } from "@ambit/cli/lib/cli";
 import { createOutput } from "@ambit/cli/lib/output";
 import { registerCommand } from "../mod.ts";
 import { loadConfig, saveConfig } from "../../schemas/config.ts";
@@ -74,10 +70,14 @@ ${bold("EXAMPLES")}
   // Find router apps (lightweight — just Fly REST API, no machine/tailscale calls)
   const spinner = out.spinner("Discovering Routers");
   const routerApps = await listRouterApps(fly, org);
-  spinner.success(`Found ${routerApps.length} Router${routerApps.length !== 1 ? "s" : ""}`);
+  spinner.success(
+    `Found ${routerApps.length} Router${routerApps.length !== 1 ? "s" : ""}`,
+  );
 
   if (routerApps.length === 0) {
-    return out.die("No Router Found. Deploy one with: ambit deploy --network browsers");
+    return out.die(
+      "No Router Found. Deploy One With: ambit deploy --network browsers",
+    );
   }
 
   // Select network
@@ -129,7 +129,7 @@ ${bold("EXAMPLES")}
     .header("  Setup Complete!")
     .header("=".repeat(50))
     .blank()
-    .text("Chromatic is ready.")
+    .text("Chromatic Is Ready.")
     .blank()
     .dim("  chromatic create my-browser")
     .blank();

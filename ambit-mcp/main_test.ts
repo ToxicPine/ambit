@@ -47,13 +47,26 @@ Deno.test("common tools present in both modes", () => {
   const safe = buildTools("safe");
   const unsafe = buildTools("unsafe");
   const commonNames = [
-    "fly_auth_status", "fly_app_status", "fly_machine_list",
-    "fly_machine_start", "fly_machine_stop", "fly_machine_destroy",
-    "fly_machine_exec", "fly_ip_list", "fly_ip_release",
-    "fly_secrets_list", "fly_secrets_set", "fly_secrets_unset",
-    "fly_scale_show", "fly_scale_count", "fly_scale_vm",
-    "fly_volumes_list", "fly_volumes_create", "fly_volumes_destroy",
-    "fly_config_show", "fly_logs",
+    "fly_auth_status",
+    "fly_app_status",
+    "fly_machine_list",
+    "fly_machine_start",
+    "fly_machine_stop",
+    "fly_machine_destroy",
+    "fly_machine_exec",
+    "fly_ip_list",
+    "fly_ip_release",
+    "fly_secrets_list",
+    "fly_secrets_set",
+    "fly_secrets_unset",
+    "fly_scale_show",
+    "fly_scale_count",
+    "fly_scale_vm",
+    "fly_volumes_list",
+    "fly_volumes_create",
+    "fly_volumes_destroy",
+    "fly_config_show",
+    "fly_logs",
   ];
   for (const name of commonNames) {
     assertEquals(name in safe, true, `${name} missing from safe`);
@@ -80,7 +93,10 @@ Deno.test("templated tools present in both but differ", () => {
   assertEquals("no_public_ips" in safe.fly_deploy.inputSchema, false);
 
   // fly_app_list descriptions differ
-  assertNotEquals(safe.fly_app_list.description, unsafe.fly_app_list.description);
+  assertNotEquals(
+    safe.fly_app_list.description,
+    unsafe.fly_app_list.description,
+  );
 });
 
 // =============================================================================
@@ -224,13 +240,13 @@ Deno.test("assertNotRouter allows normal app names", () => {
 
 import {
   FlyAppListSchema,
-  FlyMachineListSchema,
+  FlyAuthSchema,
   FlyIpListSchema,
+  FlyLogEntrySchema,
+  FlyMachineListSchema,
+  FlyScaleShowSchema,
   FlySecretListSchema,
   FlyVolumeListSchema,
-  FlyScaleShowSchema,
-  FlyLogEntrySchema,
-  FlyAuthSchema,
 } from "./src/schemas.ts";
 
 Deno.test("FlyAuthSchema parses valid auth response", () => {
@@ -295,7 +311,11 @@ Deno.test("FlyIpListSchema parses IP list", () => {
 
 Deno.test("FlySecretListSchema parses secrets", () => {
   const data = [
-    { Name: "DATABASE_URL", Digest: "abc123", CreatedAt: "2024-01-01T00:00:00Z" },
+    {
+      Name: "DATABASE_URL",
+      Digest: "abc123",
+      CreatedAt: "2024-01-01T00:00:00Z",
+    },
   ];
   const result = FlySecretListSchema.parse(data);
   assertEquals(result[0].Name, "DATABASE_URL");

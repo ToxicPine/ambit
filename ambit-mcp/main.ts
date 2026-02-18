@@ -1,6 +1,6 @@
 import { parseArgs } from "@std/cli";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio";
 import { buildTools, type Mode } from "./src/tools.ts";
 import { createHandlers } from "./src/handlers.ts";
 
@@ -16,8 +16,6 @@ const server = new McpServer({
   version: "0.1.0",
 });
 
-// --- Register tools ---
-
 const tools = buildTools(mode);
 const handlers = createHandlers(mode);
 
@@ -30,7 +28,13 @@ for (const [name, def] of Object.entries(tools)) {
     annotations: def.annotations,
   }, async (args) => {
     if (!handler) {
-      return { content: [{ type: "text" as const, text: `${name}: no handler registered` }], isError: true };
+      return {
+        content: [{
+          type: "text" as const,
+          text: `${name}: no handler registered`,
+        }],
+        isError: true,
+      };
     }
     try {
       return await handler(args);
@@ -41,11 +45,9 @@ for (const [name, def] of Object.entries(tools)) {
   });
 }
 
-// --- Register resources ---
-
 if (import.meta.main) {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 }
 
-export { server, tools, mode };
+export { mode, server, tools };

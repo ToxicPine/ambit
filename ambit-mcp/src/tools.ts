@@ -33,9 +33,15 @@ type ToolMap = Record<string, ToolDef>;
 // Annotations
 // =============================================================================
 
-const readOnly = { annotations: { readOnlyHint: true, destructiveHint: false } };
-const mutation = { annotations: { readOnlyHint: false, destructiveHint: false } };
-const destructive = { annotations: { readOnlyHint: false, destructiveHint: true } };
+const readOnly = {
+  annotations: { readOnlyHint: true, destructiveHint: false },
+};
+const mutation = {
+  annotations: { readOnlyHint: false, destructiveHint: false },
+};
+const destructive = {
+  annotations: { readOnlyHint: false, destructiveHint: true },
+};
 
 // =============================================================================
 // Shared Input Schemas
@@ -47,7 +53,9 @@ const inputs = {
   app: z.string()
     .describe("The Fly.io app name."),
   org: z.string().optional()
-    .describe("Fly.io organization slug. If omitted and only one org exists, it is used automatically."),
+    .describe(
+      "Fly.io organization slug. If omitted and only one org exists, it is used automatically.",
+    ),
   region: z.string().optional()
     .describe("Fly.io region (e.g. 'iad', 'sea', 'lhr')."),
   machine_id: z.string()
@@ -61,19 +69,33 @@ const inputs = {
 };
 
 const deployInputs = {
-  app: inputs.app.describe("The Fly.io app name to deploy to. Must already exist (use fly_app_create first)."),
+  app: inputs.app.describe(
+    "The Fly.io app name to deploy to. Must already exist (use fly_app_create first).",
+  ),
   image: z.string().optional()
-    .describe("Docker image to deploy (e.g. 'registry.fly.io/my-app:latest'). Mutually exclusive with dockerfile."),
+    .describe(
+      "Docker image to deploy (e.g. 'registry.fly.io/my-app:latest'). Mutually exclusive with dockerfile.",
+    ),
   dockerfile: z.string().optional()
-    .describe("Path to a Dockerfile to build and deploy. Mutually exclusive with image."),
+    .describe(
+      "Path to a Dockerfile to build and deploy. Mutually exclusive with image.",
+    ),
   region: z.string().optional()
-    .describe("Primary region for the deployment (e.g. 'iad', 'sea', 'lhr'). Defaults to config region."),
+    .describe(
+      "Primary region for the deployment (e.g. 'iad', 'sea', 'lhr'). Defaults to config region.",
+    ),
   strategy: z.enum(["canary", "rolling", "bluegreen", "immediate"]).optional()
-    .describe("Deployment strategy. 'rolling' (default) replaces machines gradually. 'immediate' replaces all at once. 'canary' tests on one machine first. 'bluegreen' spins up a full parallel set."),
+    .describe(
+      "Deployment strategy. 'rolling' (default) replaces machines gradually. 'immediate' replaces all at once. 'canary' tests on one machine first. 'bluegreen' spins up a full parallel set.",
+    ),
   env: z.record(z.string(), z.string()).optional()
-    .describe("Environment variables as KEY: VALUE pairs. NOT secrets — use fly_secrets_set for sensitive values."),
+    .describe(
+      "Environment variables as KEY: VALUE pairs. NOT secrets — use fly_secrets_set for sensitive values.",
+    ),
   build_args: z.record(z.string(), z.string()).optional()
-    .describe("Docker build-time arguments as KEY: VALUE pairs. Only used when building from a Dockerfile."),
+    .describe(
+      "Docker build-time arguments as KEY: VALUE pairs. Only used when building from a Dockerfile.",
+    ),
 };
 
 // =============================================================================
@@ -111,7 +133,6 @@ const logEntryOutput = z.object({
 // =============================================================================
 
 const common: ToolMap = {
-
   fly_auth_status: {
     description:
       `Check whether the fly CLI is authenticated and return the current user ` +
@@ -199,7 +220,9 @@ const common: ToolMap = {
       app: inputs.app,
       machine_id: inputs.machine_id,
       force: z.boolean().optional()
-        .describe("Force-kill the machine regardless of current state. Use when a machine is stuck."),
+        .describe(
+          "Force-kill the machine regardless of current state. Use when a machine is stuck.",
+        ),
     },
     outputSchema: {
       ok: z.boolean(),
@@ -220,7 +243,9 @@ const common: ToolMap = {
       app: inputs.app,
       machine_id: inputs.machine_id,
       command: z.array(z.string())
-        .describe("The command as an array of arguments. Example: ['ls', '-la', '/app'] or ['sh', '-c', 'ps aux | grep node']."),
+        .describe(
+          "The command as an array of arguments. Example: ['ls', '-la', '/app'] or ['sh', '-c', 'ps aux | grep node'].",
+        ),
     },
     outputSchema: {
       stdout: z.string(),
@@ -282,9 +307,13 @@ const common: ToolMap = {
     inputSchema: {
       app: inputs.app,
       secrets: z.record(z.string(), z.string())
-        .describe("Secrets as KEY: VALUE pairs. Example: { 'DATABASE_URL': 'postgres://...', 'API_KEY': 'sk-...' }."),
+        .describe(
+          "Secrets as KEY: VALUE pairs. Example: { 'DATABASE_URL': 'postgres://...', 'API_KEY': 'sk-...' }.",
+        ),
       stage: z.boolean().optional()
-        .describe("If true, secrets are staged but NOT deployed. They take effect on the next fly_deploy."),
+        .describe(
+          "If true, secrets are staged but NOT deployed. They take effect on the next fly_deploy.",
+        ),
     },
     outputSchema: {
       ok: z.boolean(),
@@ -300,7 +329,9 @@ const common: ToolMap = {
     inputSchema: {
       app: inputs.app,
       keys: z.array(z.string())
-        .describe("Secret names to remove. Example: ['OLD_API_KEY', 'DEPRECATED_TOKEN']."),
+        .describe(
+          "Secret names to remove. Example: ['OLD_API_KEY', 'DEPRECATED_TOKEN'].",
+        ),
     },
     outputSchema: {
       ok: z.boolean(),
@@ -337,9 +368,13 @@ const common: ToolMap = {
       app: inputs.app,
       count: z.number().int().min(0).max(20)
         .describe("Target number of machines. 0 removes all machines. Max 20."),
-      region: inputs.region.describe("Only scale in this region. Without this, scales across all regions."),
+      region: inputs.region.describe(
+        "Only scale in this region. Without this, scales across all regions.",
+      ),
       process_group: z.string().optional()
-        .describe("Only scale this process group (e.g. 'app', 'worker'). Without this, scales the default group."),
+        .describe(
+          "Only scale this process group (e.g. 'app', 'worker'). Without this, scales the default group.",
+        ),
     },
     outputSchema: {
       ok: z.boolean(),
@@ -348,8 +383,7 @@ const common: ToolMap = {
   },
 
   fly_scale_vm: {
-    description:
-      `Change the VM size for an app's machines. Common sizes: ` +
+    description: `Change the VM size for an app's machines. Common sizes: ` +
       `'shared-cpu-1x', 'shared-cpu-2x', 'shared-cpu-4x', ` +
       `'performance-1x', 'performance-2x', etc.`,
     inputSchema: {
@@ -357,7 +391,9 @@ const common: ToolMap = {
       size: z.string()
         .describe("VM size name (e.g. 'shared-cpu-1x', 'performance-1x')."),
       memory: z.number().int().optional()
-        .describe("Override memory in MB. If not set, uses the default for the VM size."),
+        .describe(
+          "Override memory in MB. If not set, uses the default for the VM size.",
+        ),
     },
     outputSchema: {
       ok: z.boolean(),
@@ -392,9 +428,13 @@ const common: ToolMap = {
     inputSchema: {
       app: inputs.app,
       name: z.string().optional()
-        .describe("Volume name. Used in fly.toml [[mounts]] source field. Defaults to 'data'."),
+        .describe(
+          "Volume name. Used in fly.toml [[mounts]] source field. Defaults to 'data'.",
+        ),
       region: z.string()
-        .describe("Region to create the volume in (e.g. 'iad'). Must match where machines run."),
+        .describe(
+          "Region to create the volume in (e.g. 'iad'). Must match where machines run.",
+        ),
       size_gb: z.number().int().min(1).max(500).optional()
         .describe("Volume size in gigabytes. Default: 1 GB. Max: 500 GB."),
     },
@@ -415,7 +455,9 @@ const common: ToolMap = {
       app: inputs.app,
       volume_id: inputs.volume_id,
       confirm: z.string()
-        .describe("Must exactly match the volume_id. Safety confirmation to prevent accidental data loss."),
+        .describe(
+          "Must exactly match the volume_id. Safety confirmation to prevent accidental data loss.",
+        ),
     },
     outputSchema: {
       ok: z.boolean(),
@@ -467,8 +509,7 @@ function appListTool(mode: Mode): ToolMap {
   const base =
     `List all Fly.io apps in the organization. Each app includes its ` +
     `name, status, and organization.`;
-  const safe =
-    ` Results exclude ambit infrastructure apps (ambit-* prefix).`;
+  const safe = ` Results exclude ambit infrastructure apps (ambit-* prefix).`;
 
   return {
     fly_app_list: {
@@ -501,7 +542,9 @@ function appCreateTool(mode: Mode): ToolMap {
           `ambit network to ensure the app lives on the correct 6PN.`,
         inputSchema: {
           name: z.string()
-            .describe("Name for the new app. Must be globally unique on Fly.io."),
+            .describe(
+              "Name for the new app. Must be globally unique on Fly.io.",
+            ),
           org: inputs.org,
         },
         outputSchema: {
@@ -525,7 +568,9 @@ function appCreateTool(mode: Mode): ToolMap {
           .describe("Name for the new app. Must be globally unique on Fly.io."),
         org: inputs.org,
         network: z.string().optional()
-          .describe("Custom private network name. If set, the app is created on this 6PN via --network."),
+          .describe(
+            "Custom private network name. If set, the app is created on this 6PN via --network.",
+          ),
       },
       outputSchema: {
         name: z.string(),
@@ -541,8 +586,7 @@ function appDestroyTool(mode: Mode): ToolMap {
   const base =
     `Permanently destroy a Fly.io app and all its machines, volumes, and ` +
     `IP allocations. This cannot be undone.`;
-  const safe =
-    ` Cannot target ambit infrastructure apps (ambit-* prefix).`;
+  const safe = ` Cannot target ambit infrastructure apps (ambit-* prefix).`;
 
   return {
     fly_app_destroy: {
@@ -561,8 +605,7 @@ function deployTool(mode: Mode): ToolMap {
   if (mode === "safe") {
     return {
       fly_deploy: {
-        description:
-          `Deploy an app from a Docker image or Dockerfile.\n\n` +
+        description: `Deploy an app from a Docker image or Dockerfile.\n\n` +
           `Safety enforcement:\n` +
           `- --no-public-ips is ALWAYS passed (no public IP allocation)\n` +
           `- --flycast is ALWAYS passed (ensures Flycast private IPv6)\n` +
@@ -602,11 +645,17 @@ function deployTool(mode: Mode): ToolMap {
       inputSchema: {
         ...deployInputs,
         no_public_ips: z.boolean().optional()
-          .describe("If true, pass --no-public-ips to prevent public IP allocation on deploy."),
+          .describe(
+            "If true, pass --no-public-ips to prevent public IP allocation on deploy.",
+          ),
         flycast: z.boolean().optional()
-          .describe("If true, pass --flycast to allocate a private Flycast IPv6 address."),
+          .describe(
+            "If true, pass --flycast to allocate a private Flycast IPv6 address.",
+          ),
         ha: z.boolean().optional()
-          .describe("If false, disable high-availability (skip creating spare machines). Default: true."),
+          .describe(
+            "If false, disable high-availability (skip creating spare machines). Default: true.",
+          ),
       },
       outputSchema: {
         ok: z.boolean(),
@@ -635,7 +684,9 @@ function ipAllocateTools(mode: Mode): ToolMap {
         inputSchema: {
           app: inputs.app,
           network: inputs.network
-            .describe("The custom private network that will be able to reach this app via Flycast. REQUIRED."),
+            .describe(
+              "The custom private network that will be able to reach this app via Flycast. REQUIRED.",
+            ),
         },
         outputSchema: {
           address: z.string(),
@@ -660,11 +711,17 @@ function ipAllocateTools(mode: Mode): ToolMap {
       inputSchema: {
         app: inputs.app,
         private: z.boolean().optional()
-          .describe("If true, allocate a private Flycast IPv6 (--private). If false/omitted, allocates a PUBLIC IPv6."),
+          .describe(
+            "If true, allocate a private Flycast IPv6 (--private). If false/omitted, allocates a PUBLIC IPv6.",
+          ),
         network: z.string().optional()
-          .describe("Custom network name for Flycast (--network). Only used with private: true."),
+          .describe(
+            "Custom network name for Flycast (--network). Only used with private: true.",
+          ),
         region: inputs.region,
-        org: inputs.org.describe("For cross-org Flycast: the organization that will access this app."),
+        org: inputs.org.describe(
+          "For cross-org Flycast: the organization that will access this app.",
+        ),
       },
       outputSchema: {
         address: z.string(),
@@ -683,7 +740,9 @@ function ipAllocateTools(mode: Mode): ToolMap {
       inputSchema: {
         app: inputs.app,
         shared: z.boolean().optional()
-          .describe("If true, allocate a shared IPv4 (cheaper, sufficient for most use cases)."),
+          .describe(
+            "If true, allocate a shared IPv4 (cheaper, sufficient for most use cases).",
+          ),
         region: inputs.region,
       },
       outputSchema: {
@@ -705,7 +764,6 @@ function ipAllocateTools(mode: Mode): ToolMap {
 // =============================================================================
 
 const safeOnly: ToolMap = {
-
   router_list: {
     description:
       `Discover all ambit subnet routers in the organization. Each ` +
@@ -761,11 +819,17 @@ const safeOnly: ToolMap = {
       `(~/.config/ambit/credentials.json) or TAILSCALE_API_KEY env var.`,
     inputSchema: {
       network: inputs.network
-        .describe("Custom private network name. Becomes the TLD on your tailnet (e.g. 'browsers' → '<app>.browsers')."),
+        .describe(
+          "Custom private network name. Becomes the TLD on your tailnet (e.g. 'browsers' → '<app>.browsers').",
+        ),
       org: inputs.org,
-      region: inputs.region.describe("Region for the router machine. Default: 'iad'."),
+      region: inputs.region.describe(
+        "Region for the router machine. Default: 'iad'.",
+      ),
       self_approve: z.boolean().optional()
-        .describe("If true, approve subnet routes via Tailscale API instead of relying on autoApprovers in the ACL policy."),
+        .describe(
+          "If true, approve subnet routes via Tailscale API instead of relying on autoApprovers in the ACL policy.",
+        ),
     },
     outputSchema: {
       network: z.string(),
@@ -802,7 +866,9 @@ const safeOnly: ToolMap = {
       `If network is omitted, checks all discovered routers.`,
     inputSchema: {
       network: z.string().optional()
-        .describe("Specific network to check. If omitted, checks all discovered routers."),
+        .describe(
+          "Specific network to check. If omitted, checks all discovered routers.",
+        ),
       org: inputs.org,
     },
     outputSchema: {
@@ -837,7 +903,6 @@ const safeOnly: ToolMap = {
 // =============================================================================
 
 const unsafeOnly: ToolMap = {
-
   fly_certs_list: {
     description:
       `List TLS certificates configured for an app. Certificates are used ` +

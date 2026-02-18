@@ -9,7 +9,7 @@ import { registerCommand } from "../mod.ts";
 import { createFlyProvider } from "../../providers/fly.ts";
 import { findRouterApp } from "../../discovery.ts";
 import { resolveOrg } from "../../resolve.ts";
-import { assertNotRouter, scanFlyToml, auditDeploy } from "../../guard.ts";
+import { assertNotRouter, auditDeploy, scanFlyToml } from "../../guard.ts";
 
 // =============================================================================
 // Deploy Command
@@ -80,11 +80,13 @@ ${bold("EXAMPLES")}
 
   const app = args._[0] as string | undefined;
   if (!app) {
-    return out.die("App name is required. Usage: ambit deploy <app> --network <name>");
+    return out.die(
+      "App Name Required. Usage: ambit deploy <app> --network <name>",
+    );
   }
 
   if (!args.network) {
-    return out.die("--network is required. Specify the custom 6PN to target.");
+    return out.die("--network Is Required");
   }
 
   try {
@@ -94,7 +96,7 @@ ${bold("EXAMPLES")}
   }
 
   if (args.image && args.config) {
-    return out.die("--image and --config are mutually exclusive.");
+    return out.die("--image and --config Are Mutually Exclusive");
   }
 
   const network = args.network;
@@ -133,7 +135,7 @@ ${bold("EXAMPLES")}
     routerSpinner.fail("No Router Found");
     return out.die(
       `No ambit router found on network '${network}'. ` +
-      `Run 'ambit create ${network}' first.`,
+        `Run 'ambit create ${network}' first.`,
     );
   }
 
@@ -150,12 +152,16 @@ ${bold("EXAMPLES")}
   const exists = await fly.appExists(app);
 
   if (exists) {
-    out.ok(`App '${app}' exists`);
+    out.ok(`App '${app}' Exists`);
   } else {
-    out.info(`App '${app}' does not exist — will create on network '${network}'`);
+    out.info(
+      `App '${app}' Does Not Exist — Will Create on Network '${network}'`,
+    );
 
     if (!args.yes && !args.json) {
-      const confirmed = await confirm(`Create app '${app}' on network '${network}'?`);
+      const confirmed = await confirm(
+        `Create app '${app}' on network '${network}'?`,
+      );
       if (!confirmed) {
         out.text("Cancelled.");
         return;
@@ -189,7 +195,7 @@ ${bold("EXAMPLES")}
 
     if (configPath) {
       if (!(await fileExists(configPath))) {
-        return out.die(`Config file not found: ${configPath}`);
+        return out.die(`Config File Not Found: ${configPath}`);
       }
 
       const tomlContent = await Deno.readTextFile(configPath);
@@ -200,7 +206,9 @@ ${bold("EXAMPLES")}
         for (const err of scan.errors) {
           out.err(err);
         }
-        return out.die("Pre-flight check failed. Fix fly.toml before deploying.");
+        return out.die(
+          "Pre-flight Check Failed. Fix fly.toml Before Deploying.",
+        );
       }
 
       for (const warn of scan.warnings) {
@@ -209,10 +217,10 @@ ${bold("EXAMPLES")}
 
       out.ok(`Scanned ${configPath}`);
     } else {
-      out.info("No fly.toml found — deploying without config scan");
+      out.info("No fly.toml Found — Deploying Without Config Scan");
     }
   } else {
-    out.info("Image mode — skipping TOML scan");
+    out.info("Image Mode — Skipping TOML Scan");
   }
 
   out.blank();
@@ -239,7 +247,7 @@ ${bold("EXAMPLES")}
 
   out.header("Step 6: Post-flight Audit").blank();
 
-  const auditSpinner = out.spinner("Auditing deployment");
+  const auditSpinner = out.spinner("Auditing Deployment");
   const audit = await auditDeploy(fly, app, network);
   auditSpinner.success("Audit Complete");
 
@@ -262,7 +270,7 @@ ${bold("EXAMPLES")}
   const hasIssues = audit.public_ips_released > 0 || audit.warnings.length > 0;
 
   if (hasIssues) {
-    out.fail("Deploy completed with issues", {
+    out.fail("Deploy Completed with Issues", {
       app,
       network,
       created,
@@ -289,10 +297,12 @@ ${bold("EXAMPLES")}
 
   out.blank()
     .header("=".repeat(50))
-    .header(hasIssues ? "  Deploy Completed (with warnings)" : "  Deploy Completed!")
+    .header(
+      hasIssues ? "  Deploy Completed (with warnings)" : "  Deploy Completed!",
+    )
     .header("=".repeat(50))
     .blank()
-    .text(`App '${app}' is reachable from your tailnet as:`)
+    .text(`App '${app}' Is Reachable from Your Tailnet as:`)
     .text(`  ${app}.${network}`)
     .blank();
 
@@ -306,6 +316,7 @@ ${bold("EXAMPLES")}
 registerCommand({
   name: "deploy",
   description: "Deploy an app safely on a custom private network",
-  usage: "ambit deploy <app> --network <name> [--image <img>] [--org <org>] [--region <region>]",
+  usage:
+    "ambit deploy <app> --network <name> [--image <img>] [--org <org>] [--region <region>]",
   run: deploy,
 });

@@ -41,7 +41,7 @@ export function assertNotRouter(app: string): void {
   if (app.startsWith("ambit-")) {
     throw new Error(
       "Cannot deploy ambit infrastructure apps (ambit-* prefix). " +
-      "Use 'ambit create' to manage routers.",
+        "Use 'ambit create' to manage routers.",
     );
   }
 }
@@ -72,16 +72,20 @@ export function scanFlyToml(tomlContent: string): PreflightResult {
   }
 
   // Check http_service.force_https — nonsensical on Flycast
-  const httpService = parsed.http_service as Record<string, unknown> | undefined;
+  const httpService = parsed.http_service as
+    | Record<string, unknown>
+    | undefined;
   if (httpService?.force_https) {
     result.errors.push(
       "http_service.force_https is enabled. " +
-      "This implies public HTTPS which is incompatible with Flycast-only deployment.",
+        "This implies public HTTPS which is incompatible with Flycast-only deployment.",
     );
   }
 
   // Check [[services]] for TLS on 443 — dangerous if a public IP were ever added
-  const services = parsed.services as Array<Record<string, unknown>> | undefined;
+  const services = parsed.services as
+    | Array<Record<string, unknown>>
+    | undefined;
   if (Array.isArray(services)) {
     result.warnings.push(
       "fly.toml uses [[services]] blocks. Consider migrating to [http_service].",
@@ -100,7 +104,7 @@ export function scanFlyToml(tomlContent: string): PreflightResult {
         ) {
           result.errors.push(
             "Service has TLS handler on port 443. " +
-            "This is designed for public HTTPS and incompatible with Flycast-only deployment.",
+              "This is designed for public HTTPS and incompatible with Flycast-only deployment.",
           );
         }
       }
@@ -157,25 +161,27 @@ export async function auditDeploy(
   // Phase 2: Inspect merged config for dangerous patterns
   const config = await fly.getConfig(app);
   if (config) {
-    const services = config.services as Array<{
-      ports?: Array<{ handlers?: string[]; port?: number }>;
-    }> | undefined;
+    const services = config.services as
+      | Array<{
+        ports?: Array<{ handlers?: string[]; port?: number }>;
+      }>
+      | undefined;
 
     if (Array.isArray(services) && services.length > 0) {
       const hasTlsHandler = services.some((svc) =>
-        svc.ports?.some((p) =>
-          p.handlers?.includes("tls") && p.port === 443
-        ),
+        svc.ports?.some((p) => p.handlers?.includes("tls") && p.port === 443)
       );
       if (hasTlsHandler) {
         result.warnings.push(
           "Merged config has TLS handler on port 443. " +
-          "Safe only because no public IPs are allocated.",
+            "Safe only because no public IPs are allocated.",
         );
       }
     }
 
-    const httpService = config.http_service as { force_https?: boolean } | undefined;
+    const httpService = config.http_service as
+      | { force_https?: boolean }
+      | undefined;
     if (httpService?.force_https) {
       result.warnings.push(
         "http_service.force_https is enabled. Has no effect on Flycast.",

@@ -15,9 +15,10 @@
     "jsr:@std/streams@^1.0.9": "1.0.16",
     "jsr:@std/toml@1": "1.0.11",
     "jsr:@zod/zod@^4.3.6": "4.3.6",
-    "npm:@modelcontextprotocol/sdk@^1.26.0": "1.26.0_zod@3.25.76_hono@4.11.9_ajv@8.17.1_express@5.2.1",
+    "npm:@modelcontextprotocol/sdk@^1.26.0": "1.26.0_zod@4.3.6_hono@4.11.9_ajv@8.17.1_express@5.2.1",
     "npm:puppeteer-core@*": "19.0.0",
-    "npm:puppeteer-screen-recorder@3.0.6": "3.0.6_puppeteer@19.0.0"
+    "npm:puppeteer-screen-recorder@3.0.6": "3.0.6_puppeteer@19.0.0",
+    "npm:zod@^4.3.6": "4.3.6"
   },
   "jsr": {
     "@cliffy/table@1.0.0": {
@@ -146,7 +147,7 @@
         "hono"
       ]
     },
-    "@modelcontextprotocol/sdk@1.26.0_zod@3.25.76_hono@4.11.9_ajv@8.17.1_express@5.2.1": {
+    "@modelcontextprotocol/sdk@1.26.0_zod@4.3.6_hono@4.11.9_ajv@8.17.1_express@5.2.1": {
       "integrity": "sha512-Y5RmPncpiDtTXDbLKswIJzTqu2hyBKxTNsgKqKclDbhIgg1wgtf1fRuvxgTnRfcnxtvvgbIEcqUOzZrJ6iSReg==",
       "dependencies": [
         "@hono/node-server",
@@ -952,14 +953,14 @@
         "fd-slicer"
       ]
     },
-    "zod-to-json-schema@3.25.1_zod@3.25.76": {
+    "zod-to-json-schema@3.25.1_zod@4.3.6": {
       "integrity": "sha512-pM/SU9d3YAggzi6MtR4h7ruuQlqKtad8e9S0fmxcMi+ueAK5Korys/aWcV9LIIHTVbj01NdzxcnXSN+O74ZIVA==",
       "dependencies": [
         "zod"
       ]
     },
-    "zod@3.25.76": {
-      "integrity": "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="
+    "zod@4.3.6": {
+      "integrity": "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="
     }
   },
   "workspace": {
@@ -981,8 +982,8 @@
           "jsr:@std/assert@1",
           "jsr:@std/cli@^1.0.27",
           "jsr:@std/path@^1.1.4",
-          "jsr:@zod/zod@^4.3.6",
-          "npm:@modelcontextprotocol/sdk@^1.26.0"
+          "npm:@modelcontextprotocol/sdk@^1.26.0",
+          "npm:zod@^4.3.6"
         ]
       },
       "chromatic": {
@@ -992,6 +993,11 @@
           "jsr:@std/cli@^1.0.27",
           "jsr:@std/path@^1.1.4",
           "jsr:@zod/zod@^4.3.6"
+        ]
+      },
+      "test-app": {
+        "dependencies": [
+          "jsr:@std/assert@1"
         ]
       }
     }

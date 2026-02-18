@@ -10,9 +10,9 @@ import { registerCommand } from "../mod.ts";
 import { createFlyProvider } from "../../providers/fly.ts";
 import { requireTailscaleProvider } from "../../credentials.ts";
 import {
-  listRouterApps,
   getRouterMachineInfo,
   getRouterTailscaleInfo,
+  listRouterApps,
   type RouterApp,
   type RouterMachineInfo,
   type RouterTailscaleInfo,
@@ -45,7 +45,10 @@ ${bold("OPTIONS")}
   }
 
   const out = createOutput<{
-    routers: (RouterApp & { machine: RouterMachineInfo | null; tailscale: RouterTailscaleInfo | null })[];
+    routers: (RouterApp & {
+      machine: RouterMachineInfo | null;
+      tailscale: RouterTailscaleInfo | null;
+    })[];
   }>(args.json);
 
   const fly = createFlyProvider();
@@ -58,7 +61,9 @@ ${bold("OPTIONS")}
   // 1. Find all router apps
   const spinner = out.spinner("Discovering Routers");
   const routerApps = await listRouterApps(fly, org);
-  spinner.success(`Found ${routerApps.length} Router${routerApps.length !== 1 ? "s" : ""}`);
+  spinner.success(
+    `Found ${routerApps.length} Router${routerApps.length !== 1 ? "s" : ""}`,
+  );
 
   if (routerApps.length === 0) {
     out.blank()
@@ -72,7 +77,10 @@ ${bold("OPTIONS")}
   }
 
   // 2. Get machine + tailscale state for each
-  const routers: (RouterApp & { machine: RouterMachineInfo | null; tailscale: RouterTailscaleInfo | null })[] = [];
+  const routers: (RouterApp & {
+    machine: RouterMachineInfo | null;
+    tailscale: RouterTailscaleInfo | null;
+  })[] = [];
 
   for (const app of routerApps) {
     const machine = await getRouterMachineInfo(fly, app.appName);
@@ -88,7 +96,14 @@ ${bold("OPTIONS")}
       ? r.tailscale.online ? "online" : "offline"
       : "not found";
     const tag = getRouterTag(r.network);
-    return [r.network, r.appName, r.machine?.region ?? "-", r.machine?.state ?? "unknown", tsStatus, tag];
+    return [
+      r.network,
+      r.appName,
+      r.machine?.region ?? "-",
+      r.machine?.state ?? "unknown",
+      tsStatus,
+      tag,
+    ];
   });
 
   const table = new Table()

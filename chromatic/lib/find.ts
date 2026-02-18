@@ -1,19 +1,13 @@
-// =============================================================================
-// File Finder - Parent Directory Search
-// =============================================================================
-
-import { join, dirname, resolve } from "@std/path";
-
-// =============================================================================
-// Find File in Parent Directories
-// =============================================================================
+import { dirname, join, resolve } from "@std/path";
 
 export const findFileUp = async (
   filename: string,
-  startDir?: string
+  startDir?: string,
 ): Promise<string | null> => {
   let current = resolve(startDir ?? Deno.cwd());
-  const root = Deno.build.os === "windows" ? current.split(":")[0] + ":\\" : "/";
+  const root = Deno.build.os === "windows"
+    ? current.split(":")[0] + ":\\"
+    : "/";
 
   while (current !== root) {
     const candidate = join(current, filename);
@@ -31,7 +25,6 @@ export const findFileUp = async (
     current = parent;
   }
 
-  // Check root directory as final attempt
   try {
     const rootCandidate = join(root, filename);
     const stat = await Deno.stat(rootCandidate);
@@ -39,17 +32,16 @@ export const findFileUp = async (
       return rootCandidate;
     }
   } catch {
-    // Not found
+    // Not Found
   }
 
   return null;
 };
 
-// =============================================================================
-// Relative Path for Display
-// =============================================================================
-
-export const getRelativePath = (absolutePath: string, from?: string): string => {
+export const getRelativePath = (
+  absolutePath: string,
+  from?: string,
+): string => {
   const base = resolve(from ?? Deno.cwd());
 
   if (absolutePath.startsWith(base)) {

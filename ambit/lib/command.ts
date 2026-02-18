@@ -2,7 +2,7 @@
 // Shell Command Helpers
 // =============================================================================
 
-import { Spinner, statusOk, statusErr } from "./cli.ts";
+import { Spinner, statusErr, statusOk } from "./cli.ts";
 
 // =============================================================================
 // Command Result Type
@@ -28,7 +28,7 @@ export const runCommand = async (
     cwd?: string;
     env?: Record<string, string>;
     stdin?: "inherit" | "null" | "piped";
-  }
+  },
 ): Promise<CommandResult> => {
   const [cmd, ...cmdArgs] = args;
 
@@ -73,7 +73,7 @@ export const runCommandJson = async <T>(
   options?: {
     cwd?: string;
     env?: Record<string, string>;
-  }
+  },
 ): Promise<{ success: boolean; data?: T; error?: string }> => {
   const result = await runCommand(args, options);
 
@@ -108,7 +108,7 @@ export const runWithSpinner = async (
   options?: {
     cwd?: string;
     env?: Record<string, string>;
-  }
+  },
 ): Promise<CommandResult> => {
   const spinner = new Spinner();
   spinner.start(label);
@@ -137,7 +137,7 @@ export const runQuiet = async (
   options?: {
     cwd?: string;
     env?: Record<string, string>;
-  }
+  },
 ): Promise<{ success: boolean; output: string }> => {
   const result = await runWithSpinner(label, args, options);
   return {
@@ -158,7 +158,7 @@ export const runInteractive = async (
   options?: {
     cwd?: string;
     env?: Record<string, string>;
-  }
+  },
 ): Promise<{ success: boolean; code: number }> => {
   const [cmd, ...cmdArgs] = args;
 

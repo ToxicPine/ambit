@@ -13,7 +13,7 @@
 // =============================================================================
 
 import { parseArgs } from "@std/cli";
-import { resolve, dirname, join } from "@std/path";
+import { dirname, join, resolve } from "@std/path";
 
 // =============================================================================
 // Types
@@ -38,7 +38,9 @@ const MCP_FILENAME = ".mcp.json";
 
 async function findFileUp(filename: string): Promise<string | null> {
   let current = resolve(Deno.cwd());
-  const root = Deno.build.os === "windows" ? current.split(":")[0] + ":\\" : "/";
+  const root = Deno.build.os === "windows"
+    ? current.split(":")[0] + ":\\"
+    : "/";
 
   while (current !== root) {
     const candidate = join(current, filename);
@@ -93,7 +95,8 @@ async function confirm(message: string): Promise<boolean> {
   Deno.stdout.writeSync(new TextEncoder().encode(`${message} [y/N] `));
   const n = await Deno.stdin.read(buf);
   if (n === null) return false;
-  const answer = new TextDecoder().decode(buf.subarray(0, n)).trim().toLowerCase();
+  const answer = new TextDecoder().decode(buf.subarray(0, n)).trim()
+    .toLowerCase();
   return answer === "y" || answer === "yes";
 }
 
@@ -133,7 +136,9 @@ ${bold("OPTIONS")}
   --unsafe              Configure for Unsafe Mode ${dim("(default: safe)")}
   --create              Create ${MCP_FILENAME} if Not Found
   --dry-run             Preview Changes Without Writing
-  --flake <path>        Path to the ambit-mcp Flake ${dim("(default: auto-detect)")}
+  --flake <path>        Path to the ambit-mcp Flake ${
+      dim("(default: auto-detect)")
+    }
   -y, --yes             Skip Confirmation Prompts
   --json                Output as JSON
   --help                Show This Help
@@ -154,9 +159,7 @@ ${bold("EXAMPLES")}
   // Build the MCP server config entry
   const serverConfig: McpServer = {
     command: "nix",
-    args: unsafe
-      ? ["run", flakePath, "--", "--unsafe"]
-      : ["run", flakePath],
+    args: unsafe ? ["run", flakePath, "--", "--unsafe"] : ["run", flakePath],
   };
 
   if (!args.json) {
@@ -181,7 +184,9 @@ ${bold("EXAMPLES")}
       if (args.json) {
         console.log(JSON.stringify({ error: `No ${MCP_FILENAME} Found` }));
       } else {
-        console.log(`  ${dim(`No ${MCP_FILENAME} Found in Parent Directories.`)}`);
+        console.log(
+          `  ${dim(`No ${MCP_FILENAME} Found in Parent Directories.`)}`,
+        );
         console.log(`  Use ${cyan("--create")} to Create One Here.`);
         console.log();
       }
@@ -212,7 +217,9 @@ ${bold("EXAMPLES")}
       }
     } catch (error) {
       if (error instanceof SyntaxError) {
-        console.error(`  ${red("Error:")} Invalid JSON in ${relativePath(targetPath)}`);
+        console.error(
+          `  ${red("Error:")} Invalid JSON in ${relativePath(targetPath)}`,
+        );
         Deno.exit(1);
       }
       throw error;
@@ -286,10 +293,17 @@ ${bold("EXAMPLES")}
 
   // Write
   try {
-    await Deno.writeTextFile(targetPath, JSON.stringify(newConfig, null, 2) + "\n");
+    await Deno.writeTextFile(
+      targetPath,
+      JSON.stringify(newConfig, null, 2) + "\n",
+    );
   } catch (error) {
     if (error instanceof Deno.errors.PermissionDenied) {
-      console.error(`  ${red("Error:")} Permission Denied Writing ${relativePath(targetPath)}`);
+      console.error(
+        `  ${red("Error:")} Permission Denied Writing ${
+          relativePath(targetPath)
+        }`,
+      );
       Deno.exit(1);
     }
     throw error;
@@ -304,7 +318,11 @@ ${bold("EXAMPLES")}
     }));
   } else {
     console.log();
-    console.log(`  ${green("✓")} Added ${cyan(serverName)} to ${relativePath(targetPath)}`);
+    console.log(
+      `  ${green("✓")} Added ${cyan(serverName)} to ${
+        relativePath(targetPath)
+      }`,
+    );
     console.log();
   }
 }

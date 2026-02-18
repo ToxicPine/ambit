@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "zod": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.inkeep.com/zod/mcp"]
+    },
+    "tanstack": {
+      "command": "npx",
+      "args": ["@tanstack/cli", "mcp"]
+    },
+    "flyctl": {
+      "command": "flyctl",
+      "args": ["mcp", "server"]
+    }
+  }
+}

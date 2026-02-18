@@ -12,8 +12,8 @@ import { loadConfig } from "../../schemas/config.ts";
 import { listCdpApps } from "../../schemas/instance.ts";
 import { createFlyProvider } from "@ambit/cli/providers/fly";
 import {
-  isTailscaleInstalled,
   isAcceptRoutesEnabled,
+  isTailscaleInstalled,
 } from "@ambit/cli/providers/tailscale";
 import { requireTailscaleProvider } from "@ambit/cli/src/credentials";
 import {
@@ -129,14 +129,18 @@ ${bold("CHECKS")}
     `Deploy with: ambit deploy --network ${network}`,
   );
 
-  const machine = routerApp ? await getRouterMachineInfo(fly, routerApp.appName) : null;
+  const machine = routerApp
+    ? await getRouterMachineInfo(fly, routerApp.appName)
+    : null;
   report(
     `Router Running (${network})`,
     machine?.state === "started",
     machine ? `Machine state: ${machine.state}` : "No router found",
   );
 
-  const ts = routerApp ? await getRouterTailscaleInfo(tailscale, routerApp.appName) : null;
+  const ts = routerApp
+    ? await getRouterTailscaleInfo(tailscale, routerApp.appName)
+    : null;
   report(
     `Router in Tailnet (${network})`,
     ts !== null,

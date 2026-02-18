@@ -2,22 +2,27 @@
 // Fly.io Provider - Wraps flyctl CLI
 // =============================================================================
 
-import { runCommand, runCommandJson, runQuiet, runInteractive } from "../../lib/command.ts";
+import {
+  runCommand,
+  runCommandJson,
+  runInteractive,
+  runQuiet,
+} from "../../lib/command.ts";
 import { commandExists, die, Spinner } from "../../lib/cli.ts";
 import {
-  FlyAuthSchema,
-  FlyStatusSchema,
-  FlyMachinesListSchema,
-  FlyAppsListSchema,
-  FlyOrgsSchema,
-  FlyAppInfoListSchema,
-  FlyIpListSchema,
-  mapFlyMachineState,
-  mapFlyMachineSize,
-  type FlyMachine,
   type FlyApp,
   type FlyAppInfo,
+  FlyAppInfoListSchema,
+  FlyAppsListSchema,
+  FlyAuthSchema,
   type FlyIp,
+  FlyIpListSchema,
+  type FlyMachine,
+  FlyMachinesListSchema,
+  FlyOrgsSchema,
+  FlyStatusSchema,
+  mapFlyMachineSize,
+  mapFlyMachineState,
 } from "../schemas/fly.ts";
 import { fileExists } from "../../lib/cli.ts";
 
@@ -40,7 +45,9 @@ export interface MachineConfig {
   autoStopSeconds?: number;
 }
 
-export const getSizeConfig = (size: MachineSize): { cpus: number; memoryMb: number } => {
+export const getSizeConfig = (
+  size: MachineSize,
+): { cpus: number; memoryMb: number } => {
   switch (size) {
     case "shared-cpu-1x":
       return { cpus: 1, memoryMb: 1024 };
@@ -81,7 +88,11 @@ export interface FlyProvider {
   ensureInstalled(): Promise<void>;
   ensureAuth(options?: { interactive?: boolean }): Promise<string>;
   listOrgs(): Promise<Record<string, string>>;
-  createApp(name: string, org: string, options?: { network?: string }): Promise<void>;
+  createApp(
+    name: string,
+    org: string,
+    options?: { network?: string },
+  ): Promise<void>;
   deleteApp(name: string): Promise<void>;
   listApps(org?: string): Promise<FlyApp[]>;
   appExists(name: string): Promise<boolean>;
@@ -89,8 +100,16 @@ export interface FlyProvider {
   listMachinesMapped(app: string): Promise<MachineResult[]>;
   createMachine(app: string, config: MachineConfig): Promise<MachineResult>;
   destroyMachine(app: string, machineId: string): Promise<void>;
-  setSecrets(app: string, secrets: Record<string, string>, options?: { stage?: boolean }): Promise<void>;
-  routerDeploy(app: string, dockerfilePath: string, config?: { region?: string }): Promise<void>;
+  setSecrets(
+    app: string,
+    secrets: Record<string, string>,
+    options?: { stage?: boolean },
+  ): Promise<void>;
+  routerDeploy(
+    app: string,
+    dockerfilePath: string,
+    config?: { region?: string },
+  ): Promise<void>;
   listIps(app: string): Promise<FlyIp[]>;
   releaseIp(app: string, address: string): Promise<void>;
   allocateFlycastIp(app: string, network: string): Promise<void>;
@@ -108,7 +127,9 @@ export const createFlyProvider = (): FlyProvider => {
   return {
     async ensureInstalled(): Promise<void> {
       if (!(await commandExists("fly"))) {
-        return die("Flyctl Not Found. Install from https://fly.io/docs/flyctl/install/");
+        return die(
+          "Flyctl Not Found. Install from https://fly.io/docs/flyctl/install/",
+        );
       }
     },
 
@@ -152,7 +173,7 @@ export const createFlyProvider = (): FlyProvider => {
 
     async listOrgs(): Promise<Record<string, string>> {
       const result = await runCommandJson<Record<string, string>>(
-        ["fly", "orgs", "list", "--json"]
+        ["fly", "orgs", "list", "--json"],
       );
       if (!result.success || !result.data) {
         return die("Failed to List Organizations");
@@ -185,7 +206,11 @@ export const createFlyProvider = (): FlyProvider => {
       }
     },
 
-    async createApp(name: string, org: string, options?: { network?: string }): Promise<void> {
+    async createApp(
+      name: string,
+      org: string,
+      options?: { network?: string },
+    ): Promise<void> {
       const args = ["fly", "apps", "create", name, "--org", org, "--json"];
 
       if (options?.network) {
@@ -201,7 +226,11 @@ export const createFlyProvider = (): FlyProvider => {
 
     async deleteApp(name: string): Promise<void> {
       const result = await runQuiet("Deleting App", [
-        "fly", "apps", "destroy", name, "--yes",
+        "fly",
+        "apps",
+        "destroy",
+        name,
+        "--yes",
       ]);
 
       if (!result.success) {
@@ -223,7 +252,7 @@ export const createFlyProvider = (): FlyProvider => {
 
     async listMachines(app: string): Promise<FlyMachine[]> {
       const result = await runCommandJson<FlyMachine[]>(
-        ["fly", "machines", "list", "-a", app, "--json"]
+        ["fly", "machines", "list", "-a", app, "--json"],
       );
 
       if (!result.success || !result.data) {
@@ -245,7 +274,10 @@ export const createFlyProvider = (): FlyProvider => {
       }));
     },
 
-    async createMachine(app: string, config: MachineConfig): Promise<MachineResult> {
+    async createMachine(
+      app: string,
+      config: MachineConfig,
+    ): Promise<MachineResult> {
       const existingMachines = await this.listMachinesMapped(app);
 
       if (existingMachines.length === 0) {
@@ -257,10 +289,16 @@ export const createFlyProvider = (): FlyProvider => {
       const memoryMb = config.memoryMb ?? sizeConfig.memoryMb;
 
       const args = [
-        "fly", "machine", "clone", sourceMachine.id,
-        "-a", app,
-        "--vm-cpus", String(sizeConfig.cpus),
-        "--vm-memory", String(memoryMb),
+        "fly",
+        "machine",
+        "clone",
+        sourceMachine.id,
+        "-a",
+        app,
+        "--vm-cpus",
+        String(sizeConfig.cpus),
+        "--vm-memory",
+        String(memoryMb),
       ];
 
       if (config.region) {
@@ -292,7 +330,13 @@ export const createFlyProvider = (): FlyProvider => {
     async destroyMachine(app: string, machineId: string): Promise<void> {
       const shortId = machineId.slice(0, 8);
       const result = await runQuiet(`Destroying Machine ${shortId}`, [
-        "fly", "machines", "destroy", machineId, "-a", app, "--force",
+        "fly",
+        "machines",
+        "destroy",
+        machineId,
+        "-a",
+        app,
+        "--force",
       ]);
 
       if (!result.success) {
@@ -300,7 +344,11 @@ export const createFlyProvider = (): FlyProvider => {
       }
     },
 
-    async setSecrets(app: string, secrets: Record<string, string>, options?: { stage?: boolean }): Promise<void> {
+    async setSecrets(
+      app: string,
+      secrets: Record<string, string>,
+      options?: { stage?: boolean },
+    ): Promise<void> {
       const pairs = Object.entries(secrets)
         .filter(([_, v]) => v !== undefined && v !== "")
         .map(([k, v]) => `${k}=${v}`);
@@ -315,7 +363,7 @@ export const createFlyProvider = (): FlyProvider => {
 
       const result = await runQuiet(
         `Setting ${pairs.length} Secret(s)`,
-        args
+        args,
       );
 
       if (!result.success) {
@@ -326,11 +374,14 @@ export const createFlyProvider = (): FlyProvider => {
     async routerDeploy(
       app: string,
       dockerDir: string,
-      config?: { region?: string }
+      config?: { region?: string },
     ): Promise<void> {
       const args = [
-        "fly", "deploy", dockerDir,
-        "-a", app,
+        "fly",
+        "deploy",
+        dockerDir,
+        "-a",
+        app,
         "--yes",
         "--ha=false",
       ];
@@ -348,7 +399,14 @@ export const createFlyProvider = (): FlyProvider => {
     },
 
     async listIps(app: string): Promise<FlyIp[]> {
-      const result = await runCommand(["fly", "ips", "list", "-a", app, "--json"]);
+      const result = await runCommand([
+        "fly",
+        "ips",
+        "list",
+        "-a",
+        app,
+        "--json",
+      ]);
       if (!result.success) return [];
 
       try {
@@ -361,7 +419,12 @@ export const createFlyProvider = (): FlyProvider => {
 
     async releaseIp(app: string, address: string): Promise<void> {
       const result = await runCommand([
-        "fly", "ips", "release", address, "-a", app,
+        "fly",
+        "ips",
+        "release",
+        address,
+        "-a",
+        app,
       ]);
       if (!result.success) {
         return die(`Failed to Release IP ${address} from '${app}'`);
@@ -370,9 +433,14 @@ export const createFlyProvider = (): FlyProvider => {
 
     async allocateFlycastIp(app: string, network: string): Promise<void> {
       const result = await runCommand([
-        "fly", "ips", "allocate-v6", "--private",
-        "--network", network,
-        "-a", app,
+        "fly",
+        "ips",
+        "allocate-v6",
+        "--private",
+        "--network",
+        network,
+        "-a",
+        app,
       ]);
       if (!result.success) {
         return die(`Failed to Allocate Flycast IP on Network '${network}'`);
@@ -392,8 +460,10 @@ export const createFlyProvider = (): FlyProvider => {
 
     async deploySafe(app: string, options: SafeDeployOptions): Promise<void> {
       const args = [
-        "fly", "deploy",
-        "-a", app,
+        "fly",
+        "deploy",
+        "-a",
+        app,
         "--yes",
         "--no-public-ips",
       ];
@@ -424,13 +494,17 @@ export const createFlyProvider = (): FlyProvider => {
       const configPath = `${home}/.fly/config.yml`;
 
       if (!(await fileExists(configPath))) {
-        return die("Fly Config Not Found at ~/.fly/config.yml. Run 'fly auth login' First");
+        return die(
+          "Fly Config Not Found at ~/.fly/config.yml. Run 'fly auth login' First",
+        );
       }
 
       const content = await Deno.readTextFile(configPath);
       const match = content.match(/access_token:\s*(.+)/);
       if (!match || !match[1]) {
-        return die("No Access Token Found in ~/.fly/config.yml. Run 'fly auth login' First");
+        return die(
+          "No Access Token Found in ~/.fly/config.yml. Run 'fly auth login' First",
+        );
       }
 
       return match[1].trim();
@@ -446,7 +520,7 @@ export const createFlyProvider = (): FlyProvider => {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       if (!response.ok) {
@@ -468,6 +542,9 @@ export const createFlyProvider = (): FlyProvider => {
 // Router App Naming
 // =============================================================================
 
-export const getRouterAppName = (network: string, randomSuffix: string): string => {
+export const getRouterAppName = (
+  network: string,
+  randomSuffix: string,
+): string => {
   return `${ROUTER_APP_PREFIX}${network}-${randomSuffix}`;
 };
