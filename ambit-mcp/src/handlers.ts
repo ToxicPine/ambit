@@ -174,7 +174,7 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
 
     return ok(`Created App ${args.name}`, {
       name: args.name,
-      network: network ?? null,
+      network,
       org: org ?? "",
     });
   }
@@ -204,9 +204,9 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
       state: m.state,
       region: m.region,
       private_ip: m.private_ip ?? "",
-      cpu_kind: m.config?.guest?.cpu_kind ?? null,
-      cpus: m.config?.guest?.cpus ?? null,
-      memory_mb: m.config?.guest?.memory_mb ?? null,
+      cpu_kind: m.config?.guest?.cpu_kind,
+      cpus: m.config?.guest?.cpus,
+      memory_mb: m.config?.guest?.memory_mb,
     }));
     return ok(`${machines.length} machine(s)`, { machines });
   }
@@ -378,15 +378,15 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
       return ok(`Allocated ${ip.Type} ${ip.Address}`, {
         address: ip.Address,
         type: ip.Type,
-        region: ip.Region ?? null,
-        network: ip.Network ?? null,
+        region: ip.Region,
+        network: ip.Network,
       });
     } catch {
       return ok("Allocated IPv6", {
         address: result.stdout.trim(),
         type: args.private ? "private_v6" : "v6",
-        region: null,
-        network: args.network ?? null,
+        region: undefined,
+        network: args.network,
       });
     }
   }
@@ -406,15 +406,15 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
       return ok(`Allocated ${ip.Type} ${ip.Address}`, {
         address: ip.Address,
         type: ip.Type,
-        region: ip.Region ?? null,
-        network: ip.Network ?? null,
+        region: ip.Region,
+        network: ip.Network,
       });
     } catch {
       return ok("Allocated IPv4", {
         address: result.stdout.trim(),
         type: args.shared ? "shared_v4" : "v4",
-        region: null,
-        network: null,
+        region: undefined,
+        network: undefined,
       });
     }
   }
@@ -752,7 +752,7 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
     );
     const certificates = data.map((c) => ({
       hostname: c.Hostname,
-      created_at: c.CreatedAt ?? null,
+      created_at: c.CreatedAt,
     }));
     return ok(`${certificates.length} certificate(s)`, { certificates });
   }
@@ -807,10 +807,10 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
         network: a.Network ??
           a.Name.replace("ambit-", "").replace(/-[a-z0-9]+$/, ""),
         app_name: a.Name,
-        region: null,
+        region: undefined,
         machine_state: a.Status,
-        private_ip: null,
-        subnet: null,
+        private_ip: undefined,
+        subnet: undefined,
       }));
 
     return ok(`${routers.length} router(s)`, { routers });
@@ -850,18 +850,18 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
     }
 
     const subnet = machineInfo.private_ip
-      ? extractSubnet(machineInfo.private_ip)
-      : null;
+      ? (extractSubnet(machineInfo.private_ip) ?? undefined)
+      : undefined;
 
     // Get tag from Tailscale device (best-effort)
-    let tag: string | null = null;
+    let tag: string | undefined;
     try {
       const credentials = getCredentialStore();
       const apiKey = await credentials.getTailscaleApiKey();
       if (apiKey) {
         const ts = createTailscaleClient(apiKey);
         const device = await ts.getDeviceByHostname(router.Name);
-        tag = device?.tags?.[0] ?? null;
+        tag = device?.tags?.[0];
       }
     } catch {
       // best-effort
@@ -870,9 +870,9 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
     return ok(`Router for Network '${args.network}'`, {
       network: args.network,
       app_name: router.Name,
-      region: machineInfo.region ?? null,
+      region: machineInfo.region,
       machine_state: machineInfo.state ?? router.Status,
-      private_ip: machineInfo.private_ip ?? null,
+      private_ip: machineInfo.private_ip,
       subnet,
       tag,
     });

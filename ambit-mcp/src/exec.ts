@@ -59,6 +59,7 @@ export async function execJson<T>(
 /**
  * Run `fly <args>`, parse newline-delimited JSON (NDJSON) through a schema.
  * Used for commands like `fly logs --json` that output one JSON object per line.
+ * Non-JSON lines (status messages, warnings) are silently skipped.
  */
 export async function execNdjson<T>(
   args: string[],
@@ -72,6 +73,12 @@ export async function execNdjson<T>(
       }`,
     );
   }
-  const lines = result.stdout.trim().split("\n").filter((l) => l.length > 0);
-  return lines.map((line) => schema.parse(JSON.parse(line)));
+  const lines = result.stdout.trim().split("\n");
+  const entries: T[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("{")) continue;
+    entries.push(schema.parse(JSON.parse(trimmed)));
+  }
+  return entries;
 }

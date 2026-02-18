@@ -154,8 +154,8 @@ ${bold("EXAMPLES")}
       .text(`  The tag ${tag} does not exist in your Tailscale ACL tagOwners.`)
       .text("  Tailscale will reject auth keys for undefined tags.")
       .blank()
-      .text("  Add this to your Tailscale ACL policy file:")
-      .dim("  https://login.tailscale.com/admin/acls/file")
+      .text("  Add this tag in your Tailscale ACL settings:")
+      .dim("  https://login.tailscale.com/admin/acls/visual/tags")
       .blank()
       .dim(`    "tagOwners": { "${tag}": ["autogroup:admin"] }`)
       .blank();
@@ -312,6 +312,11 @@ ${bold("EXAMPLES")}
     .blank()
     .dim("Deploy an app to this network:")
     .dim(`  ambit deploy my-app --network ${network}`)
+    .blank()
+    .dim("Invite people to your tailnet:")
+    .dim("  https://login.tailscale.com/admin/users")
+    .dim("Control their access:")
+    .dim("  https://login.tailscale.com/admin/acls/visual/general-access-rules")
     .blank();
 
   // Print recommended ACL policy
