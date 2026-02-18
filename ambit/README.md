@@ -143,6 +143,16 @@ ambit create infra
 ambit create browsers
 ```
 
+## Templates
+
+The [templates](../templates/) directory has ready-to-deploy examples for common setups, including a modern cloud devshell (Ubuntu + web terminal + persistent storage).
+
+Example:
+
+```bash
+ambit deploy my-shell --network lab --config templates/wetty/fly.toml
+```
+
 ## Agent Skill
 
 Install the Ambit [skill](https://skills.sh) to give your AI coding agent reference documentation for all the CLI commands. Works with Claude Code, Cursor, Windsurf, and other AI coding agents:

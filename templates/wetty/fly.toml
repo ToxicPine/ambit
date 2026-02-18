@@ -1,0 +1,23 @@
+# Wetty - Web Terminal over SSH
+# App name is overridden at deploy time
+
+app = "wetty"
+primary_region = "iad"
+
+[build]
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = 1024
+
+# HTTP service enables Flycast auto-stop/start on web activity
+[http_service]
+  internal_port = 3000
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+# Persistent home directory for the dev user
+[[mounts]]
+  source = "data"
+  destination = "/home/user"

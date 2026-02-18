@@ -30,6 +30,14 @@ Chromatic gives your AI agent a browser. It runs a headless Chrome instance in t
 
 ---
 
+### [Templates](./templates/)
+
+The [templates](../templates/) directory has ready-to-deploy examples for common setups, including a modern cloud devshell (Ubuntu + web terminal + persistent storage).
+
+| Template | Description |
+| --- | --- |
+| [wetty](./templates/wetty/) | A modern cloud devshell — Ubuntu 24.04 with a web terminal, persistent home directory, passwordless sudo, and auto start/stop. |
+
 ## Installation
 
 Each tool is available as a Nix package:
