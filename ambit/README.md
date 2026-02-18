@@ -44,7 +44,7 @@ Setting up auth for a personal tool is a tedious barrier. Run `ambit deploy my-t
 ### 1. Install
 
 ```bash
-nix profile install github:ToxicPine/ambit
+npx @cardelli/ambit --help
 ```
 
 ### 2. Create a Network

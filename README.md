@@ -40,23 +40,17 @@ The [templates](../templates/) directory has ready-to-deploy examples for common
 
 ## Installation
 
-Each tool is available as a Nix package:
+Each tool is available on npm:
 
 ```bash
-nix profile add github:ToxicPine/ambit        # ambit
-nix profile add github:ToxicPine/ambit#chromatic   # chromatic
-```
-
-If you don't have Nix, install it first:
-
-```bash
-curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+npx @cardelli/ambit --help
+npx @cardelli/chromatic --help
 ```
 
 Ambit MCP is installed per-project via its setup command:
 
 ```bash
-nix run github:ToxicPine/ambit#ambit-mcp -- setup --create --yes
+npx @cardelli/mcp setup --create --yes
 ```
 
 ## Agent Skills
@@ -82,7 +76,7 @@ ambit deploy my-app --network lab
 **Give your AI agent deploy access (run once per project):**
 
 ```bash
-nix run github:ToxicPine/ambit#ambit-mcp -- setup --create --yes
+npx @cardelli/mcp setup --create --yes
 # → agent can now deploy to your private network, nothing else
 ```
 

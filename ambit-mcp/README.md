@@ -23,7 +23,7 @@ Safe Mode is on by default and enforces four hard rules:
 Run the setup command, which writes the server configuration into your project so your agent picks it up automatically:
 
 ```bash
-nix run github:ToxicPine/ambit#ambit-mcp -- setup --create --yes
+npx @cardelli/mcp setup --create --yes
 ```
 
 You need `flyctl` installed and authenticated, and an Ambit network already set up with `ambit create <network>`.
