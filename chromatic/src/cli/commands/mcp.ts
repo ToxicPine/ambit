@@ -3,9 +3,9 @@
 // =============================================================================
 
 import { parseArgs } from "@std/cli";
-import { bold, confirm, cyan, dim } from "@ambit/cli/lib/cli";
-import { createOutput } from "@ambit/cli/lib/output";
-import { resolveOrg } from "@ambit/cli/src/resolve";
+import { bold, confirm, cyan, dim } from "@cardelli/ambit/lib/cli";
+import { createOutput } from "@cardelli/ambit/lib/output";
+import { resolveOrg } from "@cardelli/ambit/src/resolve";
 import { findFileUp, getRelativePath } from "../../../lib/find.ts";
 import { registerCommand } from "../mod.ts";
 import { loadConfig } from "../../schemas/config.ts";
@@ -19,7 +19,7 @@ import {
   McpConfigSchema,
   mergeMcpConfig,
 } from "../../schemas/mcp.ts";
-import { createFlyProvider } from "@ambit/cli/providers/fly";
+import { createFlyProvider } from "@cardelli/ambit/providers/fly";
 
 // =============================================================================
 // Constants

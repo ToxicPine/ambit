@@ -3,24 +3,24 @@
 // =============================================================================
 
 import { parseArgs } from "@std/cli";
-import { bold } from "@ambit/cli/lib/cli";
-import { createOutput } from "@ambit/cli/lib/output";
-import { runCommand } from "@ambit/cli/lib/command";
-import { resolveOrg } from "@ambit/cli/src/resolve";
+import { bold } from "@cardelli/ambit/lib/cli";
+import { createOutput } from "@cardelli/ambit/lib/output";
+import { runCommand } from "@cardelli/ambit/lib/command";
+import { resolveOrg } from "@cardelli/ambit/src/resolve";
 import { registerCommand } from "../mod.ts";
 import { loadConfig } from "../../schemas/config.ts";
 import { listCdpApps } from "../../schemas/instance.ts";
-import { createFlyProvider } from "@ambit/cli/providers/fly";
+import { createFlyProvider } from "@cardelli/ambit/providers/fly";
 import {
   isAcceptRoutesEnabled,
   isTailscaleInstalled,
-} from "@ambit/cli/providers/tailscale";
-import { requireTailscaleProvider } from "@ambit/cli/src/credentials";
+} from "@cardelli/ambit/providers/tailscale";
+import { requireTailscaleProvider } from "@cardelli/ambit/src/credentials";
 import {
   findRouterApp,
   getRouterMachineInfo,
   getRouterTailscaleInfo,
-} from "@ambit/cli/src/discovery";
+} from "@cardelli/ambit/src/discovery";
 
 // =============================================================================
 // Types

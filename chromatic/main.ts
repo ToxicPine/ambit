@@ -28,7 +28,7 @@
 // =============================================================================
 
 import { runCli } from "./src/cli/mod.ts";
-import { Spinner, statusErr } from "@ambit/cli/lib/cli";
+import { Spinner, statusErr } from "@cardelli/ambit/lib/cli";
 
 // Import commands to register them
 import "./src/cli/commands/setup.ts";

@@ -1,5 +1,5 @@
 {
-  "name": "@ambit/cli",
+  "name": "@cardelli/ambit",
   "version": "0.1.0",
   "exports": {
     ".": "./main.ts",

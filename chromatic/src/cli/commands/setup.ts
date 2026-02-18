@@ -3,13 +3,13 @@
 // =============================================================================
 
 import { parseArgs } from "@std/cli";
-import { bold, dim, prompt } from "@ambit/cli/lib/cli";
-import { createOutput } from "@ambit/cli/lib/output";
+import { bold, dim, prompt } from "@cardelli/ambit/lib/cli";
+import { createOutput } from "@cardelli/ambit/lib/output";
 import { registerCommand } from "../mod.ts";
 import { loadConfig, saveConfig } from "../../schemas/config.ts";
-import { createFlyProvider } from "@ambit/cli/providers/fly";
-import { listRouterApps, type RouterApp } from "@ambit/cli/src/discovery";
-import { resolveOrg } from "@ambit/cli/src/resolve";
+import { createFlyProvider } from "@cardelli/ambit/providers/fly";
+import { listRouterApps, type RouterApp } from "@cardelli/ambit/src/discovery";
+import { resolveOrg } from "@cardelli/ambit/src/resolve";
 
 // =============================================================================
 // Setup Command

@@ -4,9 +4,9 @@
 
 import { parseArgs } from "@std/cli";
 import { Table } from "@cliffy/table";
-import { bold, cyan, dim, green, red, yellow } from "@ambit/cli/lib/cli";
-import { createOutput } from "@ambit/cli/lib/output";
-import { resolveOrg } from "@ambit/cli/src/resolve";
+import { bold, cyan, dim, green, red, yellow } from "@cardelli/ambit/lib/cli";
+import { createOutput } from "@cardelli/ambit/lib/output";
+import { resolveOrg } from "@cardelli/ambit/src/resolve";
 import { registerCommand } from "../mod.ts";
 import { loadConfig } from "../../schemas/config.ts";
 import {
@@ -21,7 +21,7 @@ import {
   type Instance,
   type MachineState,
 } from "../../schemas/instance.ts";
-import { createFlyProvider } from "@ambit/cli/providers/fly";
+import { createFlyProvider } from "@cardelli/ambit/providers/fly";
 
 // =============================================================================
 // State Colors

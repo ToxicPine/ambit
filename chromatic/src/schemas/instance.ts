@@ -4,8 +4,8 @@
 
 import { z } from "zod";
 import { MachineSizeEnum } from "./config.ts";
-import type { FlyProvider } from "@ambit/cli/providers/fly";
-import type { FlyAppInfo } from "@ambit/cli/schemas/fly";
+import type { FlyProvider } from "@cardelli/ambit/providers/fly";
+import type { FlyAppInfo } from "@cardelli/ambit/schemas/fly";
 
 // =============================================================================
 // Machine State

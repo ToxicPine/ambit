@@ -47,7 +47,7 @@ await build({
     target: "ES2022",
   },
   package: {
-    name: "@ambit/cli",
+    name: "@cardelli/ambit",
     version: "0.1.0",
     description:
       "Tailscale subnet router manager for Fly.io custom networks",

@@ -1,5 +1,5 @@
 {
-  "name": "@ambit/chromatic",
+  "name": "@cardelli/chromatic",
   "version": "0.2.0",
   "exports": "./main.ts",
   "tasks": {
@@ -11,7 +11,7 @@
   },
   "imports": {
     "@cliffy/table": "jsr:@cliffy/table@^1.0.0",
-    "@ambit/cli": "jsr:@ambit/cli",
+    "@cardelli/ambit": "jsr:@cardelli/ambit",
     "@std/cli": "jsr:@std/cli@^1.0.27",
     "@std/path": "jsr:@std/path@^1.1.4",
     "zod": "jsr:@zod/zod@^4.3.6"

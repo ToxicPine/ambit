@@ -7,7 +7,7 @@ const args = parseArgs(Deno.args, { boolean: ["publish"] });
 const ambitVersion = args.publish ? "^0.1.0" : "file:../../ambit/npm";
 
 const ambitMapping = (subPath: string) => ({
-  name: "@ambit/cli",
+  name: "@cardelli/ambit",
   version: ambitVersion,
   subPath,
 });
@@ -16,7 +16,6 @@ await emptyDir("./npm");
 
 await build({
   entryPoints: [
-    "./main.ts",
     {
       kind: "bin",
       name: "ambit-mcp",
@@ -45,7 +44,7 @@ await build({
     target: "ES2022",
   },
   package: {
-    name: "@ambit/mcp",
+    name: "@cardelli/mcp",
     version: "0.1.0",
     description: "MCP server for managing Fly.io infrastructure via ambit",
     license: "MIT",

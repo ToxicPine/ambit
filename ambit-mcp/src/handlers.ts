@@ -25,17 +25,17 @@ import {
   FlyVolumeListSchema,
 } from "./schemas.ts";
 
-// @ambit/cli — safe imports (pure functions / no die() calls)
-import { extractSubnet, getRouterTag } from "@ambit/cli/schemas/config";
-import { getRouterAppName } from "@ambit/cli/providers/fly";
+// @cardelli/ambit — safe imports (pure functions / no die() calls)
+import { extractSubnet, getRouterTag } from "@cardelli/ambit/schemas/config";
+import { getRouterAppName } from "@cardelli/ambit/providers/fly";
 import {
   isAcceptRoutesEnabled,
   isTailscaleInstalled,
-} from "@ambit/cli/providers/tailscale";
-import { randomId } from "@ambit/cli/lib/cli";
-import { getRouterDockerDir } from "@ambit/cli/lib/paths";
-import { getCredentialStore } from "@ambit/cli/src/credentials";
-import { runCommand } from "@ambit/cli/lib/command";
+} from "@cardelli/ambit/providers/tailscale";
+import { randomId } from "@cardelli/ambit/lib/cli";
+import { getRouterDockerDir } from "@cardelli/ambit/lib/paths";
+import { getCredentialStore } from "@cardelli/ambit/src/credentials";
+import { runCommand } from "@cardelli/ambit/lib/command";
 
 // MCP-safe Tailscale client (throws instead of die())
 import { createTailscaleClient, waitForDevice } from "./tailscale.ts";

@@ -6,7 +6,8 @@
     "@std/fs": "jsr:@std/fs@^1.0.22"
   },
   "tasks": {
-    "build": "deno run -A scripts/build_all.ts"
+    "build": "deno run -A scripts/build_all.ts",
+    "publish": "deno run -A scripts/publish.ts"
   },
   "fmt": {
     "exclude": ["**/*.md"]

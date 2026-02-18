@@ -4,9 +4,9 @@
 
 import { parseArgs } from "@std/cli";
 import { z } from "zod";
-import { bold, dim, randomId, Spinner } from "@ambit/cli/lib/cli";
-import { createOutput } from "@ambit/cli/lib/output";
-import { resolveOrg } from "@ambit/cli/src/resolve";
+import { bold, dim, randomId, Spinner } from "@cardelli/ambit/lib/cli";
+import { createOutput } from "@cardelli/ambit/lib/output";
+import { resolveOrg } from "@cardelli/ambit/src/resolve";
 import { registerCommand } from "../mod.ts";
 import {
   getDefaultRegion,
@@ -22,8 +22,8 @@ import {
   getCdpEndpoint,
   InstanceNameSchema,
 } from "../../schemas/instance.ts";
-import { createFlyProvider } from "@ambit/cli/providers/fly";
-import { findRouterApp, getRouterMachineInfo } from "@ambit/cli/src/discovery";
+import { createFlyProvider } from "@cardelli/ambit/providers/fly";
+import { findRouterApp, getRouterMachineInfo } from "@cardelli/ambit/src/discovery";
 
 // =============================================================================
 // Arg Schemas

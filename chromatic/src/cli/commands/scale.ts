@@ -4,9 +4,9 @@
 
 import { parseArgs } from "@std/cli";
 import { z } from "zod";
-import { bold, confirm, green, red } from "@ambit/cli/lib/cli";
-import { createOutput } from "@ambit/cli/lib/output";
-import { resolveOrg } from "@ambit/cli/src/resolve";
+import { bold, confirm, green, red } from "@cardelli/ambit/lib/cli";
+import { createOutput } from "@cardelli/ambit/lib/output";
+import { resolveOrg } from "@cardelli/ambit/src/resolve";
 import { registerCommand } from "../mod.ts";
 import {
   getDefaultRegion,
@@ -19,7 +19,7 @@ import {
   getMachineSizeSummary,
   type MachineSizeSummary,
 } from "../../schemas/instance.ts";
-import { createFlyProvider } from "@ambit/cli/providers/fly";
+import { createFlyProvider } from "@cardelli/ambit/providers/fly";
 
 // =============================================================================
 // Arg Schemas

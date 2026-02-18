@@ -1055,7 +1055,7 @@
       },
       "chromatic": {
         "dependencies": [
-          "jsr:@ambit/cli@*",
+          "jsr:@cardelli/ambit@*",
           "jsr:@cliffy/table@1",
           "jsr:@std/cli@^1.0.27",
           "jsr:@std/path@^1.1.4",

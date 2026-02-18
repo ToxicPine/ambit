@@ -8,7 +8,7 @@ const args = parseArgs(Deno.args, { boolean: ["publish"] });
 const ambitVersion = args.publish ? "^0.1.0" : "file:../../ambit/npm";
 
 const ambitMapping = (subPath: string) => ({
-  name: "@ambit/cli",
+  name: "@cardelli/ambit",
   version: ambitVersion,
   subPath,
 });
@@ -56,7 +56,7 @@ await build({
     target: "ES2022",
   },
   package: {
-    name: "@ambit/chromatic",
+    name: "@cardelli/chromatic",
     version: "0.2.0",
     description: "CDP instance manager for Fly.io + Tailscale",
     license: "MIT",

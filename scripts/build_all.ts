@@ -20,12 +20,12 @@ const run = async (dir: string, label: string): Promise<void> => {
 };
 
 // Phase 1: Base package (no internal deps)
-await run("./ambit", "@ambit/cli");
+await run("./ambit", "@cardelli/ambit");
 
 // Phase 2: Dependent packages (parallel)
 await Promise.all([
-  run("./chromatic", "@ambit/chromatic"),
-  run("./ambit-mcp", "@ambit/mcp"),
+  run("./chromatic", "@cardelli/chromatic"),
+  run("./ambit-mcp", "@cardelli/mcp"),
 ]);
 
 console.log("\n=== All packages built ===\n");
