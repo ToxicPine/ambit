@@ -16,7 +16,9 @@
         "aarch64-darwin"
       ];
 
-      perSystem = { pkgs, system, ... }:
+      imports = [ ./deno.nix ];
+
+      perSystem = { system, mkDenoPackage, ... }:
         let
           pkgs = import inputs.nixpkgs {
             inherit system;
@@ -26,24 +28,6 @@
             inherit system;
             config.allowUnfree = true;
           };
-
-          mkDenoPackage = { pname, version, entrypoint, binName ? pname }:
-            pkgs.stdenv.mkDerivation {
-              inherit pname version;
-              src = ./.;
-
-              nativeBuildInputs = [ pkgs.deno ];
-
-              buildPhase = ''
-                export DENO_DIR=$(mktemp -d)
-                deno compile -A --output ${binName} ${entrypoint}
-              '';
-
-              installPhase = ''
-                mkdir -p $out/bin
-                cp ${binName} $out/bin/
-              '';
-            };
         in
         {
           devShells.default = pkgs.mkShell {
@@ -56,6 +40,12 @@
           };
 
           packages = {
+            default = mkDenoPackage {
+              pname = "ambit";
+              version = "0.1.0";
+              entrypoint = "ambit/main.ts";
+            };
+
             ambit = mkDenoPackage {
               pname = "ambit";
               version = "0.1.0";
@@ -72,12 +62,6 @@
               pname = "chromatic";
               version = "0.2.0";
               entrypoint = "chromatic/main.ts";
-            };
-
-            default = mkDenoPackage {
-              pname = "ambit";
-              version = "0.1.0";
-              entrypoint = "ambit/main.ts";
             };
           };
         };
