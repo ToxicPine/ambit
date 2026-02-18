@@ -16,10 +16,7 @@ When your agent deploys something through Ambit MCP, it lands on your Ambit netw
 
 Safe Mode is on by default and enforces four hard rules:
 
-1. **No Public IPs.** The agent cannot allocate a public IP address. The tool does not exist.
-2. **Private Network Only.** Every deployment must name a specific private network to target.
-3. **Audit on Every Deploy.** Immediately after deploying, the system checks whether any public IPs were allocated and deletes them if so.
-4. **Router Protection.** The agent cannot modify or delete the Ambit router that underpins your network.
+1. **No Public IPs.** The agent cannot allocate a public IP address. The tool does not exist. 2. **Private Network Only.** Every deployment must name a specific private network to target. 3. **Audit on Every Deploy.** Immediately after deploying, the system checks whether any public IPs were allocated and deletes them if so. 4. **Router Protection.** The agent cannot modify or delete the Ambit router that underpins your network.
 
 ## Installation
 
@@ -30,6 +27,14 @@ nix run github:ToxicPine/ambit#ambit-mcp -- setup --create --yes
 ```
 
 You need `flyctl` installed and authenticated, and an Ambit network already set up with `ambit create <network>`.
+
+## Agent Skill
+
+Install the Ambit MCP [skill](https://skills.sh) to give your AI coding agent reference documentation for all the tools. Works with Claude Code, Cursor, Windsurf, and other AI coding agents:
+
+```bash
+npx skills add ToxicPine/ambit-skills --skill ambit-mcp
+```
 
 ## Tool Reference
 
