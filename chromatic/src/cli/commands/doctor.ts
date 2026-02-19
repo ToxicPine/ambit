@@ -15,7 +15,8 @@ import {
   isAcceptRoutesEnabled,
   isTailscaleInstalled,
 } from "@cardelli/ambit/providers/tailscale";
-import { requireTailscaleProvider } from "@cardelli/ambit/src/credentials";
+import { checkDependencies } from "@cardelli/ambit/src/credentials";
+import { createTailscaleProvider } from "@cardelli/ambit/providers/tailscale";
 import {
   findRouterApp,
   getRouterMachineInfo,
@@ -89,7 +90,8 @@ ${bold("CHECKS")}
   const fly = createFlyProvider();
   await fly.ensureInstalled();
   await fly.ensureAuth({ interactive: !args.json });
-  const tailscale = await requireTailscaleProvider(out);
+  const { tailscaleKey } = await checkDependencies(out);
+  const tailscale = createTailscaleProvider("-", tailscaleKey);
   const org = await resolveOrg(fly, args, out);
 
   // =========================================================================

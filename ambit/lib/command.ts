@@ -2,7 +2,8 @@
 // Shell Command Helpers
 // =============================================================================
 
-import { Spinner, statusErr, statusOk } from "./cli.ts";
+import { spawn } from "node:child_process";
+import { Spinner } from "./cli.ts";
 
 // =============================================================================
 // Command Result Type
@@ -22,7 +23,7 @@ export interface CommandResult {
 /**
  * Run a command and capture output.
  */
-export const runCommand = async (
+export const runCommand = (
   args: string[],
   options?: {
     cwd?: string;
@@ -32,33 +33,43 @@ export const runCommand = async (
 ): Promise<CommandResult> => {
   const [cmd, ...cmdArgs] = args;
 
-  try {
-    const command = new Deno.Command(cmd, {
-      args: cmdArgs,
+  return new Promise((resolve) => {
+    const child = spawn(cmd, cmdArgs, {
       cwd: options?.cwd,
-      env: options?.env,
-      stdin: options?.stdin ?? "null",
-      stdout: "piped",
-      stderr: "piped",
+      env: options?.env ? { ...process.env, ...options.env } : undefined,
+      stdio: [
+        options?.stdin === "inherit" ? "inherit" : "ignore",
+        "pipe",
+        "pipe",
+      ],
     });
 
-    const { code, stdout, stderr } = await command.output();
-    const decoder = new TextDecoder();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
 
-    return {
-      success: code === 0,
-      code,
-      stdout: decoder.decode(stdout),
-      stderr: decoder.decode(stderr),
-    };
-  } catch (error) {
-    return {
-      success: false,
-      code: -1,
-      stdout: "",
-      stderr: error instanceof Error ? error.message : String(error),
-    };
-  }
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk: string) => stdout.push(chunk));
+    child.stderr.on("data", (chunk: string) => stderr.push(chunk));
+
+    child.on("error", (error) => {
+      resolve({
+        success: false,
+        code: -1,
+        stdout: "",
+        stderr: error.message,
+      });
+    });
+
+    child.on("close", (code) => {
+      resolve({
+        success: code === 0,
+        code: code ?? 1,
+        stdout: stdout.join(""),
+        stderr: stderr.join(""),
+      });
+    });
+  });
 };
 
 // =============================================================================
@@ -153,7 +164,7 @@ export const runQuiet = async (
 /**
  * Run a command interactively (inherits stdio).
  */
-export const runInteractive = async (
+export const runInteractive = (
   args: string[],
   options?: {
     cwd?: string;
@@ -162,19 +173,19 @@ export const runInteractive = async (
 ): Promise<{ success: boolean; code: number }> => {
   const [cmd, ...cmdArgs] = args;
 
-  try {
-    const command = new Deno.Command(cmd, {
-      args: cmdArgs,
+  return new Promise((resolve) => {
+    const child = spawn(cmd, cmdArgs, {
       cwd: options?.cwd,
-      env: options?.env,
-      stdin: "inherit",
-      stdout: "inherit",
-      stderr: "inherit",
+      env: options?.env ? { ...process.env, ...options.env } : undefined,
+      stdio: "inherit",
     });
 
-    const { code } = await command.output();
-    return { success: code === 0, code };
-  } catch {
-    return { success: false, code: -1 };
-  }
+    child.on("error", () => {
+      resolve({ success: false, code: -1 });
+    });
+
+    child.on("close", (code) => {
+      resolve({ success: (code ?? 1) === 0, code: code ?? 1 });
+    });
+  });
 };

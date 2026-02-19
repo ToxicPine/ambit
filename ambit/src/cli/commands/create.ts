@@ -7,7 +7,8 @@ import { bold, randomId, readSecret } from "../../../lib/cli.ts";
 import { createOutput } from "../../../lib/output.ts";
 import { registerCommand } from "../mod.ts";
 import { extractSubnet, getRouterTag } from "../../schemas/config.ts";
-import { createFlyProvider, getRouterAppName } from "../../providers/fly.ts";
+import { isPublicTld } from "../../guard.ts";
+import { createFlyProvider, FlyDeployError, getRouterAppName } from "../../providers/fly.ts";
 import {
   createTailscaleProvider,
   enableAcceptRoutes,
@@ -69,6 +70,11 @@ ${bold("EXAMPLES")}
   const network = args._[0] as string | undefined;
   if (!network) {
     return out.die("Network Name Required. Usage: ambit create <network>");
+  }
+  if (isPublicTld(network)) {
+    return out.die(
+      `"${network}" Is a Public TLD and Cannot Be Used as a Network Name`,
+    );
   }
   const tag = args.tag || getRouterTag(network);
   const selfApprove = args["self-approve"] ?? false;
@@ -225,7 +231,15 @@ ${bold("EXAMPLES")}
 
   out.blank().dim("Deploying Router...");
 
-  await fly.routerDeploy(routerAppName, dockerDir, { region });
+  try {
+    await fly.routerDeploy(routerAppName, dockerDir, { region });
+  } catch (e) {
+    if (e instanceof FlyDeployError) {
+      out.dim(`  ${e.detail}`);
+      return out.die(e.message);
+    }
+    throw e;
+  }
   out.ok("Router Deployed");
 
   out.blank();
@@ -319,7 +333,6 @@ ${bold("EXAMPLES")}
     .dim("  https://login.tailscale.com/admin/acls/visual/general-access-rules")
     .blank();
 
-  // Print recommended ACL policy
   if (subnet && selfApprove) {
     out.header("Recommended Tailscale ACL Policy:")
       .blank()

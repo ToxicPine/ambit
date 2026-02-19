@@ -7,7 +7,8 @@ import { bold, confirm } from "../../../lib/cli.ts";
 import { createOutput } from "../../../lib/output.ts";
 import { registerCommand } from "../mod.ts";
 import { createFlyProvider } from "../../providers/fly.ts";
-import { requireTailscaleProvider } from "../../credentials.ts";
+import { createTailscaleProvider } from "../../providers/tailscale.ts";
+import { checkDependencies } from "../../credentials.ts";
 import { findRouterApp } from "../../discovery.ts";
 import { resolveOrg } from "../../resolve.ts";
 
@@ -47,14 +48,21 @@ ${bold("OPTIONS")}
     return out.die("--network Is Required");
   }
 
-  const fly = createFlyProvider();
-  await fly.ensureInstalled();
-  await fly.ensureAuth({ interactive: !args.json });
-  const tailscale = await requireTailscaleProvider(out);
+  // =========================================================================
+  // Prerequisites
+  // =========================================================================
 
+  const { tailscaleKey } = await checkDependencies(out);
+
+  const fly = createFlyProvider();
+  await fly.ensureAuth({ interactive: !args.json });
+  const tailscale = createTailscaleProvider("-", tailscaleKey);
   const org = await resolveOrg(fly, args, out);
 
-  // 1. Find the router app
+  // =========================================================================
+  // Discover Router
+  // =========================================================================
+
   const spinner = out.spinner("Discovering Router");
   const app = await findRouterApp(fly, org, args.network);
 
@@ -65,12 +73,16 @@ ${bold("OPTIONS")}
 
   spinner.success(`Found Router: ${app.appName}`);
 
-  // Get tailscale device to read the actual tag
-  let tsDevice: Awaited<ReturnType<typeof tailscale.getDeviceByHostname>> = null;
+  let tsDevice: Awaited<ReturnType<typeof tailscale.getDeviceByHostname>> =
+    null;
   try {
     tsDevice = await tailscale.getDeviceByHostname(app.appName);
   } catch { /* device may not exist */ }
   const tag = tsDevice?.tags?.[0] ?? null;
+
+  // =========================================================================
+  // Confirm
+  // =========================================================================
 
   out.blank()
     .header("ambit Destroy")
@@ -89,7 +101,10 @@ ${bold("OPTIONS")}
     out.blank();
   }
 
-  // 2. Clean up tailscale
+  // =========================================================================
+  // Tear Down
+  // =========================================================================
+
   const dnsSpinner = out.spinner("Clearing Split DNS");
   try {
     await tailscale.clearSplitDns(app.network);
@@ -111,7 +126,6 @@ ${bold("OPTIONS")}
     deviceSpinner.fail("Could Not Remove Tailscale Device");
   }
 
-  // 3. Destroy Fly app
   const appSpinner = out.spinner("Destroying Fly App");
   try {
     await fly.deleteApp(app.appName);
@@ -120,20 +134,28 @@ ${bold("OPTIONS")}
     appSpinner.fail("Could Not Destroy Fly App");
   }
 
+  // =========================================================================
+  // Done
+  // =========================================================================
+
   out.done({ destroyed: true, appName: app.appName });
 
   out.ok("Router Destroyed");
 
   if (tag) {
     out.blank()
-      .dim("If you added ACL policy entries for this router, remember to remove:")
+      .dim(
+        "If you added ACL policy entries for this router, remember to remove:",
+      )
       .dim(`  tagOwners:     ${tag}`)
       .dim(`  autoApprovers: routes for ${tag}`)
       .dim(`  acls:          rules referencing ${tag}`)
       .blank();
   } else {
     out.blank()
-      .dim("If you added ACL policy entries for this router, remember to remove")
+      .dim(
+        "If you added ACL policy entries for this router, remember to remove",
+      )
       .dim("the associated tag from tagOwners, autoApprovers, and acls.")
       .blank();
   }

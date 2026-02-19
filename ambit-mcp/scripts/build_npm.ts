@@ -45,7 +45,7 @@ await build({
   },
   package: {
     name: "@cardelli/mcp",
-    version: "0.1.0",
+    version: "0.1.1",
     description: "MCP server for managing Fly.io infrastructure via ambit",
     license: "MIT",
     engines: {

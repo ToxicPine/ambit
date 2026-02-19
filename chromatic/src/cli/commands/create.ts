@@ -22,8 +22,9 @@ import {
   getCdpEndpoint,
   InstanceNameSchema,
 } from "../../schemas/instance.ts";
-import { createFlyProvider } from "@cardelli/ambit/providers/fly";
+import { createFlyProvider, FlyDeployError } from "@cardelli/ambit/providers/fly";
 import { findRouterApp, getRouterMachineInfo } from "@cardelli/ambit/src/discovery";
+import { isPublicTld } from "@cardelli/ambit/src/guard";
 
 // =============================================================================
 // Arg Schemas
@@ -110,6 +111,12 @@ ${bold("EXAMPLES")}
   const config = await loadConfig();
   const network = args.network ?? config.network;
 
+  if (isPublicTld(network)) {
+    return out.die(
+      `"${network}" Is a Public TLD and Cannot Be Used as a Network Name`,
+    );
+  }
+
   // Parse size
   const sizeArg = args.size ?? config.defaults.machineSize;
   const sizeResult = MachineSizeEnum.safeParse(sizeArg);
@@ -166,7 +173,15 @@ ${bold("EXAMPLES")}
   const dockerDir = new URL("../../docker/cdp", import.meta.url).pathname;
 
   out.blank().dim("Deploying CDP Image...");
-  await fly.routerDeploy(appName, dockerDir, { region });
+  try {
+    await fly.routerDeploy(appName, dockerDir, { region });
+  } catch (e) {
+    if (e instanceof FlyDeployError) {
+      out.dim(`  ${e.detail}`);
+      return out.die(e.message);
+    }
+    throw e;
+  }
   out.ok("CDP Image Deployed");
 
   // Create additional machines if count > 1 (deploy already created 1)

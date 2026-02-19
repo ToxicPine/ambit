@@ -9,10 +9,11 @@ import { runCommand } from "../../../lib/command.ts";
 import { registerCommand } from "../mod.ts";
 import { createFlyProvider } from "../../providers/fly.ts";
 import {
+  createTailscaleProvider,
   isAcceptRoutesEnabled,
   isTailscaleInstalled,
 } from "../../providers/tailscale.ts";
-import { requireTailscaleProvider } from "../../credentials.ts";
+import { checkDependencies } from "../../credentials.ts";
 import {
   findRouterApp,
   getRouterMachineInfo,
@@ -79,17 +80,18 @@ ${bold("CHECKS")}
   };
 
   // =========================================================================
-  // Prerequisites (fail fast)
+  // Prerequisites
   // =========================================================================
 
+  const { tailscaleKey } = await checkDependencies(out);
+
   const fly = createFlyProvider();
-  await fly.ensureInstalled();
   await fly.ensureAuth({ interactive: !args.json });
-  const tailscale = await requireTailscaleProvider(out);
+  const tailscale = createTailscaleProvider("-", tailscaleKey);
   const org = await resolveOrg(fly, args, out);
 
   // =========================================================================
-  // Local checks
+  // Local Checks
   // =========================================================================
 
   report(
@@ -115,7 +117,7 @@ ${bold("CHECKS")}
   );
 
   // =========================================================================
-  // Router checks
+  // Router Checks
   // =========================================================================
 
   if (args.network) {

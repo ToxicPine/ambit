@@ -6,7 +6,7 @@ import { parseArgs } from "@std/cli";
 import { bold, confirm, fileExists } from "../../../lib/cli.ts";
 import { createOutput } from "../../../lib/output.ts";
 import { registerCommand } from "../mod.ts";
-import { createFlyProvider } from "../../providers/fly.ts";
+import { createFlyProvider, FlyDeployError } from "../../providers/fly.ts";
 import { findRouterApp } from "../../discovery.ts";
 import { resolveOrg } from "../../resolve.ts";
 import { assertNotRouter, auditDeploy, scanFlyToml } from "../../guard.ts";
@@ -233,11 +233,19 @@ ${bold("EXAMPLES")}
   out.header("Step 5: Deploy").blank();
   out.dim("Deploying with --no-public-ips --flycast ...");
 
-  await fly.deploySafe(app, {
-    image: args.image,
-    config: configPath,
-    region: args.region,
-  });
+  try {
+    await fly.deploySafe(app, {
+      image: args.image,
+      config: configPath,
+      region: args.region,
+    });
+  } catch (e) {
+    if (e instanceof FlyDeployError) {
+      out.dim(`  ${e.detail}`);
+      return out.die(e.message);
+    }
+    throw e;
+  }
 
   out.ok("Deploy Succeeded");
   out.blank();

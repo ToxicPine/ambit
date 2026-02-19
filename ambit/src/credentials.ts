@@ -3,12 +3,8 @@
 // =============================================================================
 
 import { z } from "zod";
-import { ensureConfigDir, fileExists } from "../lib/cli.ts";
+import { commandExists, ensureConfigDir, fileExists } from "../lib/cli.ts";
 import { getConfigDir } from "./schemas/config.ts";
-import {
-  createTailscaleProvider,
-  type TailscaleProvider,
-} from "./providers/tailscale.ts";
 
 // =============================================================================
 // Schema
@@ -84,19 +80,42 @@ export const getCredentialStore = (): CredentialStore => {
 };
 
 // =============================================================================
-// Require Tailscale Provider (fail-fast)
+// Check Dependencies (batch validation)
 // =============================================================================
 
-/** Get a TailscaleProvider or die via out.die(). Respects JSON mode. */
-export const requireTailscaleProvider = async (
-  out: { die(msg: string): never },
-): Promise<TailscaleProvider> => {
-  const store = getCredentialStore();
-  const key = await store.getTailscaleApiKey();
+/**
+ * Verify that flyctl CLI and Tailscale API key are both available.
+ * Reports ALL missing dependencies before dying, so the user can
+ * fix everything in one pass instead of hitting errors one at a time.
+ *
+ * Returns the validated Tailscale API key for explicit injection into
+ * the provider created by the caller.
+ */
+export const checkDependencies = async (
+  out: { err(msg: string): unknown; die(msg: string): never },
+): Promise<{ tailscaleKey: string }> => {
+  const errors: string[] = [];
+
+  if (!(await commandExists("fly"))) {
+    errors.push(
+      "Flyctl Not Found. Install from https://fly.io/docs/flyctl/install/",
+    );
+  }
+
+  const key = await getCredentialStore().getTailscaleApiKey();
   if (!key) {
-    return out.die(
+    errors.push(
       "Tailscale API Key Required. Run 'ambit create' or set TAILSCALE_API_KEY",
     );
   }
-  return createTailscaleProvider("-", key);
+
+  if (errors.length === 1) {
+    return out.die(errors[0]);
+  }
+  if (errors.length > 1) {
+    for (const e of errors) out.err(e);
+    return out.die("Missing Prerequisites");
+  }
+
+  return { tailscaleKey: key! };
 };

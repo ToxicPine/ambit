@@ -193,15 +193,12 @@ export const randomId = (length: number = 6): string => {
 // =============================================================================
 
 export const commandExists = async (command: string): Promise<boolean> => {
-  try {
-    const cmd = new Deno.Command("which", {
-      args: [command],
-      stdout: "null",
-      stderr: "null",
+  const { spawn } = await import("node:child_process");
+  return new Promise((resolve) => {
+    const child = spawn("which", [command], {
+      stdio: "ignore",
     });
-    const { success } = await cmd.output();
-    return success;
-  } catch {
-    return false;
-  }
+    child.on("error", () => resolve(false));
+    child.on("close", (code) => resolve(code === 0));
+  });
 };

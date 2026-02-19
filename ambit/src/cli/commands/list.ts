@@ -8,7 +8,8 @@ import { bold } from "../../../lib/cli.ts";
 import { createOutput } from "../../../lib/output.ts";
 import { registerCommand } from "../mod.ts";
 import { createFlyProvider } from "../../providers/fly.ts";
-import { requireTailscaleProvider } from "../../credentials.ts";
+import { createTailscaleProvider } from "../../providers/tailscale.ts";
+import { checkDependencies } from "../../credentials.ts";
 import {
   getRouterMachineInfo,
   getRouterTailscaleInfo,
@@ -50,14 +51,21 @@ ${bold("OPTIONS")}
     })[];
   }>(args.json);
 
-  const fly = createFlyProvider();
-  await fly.ensureInstalled();
-  await fly.ensureAuth({ interactive: !args.json });
-  const tailscale = await requireTailscaleProvider(out);
+  // =========================================================================
+  // Prerequisites
+  // =========================================================================
 
+  const { tailscaleKey } = await checkDependencies(out);
+
+  const fly = createFlyProvider();
+  await fly.ensureAuth({ interactive: !args.json });
+  const tailscale = createTailscaleProvider("-", tailscaleKey);
   const org = await resolveOrg(fly, args, out);
 
-  // 1. Find all router apps
+  // =========================================================================
+  // Discover Routers
+  // =========================================================================
+
   const spinner = out.spinner("Discovering Routers");
   const routerApps = await listRouterApps(fly, org);
   spinner.success(
@@ -75,7 +83,6 @@ ${bold("OPTIONS")}
     return;
   }
 
-  // 2. Get machine + tailscale state for each
   const routers: (RouterApp & {
     machine: RouterMachineInfo | null;
     tailscale: RouterTailscaleInfo | null;
@@ -87,7 +94,10 @@ ${bold("OPTIONS")}
     routers.push({ ...app, machine, tailscale: ts });
   }
 
-  // 3. Render
+  // =========================================================================
+  // Render
+  // =========================================================================
+
   out.blank().header("Routers").blank();
 
   const rows = routers.map((r) => {

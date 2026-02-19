@@ -34,6 +34,40 @@ import { fileExists } from "../../lib/cli.ts";
 const ROUTER_APP_PREFIX = "ambit-";
 
 // =============================================================================
+// Deploy Error
+// =============================================================================
+
+/**
+ * Thrown when a `fly deploy` command fails. Carries the raw stderr so callers
+ * can surface it through `out` (respecting JSON mode) instead of printing
+ * directly.
+ */
+export class FlyDeployError extends Error {
+  /** Last meaningful line from flyctl stderr. */
+  readonly detail: string;
+
+  constructor(app: string, stderr: string) {
+    const detail = extractErrorDetail(stderr);
+    super(`Deploy Failed for '${app}'`);
+    this.name = "FlyDeployError";
+    this.detail = detail;
+  }
+}
+
+/**
+ * Pull the last non-empty, non-decoration line from fly stderr.
+ * Fly often prints progress lines then the actual error at the end.
+ */
+const extractErrorDetail = (stderr: string): string => {
+  const lines = stderr
+    .split("\n")
+    .map((l) => l.replace(/\x1b\[[0-9;]*m/g, "").trim())
+    .filter((l) => l.length > 0 && !l.startsWith("-->") && l !== "Error");
+
+  return lines[lines.length - 1] ?? "unknown error"
+};
+
+// =============================================================================
 // Machine Configuration
 // =============================================================================
 
@@ -396,8 +430,7 @@ export const createFlyProvider = (): FlyProvider => {
       const result = await runCommand(args);
 
       if (!result.success) {
-        console.error(result.stderr);
-        return die(`Deploy Failed for '${app}'`);
+        throw new FlyDeployError(app, result.stderr);
       }
     },
 
@@ -485,8 +518,7 @@ export const createFlyProvider = (): FlyProvider => {
       const result = await runCommand(args);
 
       if (!result.success) {
-        console.error(result.stderr);
-        return die(`Deploy Failed for '${app}'`);
+        throw new FlyDeployError(app, result.stderr);
       }
     },
 

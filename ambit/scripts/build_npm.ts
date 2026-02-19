@@ -33,6 +33,7 @@ await build({
     { name: "./lib/paths", path: "./lib/paths.ts" },
     { name: "./src/credentials", path: "./src/credentials.ts" },
     { name: "./src/discovery", path: "./src/discovery.ts" },
+    { name: "./src/guard", path: "./src/guard.ts" },
     { name: "./src/resolve", path: "./src/resolve.ts" },
   ],
   outDir: "./npm",
@@ -48,7 +49,7 @@ await build({
   },
   package: {
     name: "@cardelli/ambit",
-    version: "0.1.0",
+    version: "0.1.1",
     description:
       "Tailscale subnet router manager for Fly.io custom networks",
     license: "MIT",

@@ -57,7 +57,7 @@ await build({
   },
   package: {
     name: "@cardelli/chromatic",
-    version: "0.2.0",
+    version: "0.2.1",
     description: "CDP instance manager for Fly.io + Tailscale",
     license: "MIT",
     engines: {
