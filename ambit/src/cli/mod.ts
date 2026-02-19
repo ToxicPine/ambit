@@ -89,7 +89,7 @@ export const runCli = async (argv: string[]): Promise<void> => {
     return;
   }
 
-  const commandName = args._[0] as string | undefined;
+  const commandName = typeof args._[0] === "string" ? args._[0] : undefined;
 
   if (!commandName || args.help) {
     if (commandName) {

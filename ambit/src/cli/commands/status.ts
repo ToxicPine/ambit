@@ -115,9 +115,7 @@ const showNetworkStatus = async (
     .text(`  Private IP:    ${machine?.privateIp ?? "unknown"}`)
     .text(
       `  SOCKS Proxy:   ${
-        machine?.privateIp
-          ? `socks5://[${machine.privateIp}]:1080`
-          : "unknown"
+        machine?.privateIp ? `socks5://[${machine.privateIp}]:1080` : "unknown"
       }`,
     );
 

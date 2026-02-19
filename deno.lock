@@ -22,6 +22,7 @@
     "jsr:@ts-morph/bootstrap@0.27": "0.27.0",
     "jsr:@ts-morph/common@0.27": "0.27.0",
     "jsr:@zod/zod@^4.3.6": "4.3.6",
+    "npm:@cardelli/ambit@*": "0.1.1",
     "npm:@modelcontextprotocol/sdk@1.25.3": "1.25.3_zod@4.3.6_ajv@8.17.1_express@5.2.1",
     "npm:@modelcontextprotocol/sdk@1.26.0": "1.26.0_zod@4.3.6_hono@4.11.9_ajv@8.17.1_express@5.2.1",
     "npm:@modelcontextprotocol/sdk@^1.26.0": "1.26.0_zod@4.3.6_hono@4.11.9_ajv@8.17.1_express@5.2.1",
@@ -117,6 +118,23 @@
     }
   },
   "npm": {
+    "@cardelli/ambit@0.1.1": {
+      "integrity": "sha512-VNAewi3uLpAcflvOFR1v6iGAJwzd3gZCnsvOWSx4uN9agIGClNUjhA+om60FTSHX7WAX0AmrrY0Y31Fq4JHF+w==",
+      "dependencies": [
+        "@deno/shim-deno"
+      ],
+      "bin": true
+    },
+    "@deno/shim-deno-test@0.5.0": {
+      "integrity": "sha512-4nMhecpGlPi0cSzT67L+Tm+GOJqvuk8gqHBziqcUQOarnuIax1z96/gJHCSIz2Z0zhxE6Rzwb3IZXPtFh51j+w=="
+    },
+    "@deno/shim-deno@0.18.2": {
+      "integrity": "sha512-oQ0CVmOio63wlhwQF75zA4ioolPvOwAoK0yuzcS5bDC1JUvH3y1GS8xPh8EOpcoDQRU4FTG8OQfxhpR+c6DrzA==",
+      "dependencies": [
+        "@deno/shim-deno-test",
+        "which@4.0.0"
+      ]
+    },
     "@ffmpeg-installer/darwin-arm64@4.1.5": {
       "integrity": "sha512-hYqTiP63mXz7wSQfuqfFwfLOfwwFChUedeCVKkBtl/cliaTM7/ePI9bVzfZ2c+dWu3TqCwLDRWNSJ5pqZl8otA==",
       "os": ["darwin"],
@@ -645,6 +663,9 @@
     "isexe@2.0.0": {
       "integrity": "sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw=="
     },
+    "isexe@3.1.5": {
+      "integrity": "sha512-6B3tLtFqtQS4ekarvLVMZ+X+VlvQekbe4taUkf/rhVO3d/h0M2rfARm/pXLcPEsjjMsFgrFgSrhQIxcSVrBz8w=="
+    },
     "jose@6.1.3": {
       "integrity": "sha512-0TpaTfihd4QMNwrz/ob2Bp7X04yuxJkjRGi4aKmOqwhov54i6u79oCv7T+C7lo70MKH6BesI3vscD1yb/yzKXQ=="
     },
@@ -991,14 +1012,21 @@
     "which@1.3.1": {
       "integrity": "sha512-HxJdYWq1MTIQbJ3nw0cqssHoTNU267KlrDuGZ1WYlxDStUtKUhOaJmh112/TZmHxxUfuJqPXSOm7tDyas0OSIQ==",
       "dependencies": [
-        "isexe"
+        "isexe@2.0.0"
       ],
       "bin": true
     },
     "which@2.0.2": {
       "integrity": "sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==",
       "dependencies": [
-        "isexe"
+        "isexe@2.0.0"
+      ],
+      "bin": true
+    },
+    "which@4.0.0": {
+      "integrity": "sha512-GlaYyEb07DPxYCKhKzplCWBJtvxZcZMrL+4UkrTSJHHPyZU4mYYTv3qaOe77H7EODLSSopAUFAc6W8U4yqvscg==",
+      "dependencies": [
+        "isexe@3.1.5"
       ],
       "bin": true
     },

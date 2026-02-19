@@ -13,4 +13,4 @@ exec node /opt/wetty/build/main.js \
   --host 0.0.0.0 \
   --command "login -f user" \
   --base / \
-  --title superwet.computer
+  --title "Ambit Shell"

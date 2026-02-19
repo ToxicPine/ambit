@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y python3 python3-setuptools build-essent
   && rm -rf /var/lib/apt/lists/* \
   && npm install -g pnpm
 
-RUN git clone --depth 1 https://github.com/butlerx/wetty.git /build
+RUN git clone --depth 1 https://github.com/ToxicPine/wetty.git /build
 WORKDIR /build
 RUN pnpm install && pnpm build
 

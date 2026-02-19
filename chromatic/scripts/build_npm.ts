@@ -46,6 +46,7 @@ await build({
     "../ambit/src/schemas/fly.ts": ambitMapping("schemas/fly"),
     "../ambit/src/credentials.ts": ambitMapping("src/credentials"),
     "../ambit/src/discovery.ts": ambitMapping("src/discovery"),
+    "../ambit/src/guard.ts": ambitMapping("src/guard"),
     "../ambit/src/resolve.ts": ambitMapping("src/resolve"),
   },
   typeCheck: false,

@@ -64,7 +64,7 @@ const extractErrorDetail = (stderr: string): string => {
     .map((l) => l.replace(/\x1b\[[0-9;]*m/g, "").trim())
     .filter((l) => l.length > 0 && !l.startsWith("-->") && l !== "Error");
 
-  return lines[lines.length - 1] ?? "unknown error"
+  return lines[lines.length - 1] ?? "unknown error";
 };
 
 // =============================================================================

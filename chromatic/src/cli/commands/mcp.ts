@@ -71,10 +71,11 @@ ${bold("EXAMPLES")}
   // deno-lint-ignore no-explicit-any
   const out = createOutput<any>(args.json);
 
-  const instanceName = args._[0] as string | undefined;
-  if (!instanceName) {
+  const instanceArg = args._[0];
+  if (!instanceArg || typeof instanceArg !== "string") {
     return out.die("Instance Name Required");
   }
+  const instanceName = instanceArg;
 
   const config = await loadConfig();
   const network = args.network ?? config.network;

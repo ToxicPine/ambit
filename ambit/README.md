@@ -85,15 +85,16 @@ This puts an app onto your private network. This is what you run whenever you wa
 
 Before deploying, ambit scans your config for settings that don't make sense on a private network (like `force_https`, which only matters for public traffic). After deploying, it checks that no public IPs were allocated, releases any that were, and verifies the app has a private address on the network you specified.
 
-| Flag                | Description                                     |
-| ------------------- | ----------------------------------------------- |
-| `--network <name>`  | Target private network (required)               |
-| `--org <org>`       | Fly.io organization                             |
-| `--region <region>` | Deployment region                               |
-| `--image <img>`     | Docker image (instead of fly.toml)              |
-| `--config <path>`   | Explicit fly.toml path (instead of auto-detect) |
-| `--yes`             | Skip confirmation prompts                       |
-| `--json`            | Machine-readable JSON output                    |
+| Flag                  | Description                                                              |
+| --------------------- | ------------------------------------------------------------------------ |
+| `--network <name>`    | Target private network (required)                                        |
+| `--org <org>`         | Fly.io organization                                                      |
+| `--region <region>`   | Deployment region                                                        |
+| `--image <img>`       | Docker image (instead of fly.toml)                                       |
+| `--config <path>`     | Explicit fly.toml path (instead of auto-detect)                          |
+| `--main-port <port>`  | Internal port for HTTP service in image mode (default: `80`, `none` to skip) |
+| `--yes`               | Skip confirmation prompts                                                |
+| `--json`              | Machine-readable JSON output                                             |
 
 ### `ambit status --network <name>`
 

@@ -114,8 +114,8 @@ function tildeify(p: string): string {
 
 function formatEntry(name: string, entry: McpEntry): string {
   return JSON.stringify({ [name]: entry }, null, 2)
-    .split("\n").slice(1, -1)   // strip outer braces
-    .map((l) => l.slice(2))     // un-indent one level
+    .split("\n").slice(1, -1) // strip outer braces
+    .map((l) => l.slice(2)) // un-indent one level
     .join("\n");
 }
 
@@ -265,8 +265,11 @@ async function resolveTarget(args: {
     const found = await findUp(MCP_FILENAME);
     if (found) {
       return {
-        path: found, scope: "project", label: "Project",
-        serversKey: "mcpServers", transformEntry: identity,
+        path: found,
+        scope: "project",
+        label: "Project",
+        serversKey: "mcpServers",
+        transformEntry: identity,
       };
     }
     if (!args.create) {
@@ -282,8 +285,11 @@ async function resolveTarget(args: {
       Deno.exit(1);
     }
     return {
-      path: join(Deno.cwd(), MCP_FILENAME), scope: "project", label: "Project",
-      serversKey: "mcpServers", transformEntry: identity,
+      path: join(Deno.cwd(), MCP_FILENAME),
+      scope: "project",
+      label: "Project",
+      serversKey: "mcpServers",
+      transformEntry: identity,
     };
   }
 
@@ -339,10 +345,14 @@ ${bold("OPTIONS")}
   -n, --name <name>      Server Name ${dim("(default: ambit)")}
   --editor <editor>      Target Editor ${dim("(default: auto-detect)")}
   --project              Write to Project ${MCP_FILENAME} Instead
-  --create               Create ${MCP_FILENAME} if Not Found ${dim("(with --project)")}
+  --create               Create ${MCP_FILENAME} if Not Found ${
+    dim("(with --project)")
+  }
   --unsafe               Configure for Unsafe Mode ${dim("(default: safe)")}
   --dry-run              Preview Changes Without Writing
-  --flake <ref>          Flake Reference ${dim(`(default: ${DEFAULT_FLAKE_REF})`)}
+  --flake <ref>          Flake Reference ${
+    dim(`(default: ${DEFAULT_FLAKE_REF})`)
+  }
   -y, --yes              Skip Confirmation Prompts
   --json                 Output as JSON
   --help                 Show This Help
@@ -352,10 +362,14 @@ ${bold("EDITORS")}
   cursor                 Cursor ${dim(tildeify(EDITORS.cursor.configPath))}
   windsurf               Windsurf ${dim(tildeify(EDITORS.windsurf.configPath))}
   vscode                 VS Code ${dim(tildeify(EDITORS.vscode.configPath))}
-  claude-desktop         Claude Desktop ${dim(tildeify(EDITORS["claude-desktop"].configPath))}
+  claude-desktop         Claude Desktop ${
+    dim(tildeify(EDITORS["claude-desktop"].configPath))
+  }
 
 ${bold("EXAMPLES")}
-  ambit-mcp setup                          ${dim("# user-level, auto-detect editor")}
+  ambit-mcp setup                          ${
+    dim("# user-level, auto-detect editor")
+  }
   ambit-mcp setup --editor cursor          ${dim("# user-level, Cursor")}
   ambit-mcp setup --project --create       ${dim("# project-level .mcp.json")}
   ambit-mcp setup --unsafe --name fly-raw  ${dim("# unsafe mode, custom name")}
@@ -441,8 +455,10 @@ async function main(): Promise<void> {
 
   if (!fileIsNew) {
     const config = await readJson(target.path);
-    const servers =
-      (config[target.serversKey] ?? {}) as Record<string, unknown>;
+    const servers = (config[target.serversKey] ?? {}) as Record<
+      string,
+      unknown
+    >;
     const names = Object.keys(servers);
 
     if (!args.json) {

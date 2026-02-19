@@ -77,10 +77,11 @@ ${bold("EXAMPLES")}
 
   const out = createOutput<Record<string, unknown>>(args.json);
 
-  const name = args._[0] as string | undefined;
-  if (!name) {
+  const nameArg = args._[0];
+  if (!nameArg || typeof nameArg !== "string") {
     return out.die("Instance Name Required");
   }
+  const name = nameArg;
 
   const config = await loadConfig();
   const network = args.network ?? config.network;

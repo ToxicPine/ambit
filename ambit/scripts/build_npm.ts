@@ -50,8 +50,7 @@ await build({
   package: {
     name: "@cardelli/ambit",
     version: "0.1.1",
-    description:
-      "Tailscale subnet router manager for Fly.io custom networks",
+    description: "Tailscale subnet router manager for Fly.io custom networks",
     license: "MIT",
     engines: {
       node: ">=18",

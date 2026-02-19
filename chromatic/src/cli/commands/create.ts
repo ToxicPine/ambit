@@ -22,8 +22,14 @@ import {
   getCdpEndpoint,
   InstanceNameSchema,
 } from "../../schemas/instance.ts";
-import { createFlyProvider, FlyDeployError } from "@cardelli/ambit/providers/fly";
-import { findRouterApp, getRouterMachineInfo } from "@cardelli/ambit/src/discovery";
+import {
+  createFlyProvider,
+  FlyDeployError,
+} from "@cardelli/ambit/providers/fly";
+import {
+  findRouterApp,
+  getRouterMachineInfo,
+} from "@cardelli/ambit/src/discovery";
 import { isPublicTld } from "@cardelli/ambit/src/guard";
 
 // =============================================================================
@@ -88,10 +94,11 @@ ${bold("EXAMPLES")}
     }[];
   }>(args.json);
 
-  const rawName = args._[0] as string | undefined;
-  if (!rawName) {
+  const rawNameArg = args._[0];
+  if (!rawNameArg || typeof rawNameArg !== "string") {
     return out.die("Instance Name Required");
   }
+  const rawName = rawNameArg;
 
   const nameResult = InstanceNameSchema.safeParse(rawName);
   if (!nameResult.success) {

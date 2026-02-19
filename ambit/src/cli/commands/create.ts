@@ -8,7 +8,11 @@ import { createOutput } from "../../../lib/output.ts";
 import { registerCommand } from "../mod.ts";
 import { extractSubnet, getRouterTag } from "../../schemas/config.ts";
 import { isPublicTld } from "../../guard.ts";
-import { createFlyProvider, FlyDeployError, getRouterAppName } from "../../providers/fly.ts";
+import {
+  createFlyProvider,
+  FlyDeployError,
+  getRouterAppName,
+} from "../../providers/fly.ts";
 import {
   createTailscaleProvider,
   enableAcceptRoutes,
@@ -67,10 +71,11 @@ ${bold("EXAMPLES")}
     tag: string;
   }>(args.json);
 
-  const network = args._[0] as string | undefined;
-  if (!network) {
+  const networkArg = args._[0];
+  if (!networkArg || typeof networkArg !== "string") {
     return out.die("Network Name Required. Usage: ambit create <network>");
   }
+  const network = networkArg;
   if (isPublicTld(network)) {
     return out.die(
       `"${network}" Is a Public TLD and Cannot Be Used as a Network Name`,
