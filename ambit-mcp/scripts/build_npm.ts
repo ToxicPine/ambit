@@ -1,6 +1,13 @@
 import { build, emptyDir } from "@deno/dnt";
 import { parseArgs } from "@std/cli";
 
+const { name, version, description, license } = JSON.parse(
+  await Deno.readTextFile("./deno.json"),
+);
+if (!name || !version || !description || !license) {
+  throw new Error("deno.json must have name, version, description, and license");
+}
+
 const args = parseArgs(Deno.args, { boolean: ["publish"] });
 
 // Local builds use file: path; --publish uses semver for npm
@@ -44,10 +51,10 @@ await build({
     target: "ES2022",
   },
   package: {
-    name: "@cardelli/mcp",
-    version: "0.1.1",
-    description: "MCP server for managing Fly.io infrastructure via ambit",
-    license: "MIT",
+    name,
+    version,
+    description,
+    license,
     engines: {
       node: ">=18",
     },

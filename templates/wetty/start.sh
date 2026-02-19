@@ -9,7 +9,7 @@ chown user:user /home/user
 
 # Start wetty in foreground with direct shell (no SSH, no password)
 exec node /opt/wetty/build/main.js \
-  --port 3000 \
+  --port 80 \
   --host 0.0.0.0 \
   --command "login -f user" \
   --base / \

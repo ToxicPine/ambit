@@ -60,6 +60,6 @@ RUN cp -a /home/user /etc/skel-user
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
 
-EXPOSE 3000
+EXPOSE 80
 
 CMD ["/start.sh"]

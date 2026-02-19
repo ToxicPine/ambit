@@ -1,6 +1,8 @@
 {
   "name": "@cardelli/chromatic",
-  "version": "0.2.1",
+  "version": "0.2.2",
+  "description": "Give your AI agent a browser on your private network",
+  "license": "MIT",
   "exports": "./main.ts",
   "tasks": {
     "dev": "deno run --watch main.ts",

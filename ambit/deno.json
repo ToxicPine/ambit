@@ -1,6 +1,8 @@
 {
   "name": "@cardelli/ambit",
   "version": "0.1.2",
+  "description": "Deploy apps to the cloud that only you and your AI agents can reach",
+  "license": "MIT",
   "exports": {
     ".": "./main.ts",
     "./providers/fly": "./src/providers/fly.ts",

@@ -12,7 +12,7 @@ primary_region = "iad"
 
 # HTTP service enables Flycast auto-stop/start on web activity
 [http_service]
-  internal_port = 3000
+  internal_port = 80
   auto_stop_machines = "stop"
   auto_start_machines = true
   min_machines_running = 0

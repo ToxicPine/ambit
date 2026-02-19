@@ -1,6 +1,13 @@
 import { build, emptyDir } from "@deno/dnt";
 import { copy } from "@std/fs";
 
+const { name, version, description, license } = JSON.parse(
+  await Deno.readTextFile("./deno.json"),
+);
+if (!name || !version || !description || !license) {
+  throw new Error("deno.json must have name, version, description, and license");
+}
+
 // dnt mangles Deno shebangs (#!/usr/bin/env -S deno run -A) in source files
 // because it inserts shim imports above them, breaking TypeScript's shebang
 // stripping. This cleans up the garbled output.
@@ -48,10 +55,10 @@ await build({
     target: "ES2022",
   },
   package: {
-    name: "@cardelli/ambit",
-    version: "0.1.1",
-    description: "Tailscale subnet router manager for Fly.io custom networks",
-    license: "MIT",
+    name,
+    version,
+    description,
+    license,
     engines: {
       node: ">=18",
     },

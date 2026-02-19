@@ -2,6 +2,13 @@ import { build, emptyDir } from "@deno/dnt";
 import { copy } from "@std/fs";
 import { parseArgs } from "@std/cli";
 
+const { name, version, description, license } = JSON.parse(
+  await Deno.readTextFile("./deno.json"),
+);
+if (!name || !version || !description || !license) {
+  throw new Error("deno.json must have name, version, description, and license");
+}
+
 const args = parseArgs(Deno.args, { boolean: ["publish"] });
 
 // Local builds use file: path; --publish uses semver for npm
@@ -57,10 +64,10 @@ await build({
     target: "ES2022",
   },
   package: {
-    name: "@cardelli/chromatic",
-    version: "0.2.1",
-    description: "CDP instance manager for Fly.io + Tailscale",
-    license: "MIT",
+    name,
+    version,
+    description,
+    license,
     engines: {
       node: ">=18",
     },
