@@ -151,7 +151,7 @@ The [templates](../templates/) directory has ready-to-deploy examples for common
 Example:
 
 ```bash
-ambit deploy my-shell --network lab --config templates/wetty/fly.toml
+ambit deploy my-opencode --network supercomputer --config templates/opencode/fly.toml
 ```
 
 ## Agent Skill

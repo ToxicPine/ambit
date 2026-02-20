@@ -37,6 +37,7 @@ The [templates](../templates/) directory has ready-to-deploy examples for common
 | Template | Description |
 | --- | --- |
 | [wetty](./templates/wetty/) | A modern cloud devshell — Ubuntu 24.04 with a web terminal, persistent home directory, passwordless sudo, and auto start/stop. |
+| [opencode](./templates/opencode/) | A private OpenCode web workspace — Nix-based environment on Ubuntu 24.04 with persistent home and auto start/stop. |
 
 ## Installation
 

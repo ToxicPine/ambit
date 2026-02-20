@@ -1,8 +1,8 @@
-app = "wetty"
+app = "lazycoder"
 primary_region = "ord"
 
 [build]
-  image = "registry.fly.io/wetty:latest"
+  image = "registry.fly.io/lazycoder:latest"
 
 [mounts]
   source = "data"
