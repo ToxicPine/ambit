@@ -81,7 +81,7 @@ This is the first command you run, it sets up your private network: a named slic
 
 ### `ambit deploy <app> --network <name>`
 
-This puts an app onto your private network. This is what you run whenever you want to host something. If the app doesn't exist yet, ambit creates it on the right network for you. You can point it at a directory with a `fly.toml` (auto-detected, or pass `--config`), or give it a Docker image with `--image`.
+This puts an app onto your private network. This is what you run whenever you want to host something. If the app doesn't exist yet, ambit creates it on the right network for you. You can point it at a directory with a `fly.toml` (auto-detected, or pass `--config`), give it a Docker image with `--image`, or fetch a ready-made template from GitHub with `--template`.
 
 Before deploying, ambit scans your config for settings that don't make sense on a private network (like `force_https`, which only matters for public traffic). After deploying, it checks that no public IPs were allocated, releases any that were, and verifies the app has a private address on the network you specified.
 
@@ -92,6 +92,7 @@ Before deploying, ambit scans your config for settings that don't make sense on 
 | `--region <region>`   | Deployment region                                                        |
 | `--image <img>`       | Docker image (instead of fly.toml)                                       |
 | `--config <path>`     | Explicit fly.toml path (instead of auto-detect)                          |
+| `--template <ref>`    | GitHub template as `owner/repo/path[@ref]`                               |
 | `--main-port <port>`  | Internal port for HTTP service in image mode (default: `80`, `none` to skip) |
 | `--yes`               | Skip confirmation prompts                                                |
 | `--json`              | Machine-readable JSON output                                             |
@@ -146,9 +147,19 @@ ambit create browsers
 
 ## Templates
 
-The [templates](../templates/) directory has ready-to-deploy examples for common setups, including a modern cloud devshell (Ubuntu + web terminal + persistent storage).
+Templates are ready-to-deploy configurations hosted on GitHub. Use `--template` to fetch and deploy one in a single command:
 
-Example:
+```bash
+ambit deploy my-browser --network lab --template ToxicPine/ambit-templates/chromatic
+```
+
+The template reference format is `owner/repo/path[@ref]` — pin to a tag, branch, or commit with `@`:
+
+```bash
+ambit deploy my-browser --network lab --template ToxicPine/ambit-templates/chromatic@v1.0
+```
+
+You can also deploy from local template files with `--config`:
 
 ```bash
 ambit deploy my-opencode --network supercomputer --config templates/opencode/fly.toml

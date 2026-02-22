@@ -3,7 +3,8 @@
 // =============================================================================
 
 import { parseArgs } from "@std/cli";
-import { bold, die, dim } from "../../lib/cli.ts";
+import { bold, die, dim } from "@/lib/cli.ts";
+import denoConfig from "@/deno.json" with { type: "json" };
 
 // =============================================================================
 // Command Interface
@@ -38,7 +39,7 @@ export const getAllCommands = (): Command[] => {
 // Help Text
 // =============================================================================
 
-const VERSION = "0.3.0";
+const VERSION = denoConfig.version;
 
 export const showHelp = (): void => {
   console.log(`

@@ -3,24 +3,24 @@
 // =============================================================================
 
 import { parseArgs } from "@std/cli";
-import { bold } from "../../../lib/cli.ts";
-import { createOutput } from "../../../lib/output.ts";
-import { runCommand } from "../../../lib/command.ts";
+import { bold } from "@/lib/cli.ts";
+import { createOutput } from "@/lib/output.ts";
+import { runCommand } from "@/lib/command.ts";
 import { registerCommand } from "../mod.ts";
-import { createFlyProvider } from "../../providers/fly.ts";
+import { createFlyProvider } from "@/src/providers/fly.ts";
 import {
   createTailscaleProvider,
   isAcceptRoutesEnabled,
   isTailscaleInstalled,
-} from "../../providers/tailscale.ts";
-import { checkDependencies } from "../../credentials.ts";
+} from "@/src/providers/tailscale.ts";
+import { checkDependencies } from "@/src/credentials.ts";
 import {
   findRouterApp,
   getRouterMachineInfo,
   getRouterTailscaleInfo,
   listRouterApps,
-} from "../../discovery.ts";
-import { resolveOrg } from "../../resolve.ts";
+} from "@/src/discovery.ts";
+import { resolveOrg } from "@/src/resolve.ts";
 
 // =============================================================================
 // Types

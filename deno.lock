@@ -1080,20 +1080,6 @@
           "npm:@modelcontextprotocol/sdk@^1.26.0",
           "npm:zod@^4.3.6"
         ]
-      },
-      "chromatic": {
-        "dependencies": [
-          "jsr:@cardelli/ambit@*",
-          "jsr:@cliffy/table@1",
-          "jsr:@std/cli@^1.0.27",
-          "jsr:@std/path@^1.1.4",
-          "jsr:@zod/zod@^4.3.6"
-        ]
-      },
-      "test-app": {
-        "dependencies": [
-          "jsr:@std/assert@1"
-        ]
       }
     }
   }

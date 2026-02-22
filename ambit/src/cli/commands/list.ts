@@ -4,12 +4,12 @@
 
 import { parseArgs } from "@std/cli";
 import { Table } from "@cliffy/table";
-import { bold } from "../../../lib/cli.ts";
-import { createOutput } from "../../../lib/output.ts";
+import { bold } from "@/lib/cli.ts";
+import { createOutput } from "@/lib/output.ts";
 import { registerCommand } from "../mod.ts";
-import { createFlyProvider } from "../../providers/fly.ts";
-import { createTailscaleProvider } from "../../providers/tailscale.ts";
-import { checkDependencies } from "../../credentials.ts";
+import { createFlyProvider } from "@/src/providers/fly.ts";
+import { createTailscaleProvider } from "@/src/providers/tailscale.ts";
+import { checkDependencies } from "@/src/credentials.ts";
 import {
   getRouterMachineInfo,
   getRouterTailscaleInfo,
@@ -17,8 +17,8 @@ import {
   type RouterApp,
   type RouterMachineInfo,
   type RouterTailscaleInfo,
-} from "../../discovery.ts";
-import { resolveOrg } from "../../resolve.ts";
+} from "@/src/discovery.ts";
+import { resolveOrg } from "@/src/resolve.ts";
 
 // =============================================================================
 // List Command

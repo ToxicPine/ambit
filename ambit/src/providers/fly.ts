@@ -7,8 +7,8 @@ import {
   runCommandJson,
   runInteractive,
   runQuiet,
-} from "../../lib/command.ts";
-import { commandExists, die, Spinner } from "../../lib/cli.ts";
+} from "@/lib/command.ts";
+import { commandExists, die, Spinner } from "@/lib/cli.ts";
 import { dirname, resolve } from "@std/path";
 import {
   type FlyApp,
@@ -25,7 +25,7 @@ import {
   mapFlyMachineSize,
   mapFlyMachineState,
 } from "../schemas/fly.ts";
-import { fileExists } from "../../lib/cli.ts";
+import { fileExists } from "@/lib/cli.ts";
 
 // =============================================================================
 // Constants

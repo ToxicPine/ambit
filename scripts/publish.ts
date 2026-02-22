@@ -41,10 +41,9 @@ console.log("\n=== @cardelli/ambit ===\n");
 await build("./ambit");
 await publish("./ambit/npm");
 
-// Phase 2: Build + publish dependents (parallel build, sequential publish)
-console.log("\n=== @cardelli/chromatic + @cardelli/mcp ===\n");
-await Promise.all([build("./chromatic"), build("./ambit-mcp")]);
-await publish("./chromatic/npm");
+// Phase 2: Build + publish dependents
+console.log("\n=== @cardelli/mcp ===\n");
+await build("./ambit-mcp");
 await publish("./ambit-mcp/npm");
 
 console.log("\n=== All Packages Published ===\n");

@@ -22,30 +22,22 @@ Ambit MCP lets an AI agent like Claude Code deploy and manage your apps for you.
 
 ---
 
-### [Chromatic](./chromatic/)
-
-Chromatic gives your AI agent a browser. It runs a headless Chrome instance in the cloud, on your private network, that your agent can control to visit pages, fill in forms, and take screenshots. This matters because you don't want the agent using your actual browser — that would give it access to every site you're logged into. With Chromatic, the agent gets its own isolated browser with no connection to your accounts or local files. An agent like Claude Code can open your app, click through it, spot visual bugs or broken flows, and fix the underlying code, all without your laptop being involved.
-
-→ [Read the Chromatic docs](./chromatic/README.md)
-
----
-
 ### [Templates](./templates/)
 
-The [templates](../templates/) directory has ready-to-deploy examples for common setups, including a modern cloud devshell (Ubuntu + web terminal + persistent storage).
+The [templates](./templates/) directory has ready-to-deploy examples for common setups.
 
 | Template | Description |
 | --- | --- |
 | [wetty](./templates/wetty/) | A modern cloud devshell — Ubuntu 24.04 with a web terminal, persistent home directory, passwordless sudo, and auto start/stop. |
 | [opencode](./templates/opencode/) | A private OpenCode web workspace — Nix-based environment on Ubuntu 24.04 with persistent home and auto start/stop. |
+| [chromatic](./templates/chromatic/) | A headless Chrome instance exposing the Chrome DevTools Protocol — for AI agents or scripts that need to drive a browser on your private network. |
 
 ## Installation
 
-Each tool is available on npm:
+Ambit is available on npm:
 
 ```bash
 npx @cardelli/ambit --help
-npx @cardelli/chromatic --help
 ```
 
 Ambit MCP is installed per-project via its setup command:
@@ -56,12 +48,11 @@ npx @cardelli/mcp setup --create --yes
 
 ## Agent Skills
 
-Install [skills](https://skills.sh) to give your AI coding agent reference documentation for the CLI, MCP, and browser tools. Works with Claude Code, Cursor, Windsurf, and other AI coding agents:
+Install [skills](https://skills.sh) to give your AI coding agent reference documentation for the CLI and MCP tools. Works with Claude Code, Cursor, Windsurf, and other AI coding agents:
 
 ```bash
 npx skills add ToxicPine/ambit-skills --skill ambit-cli
 npx skills add ToxicPine/ambit-skills --skill ambit-mcp
-npx skills add ToxicPine/ambit-skills --skill chromatic
 ```
 
 ## Quick Usage
@@ -81,11 +72,9 @@ npx @cardelli/mcp setup --create --yes
 # → agent can now deploy to your private network, nothing else
 ```
 
-**Give your AI agent a browser:**
+**Deploy a headless browser from a template:**
 
 ```bash
-chromatic setup
-chromatic create my-browser
-chromatic mcp my-browser
-# → agent can now open pages, take screenshots, and fix what it finds
+ambit deploy my-browser --network lab --template ToxicPine/ambit-templates/chromatic
+# → headless Chrome on your private network, reachable via CDP at my-browser.lab:9222
 ```

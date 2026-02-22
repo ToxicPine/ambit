@@ -3,14 +3,14 @@
 // =============================================================================
 
 import { parseArgs } from "@std/cli";
-import { bold, confirm } from "../../../lib/cli.ts";
-import { createOutput } from "../../../lib/output.ts";
+import { bold, confirm } from "@/lib/cli.ts";
+import { createOutput } from "@/lib/output.ts";
 import { registerCommand } from "../mod.ts";
-import { createFlyProvider } from "../../providers/fly.ts";
-import { createTailscaleProvider } from "../../providers/tailscale.ts";
-import { checkDependencies } from "../../credentials.ts";
-import { findRouterApp } from "../../discovery.ts";
-import { resolveOrg } from "../../resolve.ts";
+import { createFlyProvider } from "@/src/providers/fly.ts";
+import { createTailscaleProvider } from "@/src/providers/tailscale.ts";
+import { checkDependencies } from "@/src/credentials.ts";
+import { findRouterApp } from "@/src/discovery.ts";
+import { resolveOrg } from "@/src/resolve.ts";
 
 // =============================================================================
 // Destroy Command

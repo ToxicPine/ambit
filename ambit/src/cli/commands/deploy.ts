@@ -4,13 +4,14 @@
 
 import { parseArgs } from "@std/cli";
 import { join } from "@std/path";
-import { bold, confirm, fileExists } from "../../../lib/cli.ts";
-import { createOutput } from "../../../lib/output.ts";
+import { bold, confirm, fileExists } from "@/lib/cli.ts";
+import { createOutput } from "@/lib/output.ts";
 import { registerCommand } from "../mod.ts";
-import { createFlyProvider, FlyDeployError } from "../../providers/fly.ts";
-import { findRouterApp } from "../../discovery.ts";
-import { resolveOrg } from "../../resolve.ts";
-import { assertNotRouter, auditDeploy, scanFlyToml } from "../../guard.ts";
+import { createFlyProvider, FlyDeployError } from "@/src/providers/fly.ts";
+import { findRouterApp } from "@/src/discovery.ts";
+import { resolveOrg } from "@/src/resolve.ts";
+import { assertNotRouter, auditDeploy, scanFlyToml } from "@/src/guard.ts";
+import { fetchTemplate, parseTemplateRef } from "@/src/template.ts";
 
 // =============================================================================
 // Types
@@ -131,12 +132,94 @@ const resolveConfigMode = async (
 };
 
 // =============================================================================
+// Template Mode
+// =============================================================================
+
+/** Resolve deploy config for template mode (--template). */
+const resolveTemplateMode = async (
+  templateRaw: string,
+  out: ReturnType<typeof createOutput>,
+): Promise<DeployConfig | null> => {
+  const ref = parseTemplateRef(templateRaw);
+
+  if (!ref) {
+    out.die(
+      `Invalid Template Reference: "${templateRaw}". ` +
+        `Format: owner/repo/path[@ref]`,
+    );
+    return null;
+  }
+
+  const label = `${ref.owner}/${ref.repo}/${ref.path}` +
+    (ref.ref ? `@${ref.ref}` : "");
+  out.info(`Template: ${label}`);
+
+  const fetchSpinner = out.spinner("Fetching Template from GitHub");
+  const result = await fetchTemplate(ref);
+
+  if (!result.ok) {
+    fetchSpinner.fail("Template Fetch Failed");
+    out.die(result.message);
+    return null;
+  }
+
+  fetchSpinner.success("Template Fetched");
+
+  // Find and scan the template's fly.toml
+  const configPath = join(result.templateDir, "fly.toml");
+
+  let tomlContent: string;
+  try {
+    tomlContent = await Deno.readTextFile(configPath);
+  } catch {
+    try {
+      Deno.removeSync(result.tempDir, { recursive: true });
+    } catch { /* ignore */ }
+    out.die(`Template '${ref.path}' Has No fly.toml`);
+    return null;
+  }
+
+  const scan = scanFlyToml(tomlContent);
+
+  if (scan.errors.length > 0) {
+    try {
+      Deno.removeSync(result.tempDir, { recursive: true });
+    } catch { /* ignore */ }
+    for (const err of scan.errors) {
+      out.err(err);
+    }
+    out.die("Pre-flight Check Failed for Template fly.toml");
+    return null;
+  }
+
+  for (const warn of scan.warnings) {
+    out.warn(warn);
+  }
+
+  out.ok(`Scanned ${ref.path}/fly.toml`);
+
+  return {
+    configPath,
+    preflight: { scanned: scan.scanned, warnings: scan.warnings },
+    tempDir: result.tempDir,
+  };
+};
+
+// =============================================================================
 // Deploy Command
 // =============================================================================
 
 const deploy = async (argv: string[]): Promise<void> => {
   const args = parseArgs(argv, {
-    string: ["network", "org", "region", "image", "config", "main-port"],
+    string: [
+      "network",
+      "org",
+      "region",
+      "image",
+      "config",
+      "main-port",
+      "template",
+    ],
     boolean: ["help", "yes", "json"],
     alias: { y: "yes" },
     default: { "main-port": "80" },
@@ -151,21 +234,37 @@ ${bold("USAGE")}
 
 ${bold("MODES")}
   Config mode (default):
-    ambit deploy <app> --network <name>                 Uses ./fly.toml
-    ambit deploy <app> --network <name> --config path   Explicit fly.toml
+    ambit deploy <app> --network <name>                    Uses ./fly.toml
+    ambit deploy <app> --network <name> --config path      Explicit fly.toml
 
   Image mode:
-    ambit deploy <app> --network <name> --image <img>   Docker image, no toml
+    ambit deploy <app> --network <name> --image <img>      Docker image, no toml
+
+  Template mode:
+    ambit deploy <app> --network <name> --template <ref>   GitHub template
 
 ${bold("OPTIONS")}
   --network <name>       Custom 6PN network to target (required)
   --org <org>            Fly.io organization slug
   --region <region>      Primary deployment region
-  --image <img>          Docker image (mutually exclusive with --config)
-  --config <path>        fly.toml path (mutually exclusive with --image)
-  --main-port <port>     Internal port for HTTP service in image mode (default: 80, "none" to skip)
   -y, --yes              Skip confirmation prompts
   --json                 Output as JSON
+
+${bold("CONFIG MODE")} (default)
+  --config <path>        Explicit fly.toml path (auto-detects ./fly.toml if omitted)
+
+${bold("IMAGE MODE")}
+  --image <img>          Docker image to deploy (no fly.toml needed)
+  --main-port <port>     Internal port for HTTP service (default: 80, "none" to skip)
+
+${bold("TEMPLATE MODE")}
+  --template <ref>       GitHub template as owner/repo/path[@ref]
+
+  Reference format:
+    owner/repo/path           Fetch from the default branch
+    owner/repo/path@tag       Fetch a tagged release
+    owner/repo/path@branch    Fetch a specific branch
+    owner/repo/path@commit    Fetch a specific commit
 
 ${bold("SAFETY")}
   Always deploys with --no-public-ips and --flycast.
@@ -176,6 +275,8 @@ ${bold("EXAMPLES")}
   ambit deploy my-app --network browsers
   ambit deploy my-app --network browsers --image registry/img:latest
   ambit deploy my-app --network browsers --config ./fly.toml --region sea
+  ambit deploy my-browser --network lab --template ToxicPine/ambit-templates/cdp
+  ambit deploy my-browser --network lab --template ToxicPine/ambit-templates/cdp@v1.0
 `);
     return;
   }
@@ -218,8 +319,9 @@ ${bold("EXAMPLES")}
     return out.die(e instanceof Error ? e.message : String(e));
   }
 
-  if (args.image && args.config) {
-    return out.die("--image and --config Are Mutually Exclusive");
+  const modeFlags = [args.image, args.config, args.template].filter(Boolean);
+  if (modeFlags.length > 1) {
+    return out.die("--image, --config, and --template Are Mutually Exclusive");
   }
 
   const network = args.network;
@@ -304,9 +406,15 @@ ${bold("EXAMPLES")}
 
   out.header("Step 4: Pre-flight Check").blank();
 
-  const deployConfig = args.image
-    ? resolveImageMode(args.image, String(args["main-port"]), out)
-    : await resolveConfigMode(args.config, out);
+  let deployConfig: DeployConfig | null;
+
+  if (args.template) {
+    deployConfig = await resolveTemplateMode(args.template, out);
+  } else if (args.image) {
+    deployConfig = resolveImageMode(args.image, String(args["main-port"]), out);
+  } else {
+    deployConfig = await resolveConfigMode(args.config, out);
+  }
 
   if (!deployConfig) return; // mode resolver already called out.die()
 
@@ -415,6 +523,6 @@ registerCommand({
   name: "deploy",
   description: "Deploy an app safely on a custom private network",
   usage:
-    "ambit deploy <app> --network <name> [--image <img>] [--org <org>] [--region <region>]",
+    "ambit deploy <app> --network <name> [--image <img>] [--template <ref>] [--org <org>] [--region <region>]",
   run: deploy,
 });

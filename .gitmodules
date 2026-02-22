@@ -1,3 +1,7 @@
 [submodule "ambit-skills"]
 	path = ambit-skills
 	url = git@github.com:ToxicPine/ambit-skills.git
+
+[submodule "ambit-templates"]
+	path = ambit-templates
+	url = git@github.com:ToxicPine/ambit-templates.git

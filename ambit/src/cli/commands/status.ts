@@ -4,15 +4,15 @@
 
 import { parseArgs } from "@std/cli";
 import { Table } from "@cliffy/table";
-import { bold } from "../../../lib/cli.ts";
-import { createOutput } from "../../../lib/output.ts";
+import { bold } from "@/lib/cli.ts";
+import { createOutput } from "@/lib/output.ts";
 import { registerCommand } from "../mod.ts";
-import { createFlyProvider, type FlyProvider } from "../../providers/fly.ts";
+import { createFlyProvider, type FlyProvider } from "@/src/providers/fly.ts";
 import {
   createTailscaleProvider,
   type TailscaleProvider,
-} from "../../providers/tailscale.ts";
-import { checkDependencies } from "../../credentials.ts";
+} from "@/src/providers/tailscale.ts";
+import { checkDependencies } from "@/src/credentials.ts";
 import {
   findRouterApp,
   getRouterMachineInfo,
@@ -21,8 +21,8 @@ import {
   type RouterApp,
   type RouterMachineInfo,
   type RouterTailscaleInfo,
-} from "../../discovery.ts";
-import { resolveOrg } from "../../resolve.ts";
+} from "@/src/discovery.ts";
+import { resolveOrg } from "@/src/resolve.ts";
 
 // =============================================================================
 // Status Command

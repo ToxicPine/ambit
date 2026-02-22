@@ -42,6 +42,7 @@ await build({
     "../ambit/lib/paths.ts": ambitMapping("lib/paths"),
     "../ambit/lib/command.ts": ambitMapping("lib/command"),
     "../ambit/src/credentials.ts": ambitMapping("src/credentials"),
+    "../ambit/src/template.ts": ambitMapping("src/template"),
   },
   typeCheck: false,
   test: false,

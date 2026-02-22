@@ -2,8 +2,8 @@
 // Resolve - Org Resolution Helper
 // =============================================================================
 
-import { prompt } from "../lib/cli.ts";
-import type { Output } from "../lib/output.ts";
+import { prompt } from "@/lib/cli.ts";
+import type { Output } from "@/lib/output.ts";
 import type { FlyProvider } from "./providers/fly.ts";
 
 // =============================================================================

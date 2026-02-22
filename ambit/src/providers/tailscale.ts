@@ -2,8 +2,8 @@
 // Tailscale API Client
 // =============================================================================
 
-import { commandExists, die } from "../../lib/cli.ts";
-import { runCommand } from "../../lib/command.ts";
+import { commandExists, die } from "@/lib/cli.ts";
+import { runCommand } from "@/lib/command.ts";
 import {
   type AuthKeyCapabilities,
   createAuthKeyPayload,

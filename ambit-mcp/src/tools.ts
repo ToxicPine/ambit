@@ -74,11 +74,19 @@ const deployInputs = {
   ),
   image: z.string().optional()
     .describe(
-      "Docker image to deploy (e.g. 'registry.fly.io/my-app:latest'). Mutually exclusive with dockerfile.",
+      "Docker image to deploy (e.g. 'registry.fly.io/my-app:latest'). Mutually exclusive with dockerfile and template.",
     ),
   dockerfile: z.string().optional()
     .describe(
-      "Path to a Dockerfile to build and deploy. Mutually exclusive with image.",
+      "Path to a Dockerfile to build and deploy. Mutually exclusive with image and template.",
+    ),
+  template: z.string().optional()
+    .describe(
+      "GitHub template reference as owner/repo/path[@ref]. Fetches a template " +
+      "directory from GitHub and deploys it. The template must contain a fly.toml " +
+      "(and typically a Dockerfile). Mutually exclusive with image and dockerfile. " +
+      "Examples: 'ToxicPine/ambit-templates/chromatic', " +
+      "'ToxicPine/ambit-templates/wetty@v1.0'.",
     ),
   region: z.string().optional()
     .describe(
@@ -605,11 +613,15 @@ function deployTool(mode: Mode): ToolMap {
   if (mode === "safe") {
     return {
       fly_deploy: {
-        description: `Deploy an app from a Docker image or Dockerfile.\n\n` +
+        description: `Deploy an app from a Docker image, Dockerfile, or GitHub template.\n\n` +
+          `Template mode: pass a GitHub reference as owner/repo/path[@ref] ` +
+          `in the 'template' field. The template is fetched from GitHub, ` +
+          `extracted, scanned, and deployed. Mutually exclusive with image ` +
+          `and dockerfile.\n\n` +
           `Safety enforcement:\n` +
           `- --no-public-ips is ALWAYS passed (no public IP allocation)\n` +
           `- --flycast is ALWAYS passed (ensures Flycast private IPv6)\n` +
-          `- Pre-flight: if a local fly.toml is found, it is scanned for ` +
+          `- Pre-flight: fly.toml (from template or local) is scanned for ` +
           `dangerous config patterns (force_https, public TLS handlers)\n` +
           `- Post-flight: fly ips list is checked — any public IPs are ` +
           `released immediately and the deploy is flagged as an error\n` +
@@ -636,9 +648,13 @@ function deployTool(mode: Mode): ToolMap {
   return {
     fly_deploy: {
       description:
-        `Deploy an app from a Docker image or Dockerfile. This is the ` +
-        `primary way to push code to a Fly.io app. Supports all deployment ` +
-        `strategies and configuration options.\n\n` +
+        `Deploy an app from a Docker image, Dockerfile, or GitHub template. ` +
+        `This is the primary way to push code to a Fly.io app. Supports ` +
+        `all deployment strategies and configuration options.\n\n` +
+        `Template mode: pass a GitHub reference as owner/repo/path[@ref] ` +
+        `in the 'template' field. The template is fetched from GitHub, ` +
+        `extracted, and deployed. Mutually exclusive with image and ` +
+        `dockerfile.\n\n` +
         `The no_public_ips and flycast flags control network exposure. ` +
         `Set no_public_ips: true to prevent public IP allocation. Set ` +
         `flycast: true to allocate a private Flycast IPv6 address.`,

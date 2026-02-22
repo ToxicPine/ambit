@@ -36,6 +36,7 @@ import { randomId } from "@cardelli/ambit/lib/cli";
 import { getRouterDockerDir } from "@cardelli/ambit/lib/paths";
 import { getCredentialStore } from "@cardelli/ambit/src/credentials";
 import { runCommand } from "@cardelli/ambit/lib/command";
+import { fetchTemplate, parseTemplateRef } from "@cardelli/ambit/src/template";
 
 // MCP-safe Tailscale client (throws instead of die())
 import { createTailscaleClient, waitForDevice } from "./tailscale.ts";
@@ -63,6 +64,33 @@ function err(text: string): CallToolResult {
     content: [{ type: "text", text }],
     isError: true,
   };
+}
+
+/**
+ * Resolve a template reference string into a local directory ready for deploy.
+ * Returns the template dir path and a cleanup function, or a CallToolResult error.
+ */
+async function resolveTemplate(
+  templateRef: string,
+): Promise<
+  { templateDir: string; tempDir: string } | { error: CallToolResult }
+> {
+  const ref = parseTemplateRef(templateRef);
+  if (!ref) {
+    return {
+      error: err(
+        `Invalid Template Reference: "${templateRef}". ` +
+          `Format: owner/repo/path[@ref]`,
+      ),
+    };
+  }
+
+  const result = await fetchTemplate(ref);
+  if (!result.ok) {
+    return { error: err(`Template Fetch Failed: ${result.message}`) };
+  }
+
+  return { templateDir: result.templateDir, tempDir: result.tempDir };
 }
 
 // =============================================================================
@@ -664,81 +692,157 @@ export function createHandlers(mode: Mode): Record<string, Handler> {
   async function fly_deploy_safe(args: Args): Promise<CallToolResult> {
     guard(args.app);
 
-    const cmdArgs = [
-      "deploy",
-      "-a",
-      args.app,
-      "--yes",
-      "--no-public-ips",
-      "--flycast",
-    ];
-    if (args.image) cmdArgs.push("--image", args.image);
-    if (args.dockerfile) cmdArgs.push("--dockerfile", args.dockerfile);
-    if (args.region) cmdArgs.push("--primary-region", args.region);
-    if (args.strategy) cmdArgs.push("--strategy", args.strategy);
-    if (args.env) {
-      for (const [k, v] of Object.entries(args.env as Record<string, string>)) {
-        cmdArgs.push("-e", `${k}=${v}`);
-      }
-    }
-    if (args.build_args) {
-      for (
-        const [k, v] of Object.entries(
-          args.build_args as Record<string, string>,
-        )
-      ) {
-        cmdArgs.push("--build-arg", `${k}=${v}`);
-      }
-    }
-
-    const result = await exec(cmdArgs);
-    if (!result.success) {
-      return err(`Deploy Failed: ${result.stderr || result.stdout}`);
-    }
-
-    // Post-flight audit
-    const audit = await auditDeploy(args.app);
-
-    if (audit.public_ips_released > 0) {
+    // Mutual exclusivity check
+    const modeFlags = [args.image, args.dockerfile, args.template].filter(
+      Boolean,
+    );
+    if (modeFlags.length > 1) {
       return err(
-        `Deploy succeeded but ${audit.public_ips_released} public IP(s) were found ` +
-          `and released. This should not happen with --no-public-ips. ` +
-          `Check fly.toml and deployment config.`,
+        "Only one of image, dockerfile, or template can be specified.",
       );
     }
 
-    return ok(`Deployed ${args.app}`, { ok: true, audit });
+    // Resolve template if provided
+    let templateResult:
+      | { templateDir: string; tempDir: string }
+      | undefined;
+    if (args.template) {
+      const resolved = await resolveTemplate(args.template);
+      if ("error" in resolved) return resolved.error;
+      templateResult = resolved;
+    }
+
+    try {
+      const cmdArgs = [
+        "deploy",
+        "-a",
+        args.app,
+        "--yes",
+        "--no-public-ips",
+        "--flycast",
+      ];
+
+      if (templateResult) {
+        // Template mode: deploy from the template directory
+        cmdArgs.splice(1, 0, templateResult.templateDir);
+      } else if (args.image) {
+        cmdArgs.push("--image", args.image);
+      } else if (args.dockerfile) {
+        cmdArgs.push("--dockerfile", args.dockerfile);
+      }
+
+      if (args.region) cmdArgs.push("--primary-region", args.region);
+      if (args.strategy) cmdArgs.push("--strategy", args.strategy);
+      if (args.env) {
+        for (
+          const [k, v] of Object.entries(args.env as Record<string, string>)
+        ) {
+          cmdArgs.push("-e", `${k}=${v}`);
+        }
+      }
+      if (args.build_args) {
+        for (
+          const [k, v] of Object.entries(
+            args.build_args as Record<string, string>,
+          )
+        ) {
+          cmdArgs.push("--build-arg", `${k}=${v}`);
+        }
+      }
+
+      const result = await exec(cmdArgs);
+      if (!result.success) {
+        return err(`Deploy Failed: ${result.stderr || result.stdout}`);
+      }
+
+      // Post-flight audit
+      const audit = await auditDeploy(args.app);
+
+      if (audit.public_ips_released > 0) {
+        return err(
+          `Deploy succeeded but ${audit.public_ips_released} public IP(s) were found ` +
+            `and released. This should not happen with --no-public-ips. ` +
+            `Check fly.toml and deployment config.`,
+        );
+      }
+
+      return ok(`Deployed ${args.app}`, { ok: true, audit });
+    } finally {
+      // Clean up template temp directory
+      if (templateResult) {
+        try {
+          Deno.removeSync(templateResult.tempDir, { recursive: true });
+        } catch { /* ignore */ }
+      }
+    }
   }
 
   async function fly_deploy_unsafe(args: Args): Promise<CallToolResult> {
-    const cmdArgs = ["deploy", "-a", args.app, "--yes"];
-    if (args.image) cmdArgs.push("--image", args.image);
-    if (args.dockerfile) cmdArgs.push("--dockerfile", args.dockerfile);
-    if (args.region) cmdArgs.push("--primary-region", args.region);
-    if (args.strategy) cmdArgs.push("--strategy", args.strategy);
-    if (args.no_public_ips) cmdArgs.push("--no-public-ips");
-    if (args.flycast) cmdArgs.push("--flycast");
-    if (args.ha === false) cmdArgs.push("--ha=false");
-    if (args.env) {
-      for (const [k, v] of Object.entries(args.env as Record<string, string>)) {
-        cmdArgs.push("-e", `${k}=${v}`);
-      }
-    }
-    if (args.build_args) {
-      for (
-        const [k, v] of Object.entries(
-          args.build_args as Record<string, string>,
-        )
-      ) {
-        cmdArgs.push("--build-arg", `${k}=${v}`);
-      }
+    // Mutual exclusivity check
+    const modeFlags = [args.image, args.dockerfile, args.template].filter(
+      Boolean,
+    );
+    if (modeFlags.length > 1) {
+      return err(
+        "Only one of image, dockerfile, or template can be specified.",
+      );
     }
 
-    const result = await exec(cmdArgs);
-    if (!result.success) {
-      return err(`Deploy Failed: ${result.stderr || result.stdout}`);
+    // Resolve template if provided
+    let templateResult:
+      | { templateDir: string; tempDir: string }
+      | undefined;
+    if (args.template) {
+      const resolved = await resolveTemplate(args.template);
+      if ("error" in resolved) return resolved.error;
+      templateResult = resolved;
     }
-    return ok(`Deployed ${args.app}`, { ok: true });
+
+    try {
+      const cmdArgs = ["deploy", "-a", args.app, "--yes"];
+
+      if (templateResult) {
+        cmdArgs.splice(1, 0, templateResult.templateDir);
+      } else if (args.image) {
+        cmdArgs.push("--image", args.image);
+      } else if (args.dockerfile) {
+        cmdArgs.push("--dockerfile", args.dockerfile);
+      }
+
+      if (args.region) cmdArgs.push("--primary-region", args.region);
+      if (args.strategy) cmdArgs.push("--strategy", args.strategy);
+      if (args.no_public_ips) cmdArgs.push("--no-public-ips");
+      if (args.flycast) cmdArgs.push("--flycast");
+      if (args.ha === false) cmdArgs.push("--ha=false");
+      if (args.env) {
+        for (
+          const [k, v] of Object.entries(args.env as Record<string, string>)
+        ) {
+          cmdArgs.push("-e", `${k}=${v}`);
+        }
+      }
+      if (args.build_args) {
+        for (
+          const [k, v] of Object.entries(
+            args.build_args as Record<string, string>,
+          )
+        ) {
+          cmdArgs.push("--build-arg", `${k}=${v}`);
+        }
+      }
+
+      const result = await exec(cmdArgs);
+      if (!result.success) {
+        return err(`Deploy Failed: ${result.stderr || result.stdout}`);
+      }
+      return ok(`Deployed ${args.app}`, { ok: true });
+    } finally {
+      if (templateResult) {
+        try {
+          Deno.removeSync(templateResult.tempDir, { recursive: true });
+        } catch { /* ignore */ }
+      }
+    }
   }
 
   // =========================================================================

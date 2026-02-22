@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { z } from "zod";
-import { commandExists, ensureConfigDir, fileExists } from "../lib/cli.ts";
+import { commandExists, ensureConfigDir, fileExists } from "@/lib/cli.ts";
 import { getConfigDir } from "./schemas/config.ts";
 
 // =============================================================================

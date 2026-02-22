@@ -3,25 +3,25 @@
 // =============================================================================
 
 import { parseArgs } from "@std/cli";
-import { bold, randomId, readSecret } from "../../../lib/cli.ts";
-import { createOutput } from "../../../lib/output.ts";
+import { bold, randomId, readSecret } from "@/lib/cli.ts";
+import { createOutput } from "@/lib/output.ts";
 import { registerCommand } from "../mod.ts";
-import { extractSubnet, getRouterTag } from "../../schemas/config.ts";
-import { isPublicTld } from "../../guard.ts";
+import { extractSubnet, getRouterTag } from "@/src/schemas/config.ts";
+import { isPublicTld } from "@/src/guard.ts";
 import {
   createFlyProvider,
   FlyDeployError,
   getRouterAppName,
-} from "../../providers/fly.ts";
+} from "@/src/providers/fly.ts";
 import {
   createTailscaleProvider,
   enableAcceptRoutes,
   isAcceptRoutesEnabled,
   isTailscaleInstalled,
   waitForDevice,
-} from "../../providers/tailscale.ts";
-import { getCredentialStore } from "../../credentials.ts";
-import { resolveOrg } from "../../resolve.ts";
+} from "@/src/providers/tailscale.ts";
+import { getCredentialStore } from "@/src/credentials.ts";
+import { resolveOrg } from "@/src/resolve.ts";
 
 // =============================================================================
 // Create Command

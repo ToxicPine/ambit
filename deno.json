@@ -1,5 +1,5 @@
 {
-  "workspace": ["./ambit", "./ambit-mcp", "./chromatic", "./test-app"],
+  "workspace": ["./ambit", "./ambit-mcp"],
   "imports": {
     "@deno/dnt": "jsr:@deno/dnt@^0.42",
     "@std/cli": "jsr:@std/cli@^1.0.27",
@@ -9,6 +9,7 @@
     "build": "deno run -A scripts/build_all.ts",
     "publish": "deno run -A scripts/publish.ts"
   },
+  "exclude": ["**/npm/"],
   "fmt": {
     "exclude": ["**/*.md"]
   }
