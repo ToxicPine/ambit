@@ -33,7 +33,7 @@ With Ambit, the agent deploys to `http://test-app.sandbox`. You can see it, the 
 
 ### For the Developer
 
-Setting up auth for a personal tool is a tedious barrier. Run `ambit deploy my-tool --network lab` and the app is live and secure in minutes. The architecture enforces security so your config doesn't have to.
+Setting up auth for a personal tool is a tedious barrier. Run `ambit deploy my-tool.lab` and the app is live and secure in minutes. The architecture enforces security so your config doesn't have to.
 
 ## How It Works
 
@@ -56,7 +56,7 @@ ambit create lab
 ### 3. Deploy an App
 
 ```bash
-ambit deploy my-crazy-site --network lab
+ambit deploy my-crazy-site.lab
 ```
 
 ### 4. Visit It
@@ -79,23 +79,65 @@ This is the first command you run, it sets up your private network: a named slic
 | `--yes`             | Skip confirmation prompts                                  |
 | `--json`            | Machine-readable JSON output                               |
 
-### `ambit deploy <app> --network <name>`
+### `ambit deploy <app>.<network>`
 
-This puts an app onto your private network. This is what you run whenever you want to host something. If the app doesn't exist yet, ambit creates it on the right network for you. You can point it at a directory with a `fly.toml` (auto-detected, or pass `--config`), give it a Docker image with `--image`, or fetch a ready-made template from GitHub with `--template`.
+This puts an app onto your private network. This is what you run whenever you want to host something. If the app doesn't exist yet, ambit creates it on the right network for you. The network can be specified as part of the name (`my-app.lab`) or with `--network` (`my-app --network lab`).
 
 Before deploying, ambit scans your config for settings that don't make sense on a private network (like `force_https`, which only matters for public traffic). After deploying, it checks that no public IPs were allocated, releases any that were, and verifies the app has a private address on the network you specified.
 
-| Flag                  | Description                                                              |
-| --------------------- | ------------------------------------------------------------------------ |
-| `--network <name>`    | Target private network (required)                                        |
-| `--org <org>`         | Fly.io organization                                                      |
-| `--region <region>`   | Deployment region                                                        |
-| `--image <img>`       | Docker image (instead of fly.toml)                                       |
-| `--config <path>`     | Explicit fly.toml path (instead of auto-detect)                          |
-| `--template <ref>`    | GitHub template as `owner/repo/path[@ref]`                               |
-| `--main-port <port>`  | Internal port for HTTP service in image mode (default: `80`, `none` to skip) |
-| `--yes`               | Skip confirmation prompts                                                |
-| `--json`              | Machine-readable JSON output                                             |
+There are three deployment modes. They are mutually exclusive — you can only use one at a time.
+
+#### Config mode (default)
+
+Deploy from a `fly.toml`. If you don't pass `--config`, ambit looks for a `fly.toml` in the current directory.
+
+```bash
+ambit deploy my-app.lab
+ambit deploy my-app.lab --config ./my-config/fly.toml
+```
+
+| Flag               | Description                       |
+| ------------------ | --------------------------------- |
+| `--config <path>`  | Explicit fly.toml path (optional) |
+
+#### Image mode
+
+Deploy a Docker image directly, without needing a `fly.toml`. Ambit generates a minimal config for you with auto start/stop enabled.
+
+```bash
+ambit deploy my-app.lab --image registry/img:latest
+ambit deploy my-app.lab --image registry/img:latest --main-port 3000
+```
+
+| Flag                 | Description                                                                  |
+| -------------------- | ---------------------------------------------------------------------------- |
+| `--image <img>`      | Docker image to deploy (required)                                            |
+| `--main-port <port>` | Internal port for the HTTP service (default: `80`, `none` to skip)           |
+
+#### Template mode
+
+Fetch a ready-made configuration from GitHub and deploy it. The reference format is `owner/repo/path[@ref]` — pin to a tag, branch, or commit with `@`.
+
+```bash
+ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic
+ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic@v1.0
+```
+
+| Flag                | Description                                |
+| ------------------- | ------------------------------------------ |
+| `--template <ref>`  | GitHub template reference (required)       |
+
+#### Shared flags
+
+These work with all three modes.
+
+| Flag                  | Description                                                    |
+| --------------------- | -------------------------------------------------------------- |
+| `--network <name>`    | Target network                                                 |
+| `--org <org>`         | Fly.io organization                                            |
+| `--region <region>`   | Deployment region                                              |
+| `--yes`               | Skip confirmation prompts                                      |
+| `--json`              | Machine-readable JSON output                                   |
 
 ### `ambit status --network <name>`
 
@@ -143,26 +185,6 @@ You can create as many networks as you want, and each one gets its own TLD on yo
 ```bash
 ambit create infra
 ambit create browsers
-```
-
-## Templates
-
-Templates are ready-to-deploy configurations hosted on GitHub. Use `--template` to fetch and deploy one in a single command:
-
-```bash
-ambit deploy my-browser --network lab --template ToxicPine/ambit-templates/chromatic
-```
-
-The template reference format is `owner/repo/path[@ref]` — pin to a tag, branch, or commit with `@`:
-
-```bash
-ambit deploy my-browser --network lab --template ToxicPine/ambit-templates/chromatic@v1.0
-```
-
-You can also deploy from local template files with `--config`:
-
-```bash
-ambit deploy my-opencode --network supercomputer --config templates/opencode/fly.toml
 ```
 
 ## Agent Skill

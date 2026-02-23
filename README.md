@@ -22,15 +22,16 @@ Ambit MCP lets an AI agent like Claude Code deploy and manage your apps for you.
 
 ---
 
-### [Templates](./templates/)
+### [Templates](./ambit-templates/)
 
-The [templates](./templates/) directory has ready-to-deploy examples for common setups.
+The [ambit-templates](./ambit-templates/) directory has ready-to-deploy examples for common setups.
 
 | Template | Description |
 | --- | --- |
-| [wetty](./templates/wetty/) | A modern cloud devshell — Ubuntu 24.04 with a web terminal, persistent home directory, passwordless sudo, and auto start/stop. |
-| [opencode](./templates/opencode/) | A private OpenCode web workspace — Nix-based environment on Ubuntu 24.04 with persistent home and auto start/stop. |
-| [chromatic](./templates/chromatic/) | A headless Chrome instance exposing the Chrome DevTools Protocol — for AI agents or scripts that need to drive a browser on your private network. |
+| [wetty](./ambit-templates/wetty/) | A cloud devshell — Nix-based environment with a web terminal, persistent home directory, passwordless sudo, and auto start/stop. |
+| [opencode](./ambit-templates/opencode/) | A private [OpenCode](https://opencode.ai) web workspace — Nix-based environment with persistent home and auto start/stop. |
+| [chromatic](./ambit-templates/chromatic/) | A headless Chrome instance exposing the Chrome DevTools Protocol — for AI agents or scripts that need to drive a browser on your private network. |
+| [openclaw](./ambit-templates/openclaw/) | A self-hosted [OpenClaw](https://openclaw.ai) instance — a personal AI assistant you can talk to from WhatsApp, Telegram, Discord, and other chat apps. |
 
 ## Installation
 
@@ -61,7 +62,7 @@ npx skills add ToxicPine/ambit-skills --skill ambit-mcp
 
 ```bash
 ambit create lab
-ambit deploy my-app --network lab
+ambit deploy my-app.lab
 # → http://my-app.lab, visible only to your devices
 ```
 
@@ -75,6 +76,6 @@ npx @cardelli/mcp setup --create --yes
 **Deploy a headless browser from a template:**
 
 ```bash
-ambit deploy my-browser --network lab --template ToxicPine/ambit-templates/chromatic
+ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic
 # → headless Chrome on your private network, reachable via CDP at my-browser.lab:9222
 ```

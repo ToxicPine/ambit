@@ -230,21 +230,24 @@ const deploy = async (argv: string[]): Promise<void> => {
 ${bold("ambit deploy")} - Deploy an App Safely on a Custom Private Network
 
 ${bold("USAGE")}
+  ambit deploy <app>.<network> [options]
   ambit deploy <app> --network <name> [options]
+
+  The network can be specified as part of the name (app.network) or with --network.
 
 ${bold("MODES")}
   Config mode (default):
-    ambit deploy <app> --network <name>                    Uses ./fly.toml
-    ambit deploy <app> --network <name> --config path      Explicit fly.toml
+    ambit deploy my-app.lab                                Uses ./fly.toml
+    ambit deploy my-app.lab --config path                  Explicit fly.toml
 
   Image mode:
-    ambit deploy <app> --network <name> --image <img>      Docker image, no toml
+    ambit deploy my-app.lab --image <img>                  Docker image, no toml
 
   Template mode:
-    ambit deploy <app> --network <name> --template <ref>   GitHub template
+    ambit deploy my-app.lab --template <ref>               GitHub template
 
 ${bold("OPTIONS")}
-  --network <name>       Custom 6PN network to target (required)
+  --network <name>       Target network
   --org <org>            Fly.io organization slug
   --region <region>      Primary deployment region
   -y, --yes              Skip confirmation prompts
@@ -272,11 +275,11 @@ ${bold("SAFETY")}
   Pre-flight scan rejects fly.toml with force_https or TLS on 443.
 
 ${bold("EXAMPLES")}
-  ambit deploy my-app --network browsers
-  ambit deploy my-app --network browsers --image registry/img:latest
-  ambit deploy my-app --network browsers --config ./fly.toml --region sea
-  ambit deploy my-browser --network lab --template ToxicPine/ambit-templates/cdp
-  ambit deploy my-browser --network lab --template ToxicPine/ambit-templates/cdp@v1.0
+  ambit deploy my-app.lab
+  ambit deploy my-app.lab --image registry/img:latest
+  ambit deploy my-app.lab --config ./fly.toml --region sea
+  ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic
+  ambit deploy my-browser --network lab --template ToxicPine/ambit-templates/chromatic@v1.0
 `);
     return;
   }
@@ -304,13 +307,35 @@ ${bold("EXAMPLES")}
   const appArg = args._[0];
   if (!appArg || typeof appArg !== "string") {
     return out.die(
-      "App Name Required. Usage: ambit deploy <app> --network <name>",
+      "Missing app name. Usage: ambit deploy <app>.<network>",
     );
   }
-  const app = appArg;
 
-  if (!args.network) {
-    return out.die("--network Is Required");
+  let app: string;
+  let network: string;
+
+  if (appArg.includes(".")) {
+    const parts = appArg.split(".");
+    if (parts.length !== 2 || !parts[0] || !parts[1]) {
+      return out.die(
+        `'${appArg}' should have exactly one dot, like my-app.my-network`,
+      );
+    }
+    if (args.network) {
+      return out.die(
+        `Network is already part of the name ('${appArg}'), --network is not needed`,
+      );
+    }
+    app = parts[0];
+    network = parts[1];
+  } else {
+    app = appArg;
+    if (!args.network) {
+      return out.die(
+        `Missing network. Use: ambit deploy ${app}.<network>`,
+      );
+    }
+    network = args.network;
   }
 
   try {
@@ -323,8 +348,6 @@ ${bold("EXAMPLES")}
   if (modeFlags.length > 1) {
     return out.die("--image, --config, and --template Are Mutually Exclusive");
   }
-
-  const network = args.network;
 
   out.blank()
     .header("=".repeat(50))
