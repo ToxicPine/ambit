@@ -1,63 +1,34 @@
-import { build, emptyDir } from "@deno/dnt";
+import denoRawConfig from "../deno.json" with { type: "json" };
+import ambitRawConfig from "../../ambit/deno.json" with { type: "json" };
 import { parseArgs } from "@std/cli";
-
-const { name, version, description, license } = JSON.parse(
-  await Deno.readTextFile("./deno.json"),
-);
-if (!name || !version || !description || !license) {
-  throw new Error("deno.json must have name, version, description, and license");
-}
+import {
+  buildNpmPackage,
+  createPathMappingsFromExports,
+  discoverImportedSubPaths,
+  parseDenoConfig,
+} from "../../scripts/build_npm_core.ts";
 
 const args = parseArgs(Deno.args, { boolean: ["publish"] });
-
-// Local builds use file: path; --publish uses semver for npm
-const ambitVersion = args.publish ? "^0.1.0" : "file:../../ambit/npm";
-
-const ambitMapping = (subPath: string) => ({
-  name: "@cardelli/ambit",
-  version: ambitVersion,
-  subPath,
+const mcpConfig = parseDenoConfig(denoRawConfig);
+const ambitConfig = parseDenoConfig(ambitRawConfig);
+const ambitVersion = args.publish
+  ? `^${ambitConfig.version}`
+  : "file:../../ambit/npm";
+const usedAmbitSubPaths = await discoverImportedSubPaths({
+  rootDir: ".",
+  packageName: ambitConfig.name,
+});
+const mappings = createPathMappingsFromExports({
+  exports: ambitConfig.exports,
+  sourcePathPrefix: "../ambit/",
+  packageName: ambitConfig.name,
+  packageVersion: ambitVersion,
+  onlySubPaths: usedAmbitSubPaths,
 });
 
-await emptyDir("./npm");
-
-await build({
-  entryPoints: [
-    {
-      kind: "bin",
-      name: "ambit-mcp",
-      path: "./main.ts",
-    },
-    { name: "./setup", path: "./setup.ts" },
-  ],
-  outDir: "./npm",
-  shims: {
-    deno: true,
-  },
-  mappings: {
-    "../ambit/src/schemas/config.ts": ambitMapping("schemas/config"),
-    "../ambit/src/providers/fly.ts": ambitMapping("providers/fly"),
-    "../ambit/src/providers/tailscale.ts": ambitMapping("providers/tailscale"),
-    "../ambit/lib/cli.ts": ambitMapping("lib/cli"),
-    "../ambit/lib/paths.ts": ambitMapping("lib/paths"),
-    "../ambit/lib/command.ts": ambitMapping("lib/command"),
-    "../ambit/src/credentials.ts": ambitMapping("src/credentials"),
-    "../ambit/src/template.ts": ambitMapping("src/template"),
-  },
-  typeCheck: false,
-  test: false,
-  scriptModule: false,
-  compilerOptions: {
-    lib: ["ES2022"],
-    target: "ES2022",
-  },
-  package: {
-    name,
-    version,
-    description,
-    license,
-    engines: {
-      node: ">=18",
-    },
-  },
+await buildNpmPackage({
+  denoConfigRaw: denoRawConfig,
+  binName: "ambit-mcp",
+  extraEntryPoints: [{ name: "./setup", path: "./setup.ts" }],
+  buildOverrides: { mappings },
 });

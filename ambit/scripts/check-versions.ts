@@ -99,7 +99,7 @@ async function getGitHubLatest(repo: string): Promise<string> {
   });
 
   if (!resp.ok) {
-    throw new Error(`GitHub API error: ${resp.status}`);
+    throw new Error(`GitHub API Error: ${resp.status}`);
   }
 
   const data = await resp.json();
@@ -112,7 +112,7 @@ async function getAlpineLatest(): Promise<string> {
   const resp = await fetch(url);
 
   if (!resp.ok) {
-    throw new Error(`Docker Hub API error: ${resp.status}`);
+    throw new Error(`Docker Hub API Error: ${resp.status}`);
   }
 
   const data = await resp.json();
@@ -136,7 +136,7 @@ async function getAlpineLatest(): Promise<string> {
 function extractVersion(content: string, pattern: RegExp): string {
   const match = content.match(pattern);
   if (!match) {
-    throw new Error(`Pattern not found: ${pattern}`);
+    throw new Error(`Pattern Not Found: ${pattern}`);
   }
   return match[1];
 }
@@ -212,8 +212,8 @@ async function main() {
     console.log(`Usage: check-versions [--update]
 
 Options:
-  --update, -u  Update Dockerfiles to latest versions
-  --help, -h    Show this help message`);
+  --update, -u  Update Dockerfiles to Latest Versions
+  --help, -h    Show This Help Message`);
     Deno.exit(0);
   }
 

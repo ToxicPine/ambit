@@ -21,6 +21,7 @@
     "jsr:@std/toml@1": "1.0.11",
     "jsr:@ts-morph/bootstrap@0.27": "0.27.0",
     "jsr:@ts-morph/common@0.27": "0.27.0",
+    "jsr:@zod/zod@4": "4.3.6",
     "jsr:@zod/zod@^4.3.6": "4.3.6",
     "npm:@cardelli/ambit@*": "0.1.1",
     "npm:@modelcontextprotocol/sdk@1.25.3": "1.25.3_zod@4.3.6_ajv@8.17.1_express@5.2.1",

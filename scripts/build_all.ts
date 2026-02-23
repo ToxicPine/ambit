@@ -1,5 +1,14 @@
 #!/usr/bin/env -S deno run -A
 import { parseArgs } from "@std/cli";
+import denoRawConfig from "../deno.json" with { type: "json" };
+import { z } from "jsr:@zod/zod@^4.0.0";
+import { parseDenoConfig } from "./build_npm_core.ts";
+
+const denoSchema = z.object({
+  workspace: z.array(z.string()),
+}).loose();
+
+const denoConfig = denoSchema.parse(denoRawConfig);
 
 const args = parseArgs(Deno.args, { boolean: ["publish"] });
 const extra = args.publish ? ["--publish"] : [];
@@ -14,15 +23,14 @@ const run = async (dir: string, label: string): Promise<void> => {
   });
   const { code } = await cmd.output();
   if (code !== 0) {
-    throw new Error(`${label} build failed with exit code ${code}`);
+    throw new Error(`${label} Build Failed: exit code ${code}`);
   }
-  console.log(`\n--- ${label} done ---\n`);
+  console.log(`\n--- ${label} Done ---\n`);
 };
 
-// Phase 1: Base package (no internal deps)
-await run("./ambit", "@cardelli/ambit");
-
-// Phase 2: Dependent packages
-await run("./ambit-mcp", "@cardelli/mcp");
-
-console.log("\n=== All packages built ===\n");
+for (const dir of denoConfig.workspace) {
+  const packageConfig = parseDenoConfig(
+    JSON.parse(await Deno.readTextFile(`${dir}/deno.json`)),
+  );
+  await run(dir, packageConfig.name);
+}
