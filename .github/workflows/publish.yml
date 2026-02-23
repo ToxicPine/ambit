@@ -1,0 +1,41 @@
+name: Publish to npm
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check for version bump
+        id: version
+        run: |
+          OLD=$(git show HEAD~1:ambit/deno.json | jq -r .version)
+          NEW=$(jq -r .version ambit/deno.json)
+          if [ "$OLD" != "$NEW" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Version Bumped: $OLD → $NEW"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No Version Change ($NEW)"
+          fi
+
+      - uses: denoland/setup-deno@v2
+        if: steps.version.outputs.changed == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.version.outputs.changed == 'true'
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Publish
+        if: steps.version.outputs.changed == 'true'
+        run: deno run -A scripts/publish.ts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
