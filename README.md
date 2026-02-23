@@ -31,7 +31,7 @@ The [ambit-templates](./ambit-templates/) directory has ready-to-deploy examples
 | [wetty](./ambit-templates/wetty/) | A cloud devshell — Nix-based environment with a web terminal, persistent home directory, passwordless sudo, and auto start/stop. |
 | [opencode](./ambit-templates/opencode/) | A private [OpenCode](https://opencode.ai) web workspace — Nix-based environment with persistent home and auto start/stop. |
 | [chromatic](./ambit-templates/chromatic/) | A headless Chrome instance exposing the Chrome DevTools Protocol — for AI agents or scripts that need to drive a browser on your private network. |
-| [openclaw](./ambit-templates/openclaw/) | A self-hosted [OpenClaw](https://openclaw.ai) instance — a personal AI assistant you can talk to from WhatsApp, Telegram, Discord, and other chat apps. |
+| [openclaw](https://github.com/ToxicPine/ambit-openclaw) | A self-hosted [OpenClaw](https://openclaw.ai) instance — a personal AI assistant you can talk to from WhatsApp, Telegram, Discord, and other chat apps. |
 
 ## Installation
 

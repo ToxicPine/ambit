@@ -11,13 +11,14 @@
 //   create     Create a Tailscale subnet router on a Fly.io custom network
 //   deploy     Deploy an app safely on a custom private network
 //   status     Show router status, network, and tailnet info
-//   destroy    Tear down the router, clean up DNS and tailnet device
+//   destroy    Destroy a network (router) or a workload app
 //   doctor     Check that Tailscale and the router are working correctly
 //
 // Examples:
 //   ambit create browsers
 //   ambit status
-//   ambit destroy
+//   ambit destroy network browsers
+//   ambit destroy app my-app.browsers
 //   ambit doctor
 //
 // =============================================================================

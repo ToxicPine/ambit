@@ -53,7 +53,7 @@ ${bold("COMMANDS")}
   deploy     Deploy an app safely on a custom private network
   list       List all discovered routers across networks
   status     Show router status, network, and tailnet info
-  destroy    Tear down the router, clean up DNS and tailnet device
+  destroy    Destroy a network (router) or a workload app
   doctor     Check that Tailscale and the router are working correctly
 
 ${bold("OPTIONS")}
@@ -64,7 +64,8 @@ ${bold("EXAMPLES")}
   ambit create browsers
   ambit list
   ambit status --network browsers
-  ambit destroy --network browsers
+  ambit destroy network browsers
+  ambit destroy app my-app.browsers
   ambit doctor
 
 ${dim("Run 'ambit <command> --help' for command-specific help.")}

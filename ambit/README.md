@@ -143,9 +143,26 @@ These work with all three modes.
 
 This tells you if your network is working correctly: it shows whether the router is running, which Tailscale device it is, what routes it's advertising, and whether DNS is configured.
 
-### `ambit destroy --network <name>`
+### `ambit destroy network <name>`
 
-This deletes the network and everything in it: tears down the router, cleans up DNS, and removes the Tailscale device. Reminds you to clean up any ACL entries you added.
+Tears down a network: destroys the router, cleans up DNS, and removes the Tailscale device. If there are workload apps still on the network, ambit warns you before proceeding. Reminds you to clean up any ACL entries you added.
+
+| Flag           | Description                    |
+| -------------- | ------------------------------ |
+| `--org <org>`  | Fly.io organization            |
+| `--yes`        | Skip confirmation prompts      |
+| `--json`       | Machine-readable JSON output   |
+
+### `ambit destroy app <app>.<network>`
+
+Destroys a workload app on a network. The network can be specified as part of the name (`my-app.lab`) or with `--network` (`my-app --network lab`). Verifies the app exists on the specified network before destroying it.
+
+| Flag                 | Description                                  |
+| -------------------- | -------------------------------------------- |
+| `--network <name>`   | Target network (if not using dot syntax)     |
+| `--org <org>`        | Fly.io organization                          |
+| `--yes`              | Skip confirmation prompts                    |
+| `--json`             | Machine-readable JSON output                 |
 
 ### `ambit doctor`
 

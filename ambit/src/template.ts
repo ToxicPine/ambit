@@ -6,9 +6,10 @@
 // template. Templates are expected to contain at least a fly.toml and
 // typically a Dockerfile.
 //
-// Reference format: owner/repo/path[@ref]
+// Reference format: owner/repo[/path][@ref]
 //
-//   ToxicPine/ambit-templates/cdp          → default branch
+//   ToxicPine/ambit-openclaw               → repo root, default branch
+//   ToxicPine/ambit-templates/cdp          → subdirectory, default branch
 //   ToxicPine/ambit-templates/cdp@v1.0     → tagged release
 //   ToxicPine/ambit-templates/cdp@main     → explicit branch
 //
@@ -66,8 +67,12 @@ const fail = (
 });
 
 /** Format a template reference for display. */
-const formatRef = (ref: TemplateRef): string =>
-  `${ref.owner}/${ref.repo}/${ref.path}` + (ref.ref ? `@${ref.ref}` : "");
+const formatRef = (ref: TemplateRef): string => {
+  const base = ref.path === "."
+    ? `${ref.owner}/${ref.repo}`
+    : `${ref.owner}/${ref.repo}/${ref.path}`;
+  return base + (ref.ref ? `@${ref.ref}` : "");
+};
 
 /** Format owner/repo with optional ref for display. */
 const formatRepo = (ref: TemplateRef): string =>
@@ -81,11 +86,13 @@ const formatRepo = (ref: TemplateRef): string =>
  * Parse a template reference string into its components.
  * Returns null if the format is invalid.
  *
- * Format: owner/repo/path[@ref]
+ * Format: owner/repo[/path][@ref]
  *
  * The first two segments are always owner/repo. Everything after the second
- * slash up to an optional @ref is the path within the repository. This is
- * unambiguous because GitHub owner and repo names cannot contain slashes.
+ * slash up to an optional @ref is the path within the repository. When no
+ * path is provided, the repository root is used as the template directory.
+ * This is unambiguous because GitHub owner and repo names cannot contain
+ * slashes.
  */
 export const parseTemplateRef = (raw: string): TemplateRef | null => {
   // Split off @ref suffix
@@ -101,13 +108,13 @@ export const parseTemplateRef = (raw: string): TemplateRef | null => {
     body = raw;
   }
 
-  // Need at least owner/repo/path
+  // Need at least owner/repo
   const parts = body.split("/");
-  if (parts.length < 3) return null;
+  if (parts.length < 2) return null;
 
   const owner = parts[0];
   const repo = parts[1];
-  const path = parts.slice(2).join("/");
+  const path = parts.length > 2 ? parts.slice(2).join("/") : ".";
 
   if (!owner || !repo || !path) return null;
 

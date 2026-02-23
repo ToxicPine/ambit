@@ -145,12 +145,14 @@ const resolveTemplateMode = async (
   if (!ref) {
     out.die(
       `Invalid Template Reference: "${templateRaw}". ` +
-        `Format: owner/repo/path[@ref]`,
+        `Format: owner/repo[/path][@ref]`,
     );
     return null;
   }
 
-  const label = `${ref.owner}/${ref.repo}/${ref.path}` +
+  const label = (ref.path === "."
+    ? `${ref.owner}/${ref.repo}`
+    : `${ref.owner}/${ref.repo}/${ref.path}`) +
     (ref.ref ? `@${ref.ref}` : "");
   out.info(`Template: ${label}`);
 
@@ -175,7 +177,7 @@ const resolveTemplateMode = async (
     try {
       Deno.removeSync(result.tempDir, { recursive: true });
     } catch { /* ignore */ }
-    out.die(`Template '${ref.path}' Has No fly.toml`);
+    out.die(`Template '${ref.path === "." ? ref.repo : ref.path}' Has No fly.toml`);
     return null;
   }
 
@@ -196,7 +198,7 @@ const resolveTemplateMode = async (
     out.warn(warn);
   }
 
-  out.ok(`Scanned ${ref.path}/fly.toml`);
+  out.ok(`Scanned ${ref.path === "." ? "" : ref.path + "/"}fly.toml`);
 
   return {
     configPath,
@@ -261,10 +263,11 @@ ${bold("IMAGE MODE")}
   --main-port <port>     Internal port for HTTP service (default: 80, "none" to skip)
 
 ${bold("TEMPLATE MODE")}
-  --template <ref>       GitHub template as owner/repo/path[@ref]
+  --template <ref>       GitHub template as owner/repo[/path][@ref]
 
   Reference format:
-    owner/repo/path           Fetch from the default branch
+    owner/repo                Fetch repo root from the default branch
+    owner/repo/path           Fetch subdirectory from the default branch
     owner/repo/path@tag       Fetch a tagged release
     owner/repo/path@branch    Fetch a specific branch
     owner/repo/path@commit    Fetch a specific commit
@@ -278,6 +281,7 @@ ${bold("EXAMPLES")}
   ambit deploy my-app.lab
   ambit deploy my-app.lab --image registry/img:latest
   ambit deploy my-app.lab --config ./fly.toml --region sea
+  ambit deploy my-claw.lab --template ToxicPine/ambit-openclaw
   ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic
   ambit deploy my-browser --network lab --template ToxicPine/ambit-templates/chromatic@v1.0
 `);

@@ -86,6 +86,65 @@ export const findRouterApp = async (
 };
 
 // =============================================================================
+// 1b. Which workload apps exist? (Fly REST API)
+// =============================================================================
+
+/** A workload (non-router) app discovered from the Fly REST API. */
+export interface WorkloadApp {
+  appName: string;
+  network: string;
+  org: string;
+}
+
+/** List all non-router apps on a specific custom network in an org. */
+export const listWorkloadAppsOnNetwork = async (
+  fly: FlyProvider,
+  org: string,
+  network: string,
+): Promise<WorkloadApp[]> => {
+  const apps = await fly.listAppsWithNetwork(org);
+
+  return apps
+    .filter(
+      (app) =>
+        !app.name.startsWith(ROUTER_APP_PREFIX) &&
+        app.network === network,
+    )
+    .map((app) => ({
+      appName: app.name,
+      network: app.network,
+      org: app.organization?.slug ?? org,
+    }));
+};
+
+/** Find a specific workload app by name, optionally verifying network. */
+export const findWorkloadApp = async (
+  fly: FlyProvider,
+  org: string,
+  appName: string,
+  network?: string,
+): Promise<WorkloadApp | null> => {
+  const apps = await fly.listAppsWithNetwork(org);
+
+  const workloads = apps
+    .filter(
+      (app) =>
+        !app.name.startsWith(ROUTER_APP_PREFIX) &&
+        app.network !== DEFAULT_NETWORK,
+    )
+    .map((app) => ({
+      appName: app.name,
+      network: app.network,
+      org: app.organization?.slug ?? org,
+    }));
+
+  if (network) {
+    return workloads.find((a) => a.appName === appName && a.network === network) ?? null;
+  }
+  return workloads.find((a) => a.appName === appName) ?? null;
+};
+
+// =============================================================================
 // 2. What's the machine state? (Fly Machines API)
 // =============================================================================
 
