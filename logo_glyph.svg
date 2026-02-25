@@ -1,4 +1,45 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <rect width="1024" height="1024" fill="#111111"/>
-  <path d="M 122.4 664.9H 62.0V 358.2H 122.4V 239.3H 181.8V 179.9H 240.3V 121.4H 359.1V 62.0H 664.9V 121.4H 783.7V 179.9H 843.2V 239.3H 901.6V 358.2H 961.0V 664.9H 901.6V 782.8H 843.2V 842.2H 783.7V 902.6H 664.9V 962.0H 359.1V 902.6H 240.3V 842.2H 181.8V 782.8H 122.4ZM 250.8 773.2V 831.6H 369.7V 891.1H 655.3V 831.6H 773.2V 773.2H 832.6V 654.3H 891.1V 368.7H 832.6V 249.9H 773.2V 190.4H 655.3V 131.0H 369.7V 190.4H 250.8V 249.9H 191.4V 368.7H 132.9V 654.3H 191.4V 773.2ZM 299.7 605.5H 240.3V 417.6H 299.7V 298.7H 418.5V 239.3H 606.4V 298.7H 724.3V 417.6H 783.7V 605.5H 724.3V 723.3H 606.4V 782.8H 418.5V 723.3H 299.7Z" fill="#e0e0e0" fill-rule="evenodd"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 1024 1024"
+   width="1024"
+   height="1024"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="logo_glyph.svg"
+   inkscape:version="1.4.3 (0d15f75042, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="0.93554688"
+     inkscape:cx="511.46555"
+     inkscape:cy="512"
+     inkscape:window-width="2048"
+     inkscape:window-height="1211"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg1" />
+  <rect
+     width="1024"
+     height="1024"
+     fill="#111111"
+     id="rect1" />
+  <path
+     d="M 179.96801,642.47466 H 128.42667 V 380.75734 h 51.54134 V 279.296 h 50.688 v -50.688 h 49.92 v -49.92 h 101.376 V 128 h 260.94932 v 50.688 h 101.376 v 49.92 h 50.77334 v 50.688 h 49.83466 v 101.46134 h 50.688 v 261.71732 h -50.688 v 100.608 h -49.83466 v 50.688 H 744.27733 V 845.312 h -101.376 V 896 H 381.95201 v -50.688 h -101.376 v -51.54134 h -49.92 v -50.688 h -50.688 z M 289.536,734.89067 v 49.83467 h 101.46133 v 50.77333 h 243.71201 v -50.77333 h 100.608 v -49.83467 h 50.688 V 633.42934 h 49.92 V 389.71733 h -49.92 v -101.376 h -50.688 V 237.568 h -100.608 V 186.88 H 390.99733 v 50.688 H 289.536 v 50.77333 h -50.688 v 101.376 h -49.92 v 243.71201 h 49.92 v 101.46133 z m 41.72801,-143.10401 h -50.688 V 431.44534 h 50.688 V 329.984 h 101.376 v -50.688 h 160.34132 v 50.688 h 100.608 v 101.46134 h 50.688 v 160.34132 h -50.688 v 100.52267 h -100.608 v 50.77333 H 432.64001 v -50.77333 h -101.376 z"
+     fill="#e0e0e0"
+     fill-rule="evenodd"
+     id="path1"
+     style="stroke-width:0.853334" />
 </svg>
