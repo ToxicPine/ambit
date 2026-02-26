@@ -45,7 +45,7 @@
               pname = "ambit";
               version = "0.2.0";
               entrypoint = "ambit/main.ts";
-              depsHash = "sha256-5mMA8eUfyWt2wX+sspQtMQWrrdx0Xk1cgOfJko0AQTQ=";
+              depsHash = "sha256-ZmqE8oV1hr4O8MlVNOJwnho/qOlwRG+4nwX/iW9dEO4=";
             };
           in {
             inherit ambit;
