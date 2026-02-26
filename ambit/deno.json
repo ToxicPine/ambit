@@ -1,6 +1,6 @@
 {
   "name": "@cardelli/ambit",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "Deploy apps to the cloud that only you and your AI agents can reach",
   "license": "MIT",
   "tasks": {
