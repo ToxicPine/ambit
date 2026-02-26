@@ -311,7 +311,8 @@ const stageSummary = async (
       .link(
         "     https://login.tailscale.com/admin/acls/visual/general-access-rules",
       )
-      .dim(`     Source: group:YOUR_GROUP  Destination: ${opts.tag}:*`)
+      .dim(`     Source: group:YOUR_GROUP    Destination: ${opts.tag}:53`)
+      .dim(`     Source: group:YOUR_GROUP    Destination: ${ctx.subnet}:*`)
       .blank()
       .dim("     Or you can do it manually with this JSON config:")
       .dim(
