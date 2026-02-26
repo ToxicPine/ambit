@@ -10,6 +10,21 @@ A toolkit for hosting apps in the cloud so that only you — and the AI agents y
 
 When you put something on the internet, you normally have to build login pages, configure firewalls, and worry about bots or strangers stumbling across it. These tools skip all of that. Your apps live in the cloud but are completely invisible to the public internet: there is no address for a stranger to find, no door for them to knock on. The only machines that can connect are the ones you have explicitly added to your private network.
 
+### Example: Cloud IDE (OpenCode) in 4 Steps
+
+1. **Install [Tailscale](https://tailscale.com/download)**.
+2. **Create a Network:**
+   ```bash
+   npx @cardelli/ambit create lab
+   ```
+3. **Follow the Instructions** to link your cloud provider.
+4. **Deploy:**
+   ```bash
+   npx @cardelli/ambit deploy my-ide.lab --template ToxicPine/ambit-templates/opencode
+   ```
+
+Open `http://my-ide.lab` on any device on your Tailscale network. You now have a persistent [OpenCode](https://opencode.ai) workspace running in the cloud — accessible from your laptop, tablet, or phone, completely invisible to the public internet, and available only to you.
+
 ## Projects
 
 ### [Ambit](./ambit/)
