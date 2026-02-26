@@ -19,7 +19,7 @@ await buildNpmPackage({
   binName: "ambit",
   includeExportEntryPoints: true,
   async postBuild() {
-    await copy("./src/docker", "./npm/esm/src/docker", { overwrite: true });
+    await copy("./router", "./npm/esm/src/router", { overwrite: true });
     await stripDenoShebang("./npm/esm/main.js");
   },
 });

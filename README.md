@@ -2,7 +2,6 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![npm @cardelli/ambit](https://img.shields.io/npm/v/@cardelli/ambit?label=ambit)](https://www.npmjs.com/package/@cardelli/ambit)
-[![npm @cardelli/mcp](https://img.shields.io/npm/v/@cardelli/mcp?label=ambit-mcp)](https://www.npmjs.com/package/@cardelli/mcp)
 [![GitHub stars](https://img.shields.io/github/stars/ToxicPine/ambit)](https://github.com/ToxicPine/ambit)
 [![Built with Nix](https://img.shields.io/badge/Built_with-Nix-5277C3?logo=nixos)](https://nixos.org)
 [![Stability: Beta](https://img.shields.io/badge/Stability-Beta-orange)](https://github.com/ToxicPine/ambit)

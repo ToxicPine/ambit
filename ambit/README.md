@@ -69,15 +69,15 @@ Open `http://my-crazy-site.lab`. It works for you and nobody else.
 
 This is the first command you run, it sets up your private network: a named slice of the cloud that only your devices can reach. Under the hood it handles Fly.io and Tailscale authentication, deploys the router, sets up DNS, and configures your local machine to accept the new routes.
 
-| Flag                | Description                                                |
-| ------------------- | ---------------------------------------------------------- |
-| `--org <org>`       | Fly.io organization                                        |
-| `--region <region>` | Fly.io region (default: `iad`)                             |
-| `--api-key <key>`   | Tailscale API access token                                 |
-| `--tag <tag>`       | Tailscale ACL tag (default: `tag:ambit-<network>`)         |
-| `--self-approve`    | Approve routes via API when autoApprovers isn't configured |
-| `--yes`             | Skip confirmation prompts                                  |
-| `--json`            | Machine-readable JSON output                               |
+| Flag                   | Description                                                |
+| ---------------------- | ---------------------------------------------------------- |
+| `--org <org>`          | Fly.io organization slug                                   |
+| `--region <region>`    | Fly.io region (default: `iad`)                             |
+| `--api-key <key>`      | Tailscale API access token (tskey-api-...)                 |
+| `--tag <tag>`          | Tailscale ACL tag for the router (default: `tag:ambit-<network>`) |
+| `--no-auto-approve`    | Skip waiting for router and approving routes               |
+| `-y`, `--yes`          | Skip confirmation prompts                                  |
+| `--json`               | Machine-readable JSON output (implies `--no-auto-approve`) |
 
 ### `ambit deploy <app>.<network>`
 
@@ -134,24 +134,52 @@ These work with all three modes.
 | Flag                  | Description                                                    |
 | --------------------- | -------------------------------------------------------------- |
 | `--network <name>`    | Target network                                                 |
-| `--org <org>`         | Fly.io organization                                            |
-| `--region <region>`   | Deployment region                                              |
-| `--yes`               | Skip confirmation prompts                                      |
+| `--org <org>`         | Fly.io organization slug                                       |
+| `--region <region>`   | Primary deployment region                                      |
+| `-y`, `--yes`         | Skip confirmation prompts                                      |
 | `--json`              | Machine-readable JSON output                                   |
 
-### `ambit status --network <name>`
+### `ambit status [network|app]`
 
-This tells you if your network is working correctly: it shows whether the router is running, which Tailscale device it is, what routes it's advertising, and whether DNS is configured.
+Without a subcommand, defaults to showing all routers (same as `status network`).
+
+#### `ambit status network [<name>]`
+
+Without a network name, shows a summary table of all routers. With a name, shows detailed status for a specific network: machine state, SOCKS proxy, Tailscale IP, subnet, and apps on the network.
+
+| Flag              | Description                    |
+| ----------------- | ------------------------------ |
+| `--org <org>`     | Fly.io organization slug       |
+| `--json`          | Machine-readable JSON output   |
+
+#### `ambit status app <app>.<network>`
+
+Shows detailed status for a specific app: machines, Flycast IPs, and the backing router.
+
+| Flag                 | Description                                  |
+| -------------------- | -------------------------------------------- |
+| `--network <name>`   | Target network (if not using dot syntax)     |
+| `--org <org>`        | Fly.io organization slug                     |
+| `--json`             | Machine-readable JSON output                 |
+
+### `ambit list`
+
+Lists all discovered routers across networks in a table showing the network name, app name, region, machine state, Tailscale connectivity status, and ACL tag.
+
+| Flag              | Description                    |
+| ----------------- | ------------------------------ |
+| `--org <org>`     | Fly.io organization slug       |
+| `--json`          | Machine-readable JSON output   |
 
 ### `ambit destroy network <name>`
 
 Tears down a network: destroys the router, cleans up DNS, and removes the Tailscale device. If there are workload apps still on the network, ambit warns you before proceeding. Reminds you to clean up any ACL entries you added.
 
-| Flag           | Description                    |
-| -------------- | ------------------------------ |
-| `--org <org>`  | Fly.io organization            |
-| `--yes`        | Skip confirmation prompts      |
-| `--json`       | Machine-readable JSON output   |
+| Flag              | Description                    |
+| ----------------- | ------------------------------ |
+| `--org <org>`     | Fly.io organization slug       |
+| `-y`, `--yes`     | Skip confirmation prompts      |
+| `--json`          | Machine-readable JSON output   |
 
 ### `ambit destroy app <app>.<network>`
 
@@ -160,13 +188,33 @@ Destroys a workload app on a network. The network can be specified as part of th
 | Flag                 | Description                                  |
 | -------------------- | -------------------------------------------- |
 | `--network <name>`   | Target network (if not using dot syntax)     |
-| `--org <org>`        | Fly.io organization                          |
-| `--yes`              | Skip confirmation prompts                    |
+| `--org <org>`        | Fly.io organization slug                     |
+| `-y`, `--yes`        | Skip confirmation prompts                    |
 | `--json`             | Machine-readable JSON output                 |
 
-### `ambit doctor`
+### `ambit doctor [network|app]`
 
-This helps you diagnose issues, run it if something seems broken. It checks that Tailscale is running, routes are accepted, the router is healthy, and all parts of the system can talk to each other.
+This helps you diagnose issues, run it if something seems broken. It checks that Tailscale is running, routes are accepted, the router is healthy, and all parts of the system can talk to each other. Without a subcommand, defaults to checking all routers (same as `doctor network`).
+
+#### `ambit doctor network [<name>]`
+
+Checks router health. Without a network name, checks all routers. With a name, checks only the specified network. Also approves any unapproved subnet routes it finds.
+
+| Flag                 | Description                                  |
+| -------------------- | -------------------------------------------- |
+| `--network <name>`   | Alias for the positional `<name>` argument   |
+| `--org <org>`        | Fly.io organization slug                     |
+| `--json`             | Machine-readable JSON output                 |
+
+#### `ambit doctor app <app>.<network>`
+
+Checks app health: verifies the app is deployed and running, then checks the router for that network.
+
+| Flag                 | Description                                  |
+| -------------------- | -------------------------------------------- |
+| `--network <name>`   | Target network (if not using dot syntax)     |
+| `--org <org>`        | Fly.io organization slug                     |
+| `--json`             | Machine-readable JSON output                 |
 
 ## Access Control
 

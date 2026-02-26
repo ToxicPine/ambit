@@ -1,6 +1,7 @@
-# Flake-parts module: Deno workspace builder
+# Flake-parts module: Deno package builder
 #
 # Provides mkDenoPackage for compiling Deno entrypoints into standalone binaries.
+# Package definitions (entrypoints, versions, hashes) live in flake.nix.
 #
 
 { inputs, lib, ... }:
@@ -13,45 +14,40 @@
         config.allowUnfree = true;
       };
 
-      depsHash = "sha256-5mMA8eUfyWt2wX+sspQtMQWrrdx0Xk1cgOfJko0AQTQ=";
-
-      denoDeps = pkgs.stdenv.mkDerivation {
-        name = "deno-workspace-deps";
-        src = lib.cleanSourceWith {
-          src = ./.;
-          filter = path: type:
-            let name = builtins.baseNameOf path; in
-            type == "directory"
-            || lib.hasSuffix ".ts" name
-            || name == "deno.json"
-            || name == "deno.lock";
-        };
-
-        nativeBuildInputs = [ pkgs.deno pkgs.cacert ];
-
-        outputHashMode = "recursive";
-        outputHashAlgo = "sha256";
-        outputHash = depsHash;
-
-        buildPhase = ''
-          export HOME=$TMPDIR
-          export DENO_DIR="$out"
-
-          deno cache --lock=deno.lock \
-            ambit/main.ts \
-            ambit-mcp/main.ts \
-            chromatic/main.ts
-
-          echo 'Deno.exit(0)' > $TMPDIR/stub.ts
-          deno compile --output $TMPDIR/stub $TMPDIR/stub.ts
-          rm -f $TMPDIR/stub
-        '';
-
-        dontInstall = true;
-      };
-
-      mkDenoPackage = { pname, version, entrypoint, binName ? pname }:
+      mkDenoPackage = { pname, version, entrypoint, binName ? pname, depsHash }:
         let
+          deps = pkgs.stdenv.mkDerivation {
+            name = "${pname}-deps";
+            src = lib.cleanSourceWith {
+              src = ./.;
+              filter = path: type:
+                let name = builtins.baseNameOf path; in
+                type == "directory"
+                || lib.hasSuffix ".ts" name
+                || name == "deno.json"
+                || name == "deno.lock";
+            };
+
+            nativeBuildInputs = [ pkgs.deno pkgs.cacert ];
+
+            outputHashMode = "recursive";
+            outputHashAlgo = "sha256";
+            outputHash = depsHash;
+
+            buildPhase = ''
+              export HOME=$TMPDIR
+              export DENO_DIR="$out"
+
+              deno cache --lock=deno.lock ${entrypoint}
+
+              echo 'Deno.exit(0)' > $TMPDIR/stub.ts
+              deno compile --output $TMPDIR/stub $TMPDIR/stub.ts
+              rm -f $TMPDIR/stub
+            '';
+
+            dontInstall = true;
+          };
+
           raw = pkgs.stdenv.mkDerivation {
             name = "${pname}-unwrapped";
             inherit version;
@@ -66,7 +62,7 @@
               export HOME=$TMPDIR
 
               # Writable copy of the pre-warmed cache (Nix store is read-only).
-              cp -r ${denoDeps} $TMPDIR/deno-cache
+              cp -r ${deps} $TMPDIR/deno-cache
               chmod -R u+w $TMPDIR/deno-cache
               export DENO_DIR=$TMPDIR/deno-cache
 

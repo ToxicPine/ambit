@@ -3,8 +3,7 @@
 // =============================================================================
 
 import { spawn } from "node:child_process";
-import { Spinner } from "./cli.ts";
-import { Result } from "./result.ts";
+import { Result } from "@/lib/result.ts";
 
 // =============================================================================
 // Run Options
@@ -35,13 +34,13 @@ export class CmdResult {
   /** Parse stdout as JSON, returning Result<T>. */
   json<T>(): Result<T> {
     if (!this.ok) {
-      return Result.err(this.stderr || `Command failed with code ${this.code}`);
+      return Result.err(this.stderr || `Command Failed With Code ${this.code}`);
     }
     try {
       return Result.ok(JSON.parse(this.stdout) as T);
     } catch {
       return Result.err(
-        `Failed to parse JSON: ${this.stdout.slice(0, 100)}`,
+        `Failed To Parse JSON: ${this.stdout.slice(0, 100)}`,
       );
     }
   }
@@ -111,20 +110,6 @@ export const runCommand = (
 // =============================================================================
 // Wrappers
 // =============================================================================
-
-/** Run with spinner, return CmdResult. */
-export const runQuiet = (
-  label: string,
-  args: string[],
-  options?: RunOptions,
-): Promise<CmdResult> => {
-  const spinner = new Spinner();
-  spinner.start(label);
-  return runCommand(args, options).then((r) => {
-    r.ok ? spinner.success(label) : spinner.fail(label);
-    return r;
-  });
-};
 
 /** Run and parse stdout as JSON. */
 export const runJson = <T>(
