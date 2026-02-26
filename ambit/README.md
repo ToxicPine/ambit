@@ -50,13 +50,13 @@ npx @cardelli/ambit --help
 ### 2. Create a Network
 
 ```bash
-ambit create lab
+npx @cardelli/ambit create lab
 ```
 
 ### 3. Deploy an App
 
 ```bash
-ambit deploy my-crazy-site.lab
+npx @cardelli/ambit deploy my-crazy-site.lab
 ```
 
 ### 4. Visit It
@@ -92,8 +92,8 @@ There are three deployment modes. They are mutually exclusive — you can only u
 Deploy from a `fly.toml`. If you don't pass `--config`, ambit looks for a `fly.toml` in the current directory.
 
 ```bash
-ambit deploy my-app.lab
-ambit deploy my-app.lab --config ./my-config/fly.toml
+npx @cardelli/ambit deploy my-app.lab
+npx @cardelli/ambit deploy my-app.lab --config ./my-config/fly.toml
 ```
 
 | Flag               | Description                       |
@@ -105,8 +105,8 @@ ambit deploy my-app.lab --config ./my-config/fly.toml
 Deploy a Docker image directly, without needing a `fly.toml`. Ambit generates a minimal config for you with auto start/stop enabled.
 
 ```bash
-ambit deploy my-app.lab --image registry/img:latest
-ambit deploy my-app.lab --image registry/img:latest --main-port 3000
+npx @cardelli/ambit deploy my-app.lab --image registry/img:latest
+npx @cardelli/ambit deploy my-app.lab --image registry/img:latest --main-port 3000
 ```
 
 | Flag                 | Description                                                                  |
@@ -119,8 +119,8 @@ ambit deploy my-app.lab --image registry/img:latest --main-port 3000
 Fetch a ready-made configuration from GitHub and deploy it. The reference format is `owner/repo/path[@ref]` — pin to a tag, branch, or commit with `@`.
 
 ```bash
-ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic
-ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic@v1.0
+npx @cardelli/ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic
+npx @cardelli/ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic@v1.0
 ```
 
 | Flag                | Description                                |
@@ -200,8 +200,8 @@ If you want to lock it down, two rules do the job — one for DNS queries and on
 You can create as many networks as you want, and each one gets its own TLD on your tailnet. The SOCKS proxy on each router means containers on one network can reach services on another by going through the tailnet, so a browser on your `browsers` network can connect to a database on your `infra` network.
 
 ```bash
-ambit create infra
-ambit create browsers
+npx @cardelli/ambit create infra
+npx @cardelli/ambit create browsers
 ```
 
 ## Agent Skill
@@ -211,7 +211,3 @@ Install the Ambit [skill](https://skills.sh) to give your AI coding agent refere
 ```bash
 npx skills add ToxicPine/ambit-skills --skill ambit-cli
 ```
-
-## Ambit MCP
-
-The [ambit MCP server](../ambit-mcp/) lets AI agents deploy and manage apps on your behalf, with the same safety guarantees. In safe mode, the agent literally cannot deploy something with a public IP. See the [ambit-mcp README](../ambit-mcp/) for details.
