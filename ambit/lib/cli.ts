@@ -126,9 +126,41 @@ export const confirm = async (message: string): Promise<boolean> => {
 };
 
 export const readSecret = async (message: string): Promise<string> => {
-  // Note: This is a simplified version - for proper secret input,
-  // you'd want to disable echo on the terminal
-  return await prompt(message);
+  if (!Deno.stdin.isTerminal) {
+    return await prompt(message);
+  }
+
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+
+  await Deno.stdout.write(encoder.encode(message));
+
+  let echoDisabled = false;
+  try {
+    const sttyOff = await new Deno.Command("stty", {
+      args: ["-echo"],
+      stdin: "inherit",
+      stdout: "null",
+      stderr: "null",
+    }).output();
+    echoDisabled = sttyOff.success;
+
+    const buf = new Uint8Array(1024);
+    const n = await Deno.stdin.read(buf);
+    if (n === null) return "";
+
+    return decoder.decode(buf.subarray(0, n)).trim();
+  } finally {
+    if (echoDisabled) {
+      await new Deno.Command("stty", {
+        args: ["echo"],
+        stdin: "inherit",
+        stdout: "null",
+        stderr: "null",
+      }).output();
+    }
+    await Deno.stdout.write(encoder.encode("\n"));
+  }
 };
 
 // =============================================================================
@@ -136,21 +168,9 @@ export const readSecret = async (message: string): Promise<string> => {
 // =============================================================================
 
 export const fileExists = async (path: string): Promise<boolean> => {
-  try {
-    await Deno.stat(path);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-export const fileExistsSync = (path: string): boolean => {
-  try {
-    Deno.statSync(path);
-    return true;
-  } catch {
-    return false;
-  }
+  return Deno.stat(path)
+    .then(() => true)
+    .catch(() => false);
 };
 
 // =============================================================================
@@ -170,8 +190,11 @@ export const ensureConfigDir = async (): Promise<void> => {
   const dir = getConfigDir();
   try {
     await Deno.mkdir(dir, { recursive: true });
-  } catch {
-    // Ignore - already exists
+  } catch (error) {
+    if (error instanceof Deno.errors.AlreadyExists) {
+      return;
+    }
+    throw error;
   }
 };
 
@@ -181,11 +204,10 @@ export const ensureConfigDir = async (): Promise<void> => {
 
 export const randomId = (length: number = 6): string => {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+  return Array.from(
+    { length },
+    () => chars[Math.floor(Math.random() * chars.length)],
+  ).join("");
 };
 
 // =============================================================================

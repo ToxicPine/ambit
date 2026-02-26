@@ -2,12 +2,8 @@
 // Fly.io Provider - Wraps flyctl CLI
 // =============================================================================
 
-import {
-  runCommand,
-  runCommandJson,
-  runInteractive,
-  runQuiet,
-} from "@/lib/command.ts";
+import { runCommand, runJson, runQuiet } from "@/lib/command.ts";
+import { Result } from "@/lib/result.ts";
 import { commandExists, die, Spinner } from "@/lib/cli.ts";
 import { dirname, resolve } from "@std/path";
 import {
@@ -113,6 +109,7 @@ export interface SafeDeployOptions {
   image?: string;
   config?: string;
   region?: string;
+  routerId?: string;
 }
 
 // =============================================================================
@@ -126,7 +123,7 @@ export interface FlyProvider {
   createApp(
     name: string,
     org: string,
-    options?: { network?: string },
+    options?: { network?: string; routerId?: string },
   ): Promise<void>;
   deleteApp(name: string): Promise<void>;
   listApps(org?: string): Promise<FlyApp[]>;
@@ -175,14 +172,13 @@ export const createFlyProvider = (): FlyProvider => {
 
       const result = await runCommand(["fly", "auth", "whoami", "--json"]);
 
-      if (result.success) {
-        try {
-          const parsed = FlyAuthSchema.safeParse(JSON.parse(result.stdout));
+      if (result.ok) {
+        const auth = result.json<{ email: string }>();
+        if (auth.ok) {
+          const parsed = FlyAuthSchema.safeParse(auth.value);
           if (parsed.success) {
             return parsed.data.email;
           }
-        } catch {
-          // Parse failed, need to authenticate
         }
       }
 
@@ -190,17 +186,21 @@ export const createFlyProvider = (): FlyProvider => {
         return die("Not Authenticated with Fly.io. Run 'fly auth login' First");
       }
 
-      const loginResult = await runInteractive(["fly", "auth", "login"]);
-      if (!loginResult.success) {
+      const loginResult = await runCommand(["fly", "auth", "login"], {
+        interactive: true,
+      });
+      if (!loginResult.ok) {
         return die("Fly.io Authentication Failed");
       }
 
       const checkResult = await runCommand(["fly", "auth", "whoami", "--json"]);
-      if (!checkResult.success) {
+      if (!checkResult.ok) {
         return die("Fly.io Authentication Verification Failed");
       }
 
-      const parsed = FlyAuthSchema.safeParse(JSON.parse(checkResult.stdout));
+      const parsed = FlyAuthSchema.safeParse(
+        checkResult.json<unknown>().unwrap(),
+      );
       if (!parsed.success || !parsed.data) {
         return die("Fly.io Authentication Response Invalid");
       }
@@ -209,14 +209,14 @@ export const createFlyProvider = (): FlyProvider => {
     },
 
     async listOrgs(): Promise<Record<string, string>> {
-      const result = await runCommandJson<Record<string, string>>(
+      const result = await runJson<Record<string, string>>(
         ["fly", "orgs", "list", "--json"],
       );
-      if (!result.success || !result.data) {
+      if (!result.ok) {
         return die("Failed to List Organizations");
       }
 
-      const parsed = FlyOrgsSchema.safeParse(result.data);
+      const parsed = FlyOrgsSchema.safeParse(result.value);
       if (!parsed.success) {
         return die("Failed to Parse Organizations");
       }
@@ -231,24 +231,23 @@ export const createFlyProvider = (): FlyProvider => {
       }
 
       const result = await runCommand(args);
-      if (!result.success) {
-        return [];
-      }
-
-      try {
-        const parsed = FlyAppsListSchema.safeParse(JSON.parse(result.stdout));
-        return parsed.success ? parsed.data : [];
-      } catch {
-        return [];
-      }
+      return result.json<FlyApp[]>().flatMap((data) => {
+        const parsed = FlyAppsListSchema.safeParse(data);
+        return parsed.success
+          ? Result.ok(parsed.data)
+          : Result.err("Parse Failed");
+      }).unwrapOr([]);
     },
 
     async createApp(
       name: string,
       org: string,
-      options?: { network?: string },
+      options?: { network?: string; routerId?: string },
     ): Promise<void> {
-      const args = ["fly", "apps", "create", name, "--org", org, "--json"];
+      const appName = options?.routerId
+        ? getWorkloadAppName(name, options.routerId)
+        : name;
+      const args = ["fly", "apps", "create", appName, "--org", org, "--json"];
 
       if (options?.network) {
         args.push("--network", options.network);
@@ -256,8 +255,8 @@ export const createFlyProvider = (): FlyProvider => {
 
       const result = await runQuiet("Creating App", args);
 
-      if (!result.success) {
-        return die(`Failed to Create App '${name}'`);
+      if (!result.ok) {
+        return die(`Failed to Create App '${appName}'`);
       }
     },
 
@@ -270,34 +269,33 @@ export const createFlyProvider = (): FlyProvider => {
         "--yes",
       ]);
 
-      if (!result.success) {
+      if (!result.ok) {
         return die(`Failed to Delete App '${name}'`);
       }
     },
 
     async appExists(name: string): Promise<boolean> {
       const result = await runCommand(["fly", "status", "-a", name, "--json"]);
-      if (!result.success) return false;
-
-      try {
-        const parsed = FlyStatusSchema.safeParse(JSON.parse(result.stdout));
-        return parsed.success && !!parsed.data.ID;
-      } catch {
-        return false;
-      }
+      return result.json<{ ID?: string }>().match({
+        ok: (data) => {
+          const parsed = FlyStatusSchema.safeParse(data);
+          return parsed.success && !!parsed.data.ID;
+        },
+        err: () => false,
+      });
     },
 
     async listMachines(app: string): Promise<FlyMachine[]> {
-      const result = await runCommandJson<FlyMachine[]>(
+      const result = await runJson<FlyMachine[]>(
         ["fly", "machines", "list", "-a", app, "--json"],
       );
 
-      if (!result.success || !result.data) {
-        return [];
-      }
-
-      const parsed = FlyMachinesListSchema.safeParse(result.data);
-      return parsed.success ? parsed.data : [];
+      return result.flatMap((data) => {
+        const parsed = FlyMachinesListSchema.safeParse(data);
+        return parsed.success
+          ? Result.ok(parsed.data)
+          : Result.err("Parse Failed");
+      }).unwrapOr([]);
     },
 
     async listMachinesMapped(app: string): Promise<MachineResult[]> {
@@ -347,7 +345,7 @@ export const createFlyProvider = (): FlyProvider => {
 
       const result = await runCommand(args);
 
-      if (!result.success) {
+      if (!result.ok) {
         spinner.fail("Machine Creation Failed");
         return die(result.stderr || "Unknown Error");
       }
@@ -376,7 +374,7 @@ export const createFlyProvider = (): FlyProvider => {
         "--force",
       ]);
 
-      if (!result.success) {
+      if (!result.ok) {
         return die(`Failed to Destroy Machine '${shortId}'`);
       }
     },
@@ -403,7 +401,7 @@ export const createFlyProvider = (): FlyProvider => {
         args,
       );
 
-      if (!result.success) {
+      if (!result.ok) {
         return die("Failed to Set Secrets");
       }
     },
@@ -429,7 +427,7 @@ export const createFlyProvider = (): FlyProvider => {
 
       const result = await runCommand(args);
 
-      if (!result.success) {
+      if (!result.ok) {
         throw new FlyDeployError(app, result.stderr);
       }
     },
@@ -443,14 +441,12 @@ export const createFlyProvider = (): FlyProvider => {
         app,
         "--json",
       ]);
-      if (!result.success) return [];
-
-      try {
-        const parsed = FlyIpListSchema.safeParse(JSON.parse(result.stdout));
-        return parsed.success ? parsed.data : [];
-      } catch {
-        return [];
-      }
+      return result.json<FlyIp[]>().flatMap((data) => {
+        const parsed = FlyIpListSchema.safeParse(data);
+        return parsed.success
+          ? Result.ok(parsed.data)
+          : Result.err("Parse Failed");
+      }).unwrapOr([]);
     },
 
     async releaseIp(app: string, address: string): Promise<void> {
@@ -462,7 +458,7 @@ export const createFlyProvider = (): FlyProvider => {
         "-a",
         app,
       ]);
-      if (!result.success) {
+      if (!result.ok) {
         return die(`Failed to Release IP ${address} from '${app}'`);
       }
     },
@@ -478,23 +474,23 @@ export const createFlyProvider = (): FlyProvider => {
         "-a",
         app,
       ]);
-      if (!result.success) {
+      if (!result.ok) {
         return die(`Failed to Allocate Flycast IP on Network '${network}'`);
       }
     },
 
     async getConfig(app: string): Promise<Record<string, unknown> | null> {
       const result = await runCommand(["fly", "config", "show", "-a", app]);
-      if (!result.success) return null;
-
-      try {
-        return JSON.parse(result.stdout) as Record<string, unknown>;
-      } catch {
-        return null;
-      }
+      return result.json<Record<string, unknown>>().match({
+        ok: (v) => v,
+        err: () => null,
+      });
     },
 
     async deploySafe(app: string, options: SafeDeployOptions): Promise<void> {
+      const appName = options.routerId
+        ? getWorkloadAppName(app, options.routerId)
+        : app;
       const args = ["fly", "deploy"];
 
       // When config is provided, use its parent directory as the build context
@@ -505,7 +501,7 @@ export const createFlyProvider = (): FlyProvider => {
         args.push("--config", configAbs);
       }
 
-      args.push("-a", app, "--yes", "--no-public-ips");
+      args.push("-a", appName, "--yes", "--no-public-ips");
 
       if (options.image) {
         args.push("--image", options.image);
@@ -517,8 +513,8 @@ export const createFlyProvider = (): FlyProvider => {
 
       const result = await runCommand(args);
 
-      if (!result.success) {
-        throw new FlyDeployError(app, result.stderr);
+      if (!result.ok) {
+        throw new FlyDeployError(appName, result.stderr);
       }
     },
 
@@ -531,18 +527,11 @@ export const createFlyProvider = (): FlyProvider => {
         app,
         "--json",
       ]);
-      if (!result.success) return [];
-
-      try {
-        const certs = JSON.parse(result.stdout) as Array<{
-          Hostname?: string;
-        }>;
-        return certs
+      return result.json<Array<{ Hostname?: string }>>().map((certs) =>
+        certs
           .map((c) => c.Hostname)
-          .filter((h): h is string => typeof h === "string");
-      } catch {
-        return [];
-      }
+          .filter((h): h is string => typeof h === "string")
+      ).unwrapOr([]);
     },
 
     async removeCert(app: string, hostname: string): Promise<void> {
@@ -608,7 +597,7 @@ export const createFlyProvider = (): FlyProvider => {
 };
 
 // =============================================================================
-// Router App Naming
+// App Naming
 // =============================================================================
 
 export const getRouterAppName = (
@@ -616,4 +605,21 @@ export const getRouterAppName = (
   randomSuffix: string,
 ): string => {
   return `${ROUTER_APP_PREFIX}${network}-${randomSuffix}`;
+};
+
+/** Extract the routerId suffix from a router app name. */
+export const getRouterSuffix = (
+  routerAppName: string,
+  network: string,
+): string => {
+  const prefix = `${ROUTER_APP_PREFIX}${network}-`;
+  return routerAppName.slice(prefix.length);
+};
+
+/** Build the physical Fly app name for a workload. */
+export const getWorkloadAppName = (
+  name: string,
+  routerId: string,
+): string => {
+  return `${name}-${routerId}`;
 };

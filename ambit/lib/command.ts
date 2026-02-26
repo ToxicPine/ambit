@@ -4,16 +4,52 @@
 
 import { spawn } from "node:child_process";
 import { Spinner } from "./cli.ts";
+import { Result } from "./result.ts";
 
 // =============================================================================
-// Command Result Type
+// Run Options
 // =============================================================================
 
-export interface CommandResult {
-  success: boolean;
-  code: number;
-  stdout: string;
-  stderr: string;
+export interface RunOptions {
+  interactive?: boolean;
+  cwd?: string;
+  env?: Record<string, string>;
+  stdin?: "inherit" | "null";
+}
+
+// =============================================================================
+// Command Result
+// =============================================================================
+
+export class CmdResult {
+  readonly ok: boolean;
+
+  constructor(
+    readonly code: number,
+    readonly stdout: string,
+    readonly stderr: string,
+  ) {
+    this.ok = code === 0;
+  }
+
+  /** Parse stdout as JSON, returning Result<T>. */
+  json<T>(): Result<T> {
+    if (!this.ok) {
+      return Result.err(this.stderr || `Command failed with code ${this.code}`);
+    }
+    try {
+      return Result.ok(JSON.parse(this.stdout) as T);
+    } catch {
+      return Result.err(
+        `Failed to parse JSON: ${this.stdout.slice(0, 100)}`,
+      );
+    }
+  }
+
+  /** Merged stdout + stderr. */
+  get output(): string {
+    return (this.stdout + this.stderr).trimEnd();
+  }
 }
 
 // =============================================================================
@@ -22,170 +58,76 @@ export interface CommandResult {
 
 /**
  * Run a command and capture output.
+ * When `interactive: true`, inherits all stdio (no capture).
  */
 export const runCommand = (
   args: string[],
-  options?: {
-    cwd?: string;
-    env?: Record<string, string>;
-    stdin?: "inherit" | "null" | "piped";
-  },
-): Promise<CommandResult> => {
+  options?: RunOptions,
+): Promise<CmdResult> => {
   const [cmd, ...cmdArgs] = args;
+  const interactive = options?.interactive ?? false;
 
   return new Promise((resolve) => {
     const child = spawn(cmd, cmdArgs, {
       cwd: options?.cwd,
       env: options?.env ? { ...process.env, ...options.env } : undefined,
-      stdio: [
-        options?.stdin === "inherit" ? "inherit" : "ignore",
-        "pipe",
-        "pipe",
-      ],
+      stdio: interactive
+        ? "inherit"
+        : [
+          options?.stdin === "inherit" ? "inherit" : "ignore",
+          "pipe",
+          "pipe",
+        ],
     });
+
+    if (interactive) {
+      child.on("error", () => {
+        resolve(new CmdResult(-1, "", ""));
+      });
+      child.on("close", (code) => {
+        resolve(new CmdResult(code ?? 1, "", ""));
+      });
+      return;
+    }
 
     const stdout: string[] = [];
     const stderr: string[] = [];
 
-    child.stdout.setEncoding("utf8");
-    child.stderr.setEncoding("utf8");
-    child.stdout.on("data", (chunk: string) => stdout.push(chunk));
-    child.stderr.on("data", (chunk: string) => stderr.push(chunk));
+    child.stdout!.setEncoding("utf8");
+    child.stderr!.setEncoding("utf8");
+    child.stdout!.on("data", (chunk: string) => stdout.push(chunk));
+    child.stderr!.on("data", (chunk: string) => stderr.push(chunk));
 
     child.on("error", (error) => {
-      resolve({
-        success: false,
-        code: -1,
-        stdout: "",
-        stderr: error.message,
-      });
+      resolve(new CmdResult(-1, "", error.message));
     });
 
     child.on("close", (code) => {
-      resolve({
-        success: code === 0,
-        code: code ?? 1,
-        stdout: stdout.join(""),
-        stderr: stderr.join(""),
-      });
+      resolve(new CmdResult(code ?? 1, stdout.join(""), stderr.join("")));
     });
   });
 };
 
 // =============================================================================
-// Run Command with JSON Output
+// Wrappers
 // =============================================================================
 
-/**
- * Run a command that outputs JSON and parse it.
- */
-export const runCommandJson = async <T>(
-  args: string[],
-  options?: {
-    cwd?: string;
-    env?: Record<string, string>;
-  },
-): Promise<{ success: boolean; data?: T; error?: string }> => {
-  const result = await runCommand(args, options);
-
-  if (!result.success) {
-    return {
-      success: false,
-      error: result.stderr || `Command failed with code ${result.code}`,
-    };
-  }
-
-  try {
-    const data = JSON.parse(result.stdout) as T;
-    return { success: true, data };
-  } catch {
-    return {
-      success: false,
-      error: `Failed to parse JSON output: ${result.stdout.slice(0, 100)}`,
-    };
-  }
-};
-
-// =============================================================================
-// Run with Spinner
-// =============================================================================
-
-/**
- * Run a command while showing a spinner.
- */
-export const runWithSpinner = async (
+/** Run with spinner, return CmdResult. */
+export const runQuiet = (
   label: string,
   args: string[],
-  options?: {
-    cwd?: string;
-    env?: Record<string, string>;
-  },
-): Promise<CommandResult> => {
+  options?: RunOptions,
+): Promise<CmdResult> => {
   const spinner = new Spinner();
   spinner.start(label);
-
-  const result = await runCommand(args, options);
-
-  if (result.success) {
-    spinner.success(label);
-  } else {
-    spinner.fail(label);
-  }
-
-  return result;
-};
-
-// =============================================================================
-// Run Quiet
-// =============================================================================
-
-/**
- * Run a command with spinner and return simplified result.
- */
-export const runQuiet = async (
-  label: string,
-  args: string[],
-  options?: {
-    cwd?: string;
-    env?: Record<string, string>;
-  },
-): Promise<{ success: boolean; output: string }> => {
-  const result = await runWithSpinner(label, args, options);
-  return {
-    success: result.success,
-    output: result.stdout + result.stderr,
-  };
-};
-
-// =============================================================================
-// Run Interactive
-// =============================================================================
-
-/**
- * Run a command interactively (inherits stdio).
- */
-export const runInteractive = (
-  args: string[],
-  options?: {
-    cwd?: string;
-    env?: Record<string, string>;
-  },
-): Promise<{ success: boolean; code: number }> => {
-  const [cmd, ...cmdArgs] = args;
-
-  return new Promise((resolve) => {
-    const child = spawn(cmd, cmdArgs, {
-      cwd: options?.cwd,
-      env: options?.env ? { ...process.env, ...options.env } : undefined,
-      stdio: "inherit",
-    });
-
-    child.on("error", () => {
-      resolve({ success: false, code: -1 });
-    });
-
-    child.on("close", (code) => {
-      resolve({ success: (code ?? 1) === 0, code: code ?? 1 });
-    });
+  return runCommand(args, options).then((r) => {
+    r.ok ? spinner.success(label) : spinner.fail(label);
+    return r;
   });
 };
+
+/** Run and parse stdout as JSON. */
+export const runJson = <T>(
+  args: string[],
+  options?: RunOptions,
+): Promise<Result<T>> => runCommand(args, options).then((r) => r.json<T>());

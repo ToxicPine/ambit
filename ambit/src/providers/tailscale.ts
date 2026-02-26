@@ -290,16 +290,10 @@ export const isTailscaleInstalled = async (): Promise<boolean> => {
  */
 export const isAcceptRoutesEnabled = async (): Promise<boolean> => {
   const result = await runCommand(["tailscale", "debug", "prefs"]);
-  if (!result.success) {
-    return false;
-  }
-
-  try {
-    const prefs = JSON.parse(result.stdout);
-    return prefs.RouteAll === true;
-  } catch {
-    return false;
-  }
+  return result.json<{ RouteAll?: boolean }>().match({
+    ok: (prefs) => prefs.RouteAll === true,
+    err: () => false,
+  });
 };
 
 /**
@@ -308,5 +302,5 @@ export const isAcceptRoutesEnabled = async (): Promise<boolean> => {
  */
 export const enableAcceptRoutes = async (): Promise<boolean> => {
   const result = await runCommand(["tailscale", "set", "--accept-routes"]);
-  return result.success;
+  return result.ok;
 };

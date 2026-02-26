@@ -102,7 +102,7 @@ ${bold("CHECKS")}
 
   const tsStatus = await runCommand(["tailscale", "status", "--json"]);
   let tsConnected = false;
-  if (tsStatus.success) {
+  if (tsStatus.ok) {
     try {
       const parsed = JSON.parse(tsStatus.stdout);
       tsConnected = parsed.BackendState === "Running";

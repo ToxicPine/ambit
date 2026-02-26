@@ -14,6 +14,7 @@
 // =============================================================================
 
 import type { FlyProvider } from "./providers/fly.ts";
+import { getRouterSuffix } from "./providers/fly.ts";
 import type { TailscaleProvider } from "./providers/tailscale.ts";
 import { extractSubnet } from "./schemas/config.ts";
 
@@ -26,6 +27,7 @@ export interface RouterApp {
   appName: string;
   network: string;
   org: string;
+  routerId: string;
 }
 
 /** Machine state for a router, from the Fly Machines API. */
@@ -72,6 +74,7 @@ export const listRouterApps = async (
       appName: app.name,
       network: app.network,
       org: app.organization?.slug ?? org,
+      routerId: getRouterSuffix(app.name, app.network),
     }));
 };
 

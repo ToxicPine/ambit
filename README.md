@@ -21,14 +21,6 @@ Ambit is the core tool. It deploys your apps — databases, dashboards, internal
 
 ---
 
-### [Ambit MCP](./ambit-mcp/)
-
-Ambit MCP lets an AI agent like Claude Code deploy and manage your apps for you. Rather than handing the agent unrestricted access to your cloud account and hoping it doesn't do anything dangerous, Ambit MCP gives it a constrained set of tools that can only ever produce private deployments. The agent can write code, deploy it, check logs, and update configuration — but it has no way to accidentally make something public, because that option simply doesn't exist in the interface it's given.
-
-→ [Read the Ambit MCP docs](./ambit-mcp/README.md)
-
----
-
 ### [Templates](./ambit-templates/)
 
 The [ambit-templates](./ambit-templates/) directory has ready-to-deploy examples for common setups.
@@ -60,7 +52,6 @@ Install [skills](https://skills.sh) to give your AI coding agent reference docum
 
 ```bash
 npx skills add ToxicPine/ambit-skills --skill ambit-cli
-npx skills add ToxicPine/ambit-skills --skill ambit-mcp
 ```
 
 ## Quick Usage

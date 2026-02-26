@@ -124,10 +124,21 @@ echo "Router: Starting DNS Proxy"
 
 # Generate Corefile for CoreDNS
 # Rewrites NETWORK_NAME TLD to .flycast before forwarding to Fly DNS.
+# When ROUTER_ID is set, workload app names are suffixed: app.network ->
+# app-ROUTER_ID.flycast. This ties workloads to their router and avoids
+# name collisions across networks.
 # .flycast resolves to the Flycast address (private_v6) which routes through
 # Fly Proxy — enabling autostart/autostop and load balancing. The Flycast IP
 # is within the network's /48 subnet so it's routable through the tailnet.
-if [ -n "${NETWORK_NAME}" ]; then
+if [ -n "${NETWORK_NAME}" ] && [ -n "${ROUTER_ID}" ]; then
+  echo "Router: DNS Rewrite *.${NETWORK_NAME} -> *-${ROUTER_ID}.flycast"
+  cat > /etc/coredns/Corefile <<EOF
+.:53 {
+    rewrite name regex (.+)\.${NETWORK_NAME}\. {1}-${ROUTER_ID}.flycast. answer auto
+    forward . fdaa::3
+}
+EOF
+elif [ -n "${NETWORK_NAME}" ]; then
   echo "Router: DNS Rewrite ${NETWORK_NAME} -> flycast"
   cat > /etc/coredns/Corefile <<EOF
 .:53 {

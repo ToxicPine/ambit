@@ -22,6 +22,7 @@ import {
 } from "@/src/providers/tailscale.ts";
 import { getCredentialStore } from "@/src/credentials.ts";
 import { resolveOrg } from "@/src/resolve.ts";
+import { findRouterApp } from "@/src/discovery.ts";
 
 // =============================================================================
 // Create Command
@@ -104,7 +105,17 @@ ${bold("EXAMPLES")}
 
   const org = await resolveOrg(fly, args, out);
   const region = args.region || "iad";
-  out.ok(`Using Region: ${region}`).blank();
+  out.ok(`Using Region: ${region}`);
+
+  const existingRouter = await findRouterApp(fly, org, network);
+  if (existingRouter) {
+    return out.die(
+      `A router already exists for network "${network}": ${existingRouter.appName}. ` +
+      `Use "ambit destroy ${network}" first, or choose a different network name.`
+    );
+  }
+
+  out.blank();
 
   // ==========================================================================
   // Step 2: Tailscale Configuration
@@ -175,49 +186,18 @@ ${bold("EXAMPLES")}
 
   tagOwnerSpinner.success(`Tag ${tag} Configured in tagOwners`);
 
-  // ==========================================================================
-  // Step 2.6: Check autoApprovers
-  // ==========================================================================
-
-  if (!selfApprove) {
-    const autoApproverSpinner = out.spinner(
-      "Checking autoApprovers Configuration",
-    );
-    const hasAutoApprover = await tailscale.isAutoApproverConfigured(tag);
-
-    if (!hasAutoApprover) {
-      autoApproverSpinner.fail("autoApprovers Not Configured");
-      out.blank()
-        .text(
-          `  The tag ${tag} is not listed in your Tailscale ACL autoApprovers.`,
-        )
-        .text("  Routes advertised by the router will not be auto-approved.")
-        .blank()
-        .text("  Either configure autoApprovers in your Tailscale ACL policy:")
-        .dim(
-          `    "autoApprovers": { "routes": { "fdaa:X:XXXX::/48": ["${tag}"] } }`,
-        )
-        .blank()
-        .text("  Or re-run with --self-approve to approve routes via API:")
-        .dim(`    ambit create ${network} --self-approve`)
-        .blank();
-      return out.die("Configure autoApprovers or Use --self-approve");
-    }
-
-    autoApproverSpinner.success("autoApprovers Configured");
-  } else {
-    out.info("Self-Approve Mode: Routes Will Be Approved via API");
-  }
-
   out.blank();
 
   // ==========================================================================
   // Step 3: Deploy Router on Custom 6PN
   // ==========================================================================
 
+  let hasAutoApprover = false;
+
   out.header("Step 3: Deploy Subnet Router").blank();
 
-  const routerAppName = getRouterAppName(network, randomId(6));
+  const suffix = randomId(8);
+  const routerAppName = getRouterAppName(network, suffix);
   out.info(`Creating Router App: ${routerAppName}`)
     .info(`Custom Network: ${network}`)
     .info(`Router Tag: ${tag}`);
@@ -229,6 +209,7 @@ ${bold("EXAMPLES")}
     TAILSCALE_API_TOKEN: apiKey,
     NETWORK_NAME: network,
     TAILSCALE_TAGS: tag,
+    ROUTER_ID: suffix,
   }, { stage: true });
   out.ok("Set Router Secrets");
 
@@ -262,12 +243,16 @@ ${bold("EXAMPLES")}
 
   if (subnet) {
     out.ok(`Subnet: ${subnet}`);
-  }
 
-  if (selfApprove && subnet) {
-    const approveSpinner = out.spinner("Approving Subnet Routes via API");
-    await tailscale.approveSubnetRoutes(device.id, [subnet]);
-    approveSpinner.success("Subnet Routes Approved via API");
+    hasAutoApprover = await tailscale.isAutoApproverConfigured(tag);
+    if (selfApprove) {
+      const approveSpinner = out.spinner("Approving Subnet Routes via API");
+      await tailscale.approveSubnetRoutes(device.id, [subnet]);
+      approveSpinner.success("Subnet Routes Approved via API");
+    } else if (!hasAutoApprover) {
+      out.warn("autoApprovers Not Configured — Routes Need Manual Approval")
+        .dim("  See ACL recommendations below.");
+    }
   }
 
   if (device.advertisedRoutes && device.advertisedRoutes.length > 0) {
@@ -338,24 +323,26 @@ ${bold("EXAMPLES")}
     .dim("  https://login.tailscale.com/admin/acls/visual/general-access-rules")
     .blank();
 
-  if (subnet && selfApprove) {
-    out.header("Recommended Tailscale ACL Policy:")
+  if (subnet && !hasAutoApprover) {
+    out.header("Recommended: Configure autoApprovers")
       .blank()
-      .dim("  Add these to your tailnet policy file at:")
+      .dim("  Add to your tailnet policy file at:")
       .dim("  https://login.tailscale.com/admin/acls/file")
       .blank()
-      .text(`  "tagOwners": { "${tag}": ["autogroup:admin"] }`)
       .text(`  "autoApprovers": { "routes": { "${subnet}": ["${tag}"] } }`)
-      .blank()
-      .dim("  To restrict access, add ACL rules:")
-      .dim(
-        `    {"action": "accept", "src": ["group:YOUR_GROUP"], "dst": ["${tag}:53"]}`,
-      )
-      .dim(
-        `    {"action": "accept", "src": ["group:YOUR_GROUP"], "dst": ["${subnet}:*"]}`,
-      )
       .blank();
-  } else if (subnet) {
+    if (selfApprove) {
+      out.dim("  Routes were approved via API for this session.")
+        .dim("  autoApprovers will auto-approve on future deploys/restarts.");
+    } else {
+      out.dim("  Without autoApprovers, you must manually approve routes:")
+        .dim("  https://login.tailscale.com/admin/machines")
+        .dim(`  Or re-create with: ambit create ${network} --self-approve`);
+    }
+    out.blank();
+  }
+
+  if (subnet) {
     out.header("Recommended ACL Rules:")
       .blank()
       .dim("  To restrict access, add ACL rules to your policy file:")

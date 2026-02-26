@@ -50,6 +50,12 @@ export class Output<T extends Record<string, unknown>> {
     return this;
   }
 
+  print(): void {
+    if (this.jsonMode && this.result) {
+      console.log(JSON.stringify(this.result, null, 2));
+    }
+  }
+
   // ===========================================================================
   // Human-Mode Output (no-op in JSON mode)
   // ===========================================================================
@@ -94,7 +100,6 @@ export class Output<T extends Record<string, unknown>> {
     return this;
   }
 
-  // JSON-aware spinner — no-op in JSON mode
   spinner(
     message: string,
   ): { success(msg: string): void; fail(msg: string): void; stop(): void } {
@@ -114,14 +119,6 @@ export class Output<T extends Record<string, unknown>> {
   // Terminal Output
   // ===========================================================================
 
-  // Print result as JSON (no-op in human mode)
-  print(): void {
-    if (this.jsonMode && this.result) {
-      console.log(JSON.stringify(this.result, null, 2));
-    }
-  }
-
-  // Fatal error — outputs { ok: false, error } and exits
   die(message: string): never {
     if (this.jsonMode) {
       console.log(JSON.stringify({ ok: false, error: message }, null, 2));
@@ -131,7 +128,6 @@ export class Output<T extends Record<string, unknown>> {
     Deno.exit(1);
   }
 
-  // Check if in JSON mode
   isJson(): boolean {
     return this.jsonMode;
   }

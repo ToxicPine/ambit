@@ -1,5 +1,5 @@
 {
-  "workspace": ["./ambit", "./ambit-mcp"],
+  "workspace": ["./ambit"],
   "imports": {
     "@deno/dnt": "jsr:@deno/dnt@^0.42",
     "@std/cli": "jsr:@std/cli@^1.0.27",

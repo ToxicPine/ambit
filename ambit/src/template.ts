@@ -17,22 +17,7 @@
 
 import { join } from "@std/path";
 import { runCommand } from "@/lib/command.ts";
-import type { Result } from "@/lib/result.ts";
-
-// =============================================================================
-// Error Types
-// =============================================================================
-
-/** Kinds of errors that can occur when fetching a template from GitHub. */
-export type TemplateErrorKind =
-  | "NotFound"
-  | "RateLimited"
-  | "HttpError"
-  | "ExtractionFailed"
-  | "PathNotFound"
-  | "PathNotDirectory"
-  | "EmptyArchive"
-  | "NetworkError";
+import { Result } from "@/lib/result.ts";
 
 // =============================================================================
 // Types
@@ -48,8 +33,7 @@ export interface TemplateRef {
 
 /** Result of fetching a template from GitHub. */
 export type TemplateFetchResult = Result<
-  { tempDir: string; templateDir: string },
-  TemplateErrorKind
+  { tempDir: string; templateDir: string }
 >;
 
 // =============================================================================
@@ -57,14 +41,7 @@ export type TemplateFetchResult = Result<
 // =============================================================================
 
 /** Shorthand for returning a typed fetch error. */
-const fail = (
-  kind: TemplateErrorKind,
-  message: string,
-): TemplateFetchResult => ({
-  ok: false,
-  kind,
-  message,
-});
+const fail = (message: string): TemplateFetchResult => Result.err(message);
 
 /** Format a template reference for display. */
 const formatRef = (ref: TemplateRef): string => {
@@ -146,12 +123,9 @@ export const fetchTemplate = async (
     } catch { /* ignore */ }
   };
 
-  const cleanFail = (
-    kind: TemplateErrorKind,
-    message: string,
-  ): TemplateFetchResult => {
+  const cleanFail = (message: string): TemplateFetchResult => {
     cleanup();
-    return fail(kind, message);
+    return fail(message);
   };
 
   try {
@@ -171,7 +145,6 @@ export const fetchTemplate = async (
 
       if (response.status === 404) {
         return cleanFail(
-          "NotFound",
           `Template Repository Not Found: ${repo}. ` +
             "Check that the repository exists and is public.",
         );
@@ -179,13 +152,11 @@ export const fetchTemplate = async (
 
       if (response.status === 403) {
         return cleanFail(
-          "RateLimited",
           "GitHub API Rate Limit Exceeded. Try again later.",
         );
       }
 
       return cleanFail(
-        "HttpError",
         `GitHub API Returned HTTP ${response.status} for ${repo}`,
       );
     }
@@ -207,11 +178,8 @@ export const fetchTemplate = async (
       extractDir,
     ]);
 
-    if (!extractResult.success) {
-      return cleanFail(
-        "ExtractionFailed",
-        "Failed to Extract Template Archive",
-      );
+    if (!extractResult.ok) {
+      return cleanFail("Failed to Extract Template Archive");
     }
 
     // GitHub tarballs have a single top-level dir (owner-repo-commitish/)
@@ -219,10 +187,7 @@ export const fetchTemplate = async (
     const topLevel = entries.find((e) => e.isDirectory);
 
     if (!topLevel) {
-      return cleanFail(
-        "EmptyArchive",
-        "Template Archive Has No Top-Level Directory",
-      );
+      return cleanFail("Template Archive Has No Top-Level Directory");
     }
 
     // Locate the template subdirectory
@@ -232,24 +197,19 @@ export const fetchTemplate = async (
       const stat = Deno.statSync(templateDir);
       if (!stat.isDirectory) {
         return cleanFail(
-          "PathNotDirectory",
           `Template Path '${ref.path}' Is Not a Directory in ${formatRepo(ref)}`,
         );
       }
     } catch {
       return cleanFail(
-        "PathNotFound",
         `Template Path '${ref.path}' Not Found in ${formatRepo(ref)}`,
       );
     }
 
-    return { ok: true, tempDir, templateDir };
+    return Result.ok({ tempDir, templateDir });
   } catch (e) {
     if (e instanceof TypeError) {
-      return cleanFail(
-        "NetworkError",
-        "Network Error: Could Not Reach GitHub",
-      );
+      return cleanFail("Network Error: Could Not Reach GitHub");
     }
 
     cleanup();

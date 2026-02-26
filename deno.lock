@@ -25,11 +25,8 @@
     "jsr:@zod/zod@^4.3.6": "4.3.6",
     "npm:@cardelli/ambit@*": "0.1.1",
     "npm:@modelcontextprotocol/sdk@1.25.3": "1.25.3_zod@4.3.6_ajv@8.17.1_express@5.2.1",
-    "npm:@modelcontextprotocol/sdk@1.26.0": "1.26.0_zod@4.3.6_hono@4.11.9_ajv@8.17.1_express@5.2.1",
-    "npm:@modelcontextprotocol/sdk@^1.26.0": "1.26.0_zod@4.3.6_hono@4.11.9_ajv@8.17.1_express@5.2.1",
     "npm:puppeteer-core@*": "19.0.0",
-    "npm:puppeteer-screen-recorder@3.0.6": "3.0.6_puppeteer@19.0.0",
-    "npm:zod@^4.3.6": "4.3.6"
+    "npm:puppeteer-screen-recorder@3.0.6": "3.0.6_puppeteer@19.0.0"
   },
   "jsr": {
     "@cliffy/table@1.0.0": {
@@ -213,29 +210,7 @@
         "eventsource",
         "eventsource-parser",
         "express",
-        "express-rate-limit@7.5.1_express@5.2.1",
-        "jose",
-        "json-schema-typed",
-        "pkce-challenge",
-        "raw-body",
-        "zod",
-        "zod-to-json-schema"
-      ]
-    },
-    "@modelcontextprotocol/sdk@1.26.0_zod@4.3.6_hono@4.11.9_ajv@8.17.1_express@5.2.1": {
-      "integrity": "sha512-Y5RmPncpiDtTXDbLKswIJzTqu2hyBKxTNsgKqKclDbhIgg1wgtf1fRuvxgTnRfcnxtvvgbIEcqUOzZrJ6iSReg==",
-      "dependencies": [
-        "@hono/node-server",
-        "ajv",
-        "ajv-formats",
-        "content-type",
-        "cors",
-        "cross-spawn",
-        "eventsource",
-        "eventsource-parser",
-        "express",
-        "express-rate-limit@8.2.1_express@5.2.1",
-        "hono",
+        "express-rate-limit",
         "jose",
         "json-schema-typed",
         "pkce-challenge",
@@ -462,13 +437,6 @@
         "express"
       ]
     },
-    "express-rate-limit@8.2.1_express@5.2.1": {
-      "integrity": "sha512-PCZEIEIxqwhzw4KF0n7QF4QqruVTcF73O5kFKUnGOyjbCCgizBBiFaYpd/fnBLUMPw/BWw9OsiN7GgrNYr7j6g==",
-      "dependencies": [
-        "express",
-        "ip-address"
-      ]
-    },
     "express@5.2.1": {
       "integrity": "sha512-hIS4idWWai69NezIdRt2xFVofaF4j+6INOpJlVOLDO8zXGpUVEVzIYk12UUi2JzjEzWL3IOAxcTubgz9Po0yXw==",
       "dependencies": [
@@ -651,9 +619,6 @@
     },
     "inherits@2.0.4": {
       "integrity": "sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ=="
-    },
-    "ip-address@10.0.1": {
-      "integrity": "sha512-NWv9YLW4PoW2B7xtzaS3NCot75m6nK7Icdv0o3lfMceJVRfSoQwqD4wEH5rLwoKJwUiZ/rfpiVBhnaF0FK4HoA=="
     },
     "ipaddr.js@1.9.1": {
       "integrity": "sha512-0KI/607xoxSToH7GjN1FfSbLoU0+btTicjsQSWQlh/hZykN8KpmMf7uYwPW3R+akZ6R/w18ZlXSHBYXiYUPO3g=="
@@ -1071,15 +1036,6 @@
           "jsr:@std/path@^1.1.4",
           "jsr:@std/toml@1",
           "jsr:@zod/zod@^4.3.6"
-        ]
-      },
-      "ambit-mcp": {
-        "dependencies": [
-          "jsr:@std/assert@1",
-          "jsr:@std/cli@^1.0.27",
-          "jsr:@std/path@^1.1.4",
-          "npm:@modelcontextprotocol/sdk@^1.26.0",
-          "npm:zod@^4.3.6"
         ]
       }
     }

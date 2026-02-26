@@ -7,7 +7,11 @@ import { join } from "@std/path";
 import { bold, confirm, fileExists } from "@/lib/cli.ts";
 import { createOutput } from "@/lib/output.ts";
 import { registerCommand } from "../mod.ts";
-import { createFlyProvider, FlyDeployError } from "@/src/providers/fly.ts";
+import {
+  createFlyProvider,
+  FlyDeployError,
+  getWorkloadAppName,
+} from "@/src/providers/fly.ts";
 import { findRouterApp } from "@/src/discovery.ts";
 import { resolveOrg } from "@/src/resolve.ts";
 import { assertNotRouter, auditDeploy, scanFlyToml } from "@/src/guard.ts";
@@ -161,21 +165,22 @@ const resolveTemplateMode = async (
 
   if (!result.ok) {
     fetchSpinner.fail("Template Fetch Failed");
-    out.die(result.message);
+    out.die(result.error!);
     return null;
   }
 
+  const { tempDir, templateDir } = result.value!;
   fetchSpinner.success("Template Fetched");
 
   // Find and scan the template's fly.toml
-  const configPath = join(result.templateDir, "fly.toml");
+  const configPath = join(templateDir, "fly.toml");
 
   let tomlContent: string;
   try {
     tomlContent = await Deno.readTextFile(configPath);
   } catch {
     try {
-      Deno.removeSync(result.tempDir, { recursive: true });
+      Deno.removeSync(tempDir, { recursive: true });
     } catch { /* ignore */ }
     out.die(`Template '${ref.path === "." ? ref.repo : ref.path}' Has No fly.toml`);
     return null;
@@ -185,7 +190,7 @@ const resolveTemplateMode = async (
 
   if (scan.errors.length > 0) {
     try {
-      Deno.removeSync(result.tempDir, { recursive: true });
+      Deno.removeSync(tempDir, { recursive: true });
     } catch { /* ignore */ }
     for (const err of scan.errors) {
       out.err(err);
@@ -203,7 +208,7 @@ const resolveTemplateMode = async (
   return {
     configPath,
     preflight: { scanned: scan.scanned, warnings: scan.warnings },
-    tempDir: result.tempDir,
+    tempDir,
   };
 };
 
@@ -392,6 +397,8 @@ ${bold("EXAMPLES")}
   }
 
   routerSpinner.success(`Router Found: ${router.appName}`);
+  const routerId = router.routerId;
+  const flyAppName = getWorkloadAppName(app, routerId);
   out.blank();
 
   // ==========================================================================
@@ -401,18 +408,18 @@ ${bold("EXAMPLES")}
   out.header("Step 3: App Setup").blank();
 
   let created = false;
-  const exists = await fly.appExists(app);
+  const exists = await fly.appExists(flyAppName);
 
   if (exists) {
-    out.ok(`App '${app}' Exists`);
+    out.ok(`App '${flyAppName}' Exists`);
   } else {
     out.info(
-      `App '${app}' Does Not Exist — Will Create on Network '${network}'`,
+      `App '${flyAppName}' Does Not Exist — Will Create on Network '${network}'`,
     );
 
     if (!args.yes && !args.json) {
       const confirmed = await confirm(
-        `Create app '${app}' on network '${network}'?`,
+        `Create app '${flyAppName}' on network '${network}'?`,
       );
       if (!confirmed) {
         out.text("Cancelled.");
@@ -420,8 +427,8 @@ ${bold("EXAMPLES")}
       }
     }
 
-    await fly.createApp(app, org, { network });
-    out.ok(`Created App '${app}' on Network '${network}'`);
+    await fly.createApp(app, org, { network, routerId });
+    out.ok(`Created App '${flyAppName}' on Network '${network}'`);
     created = true;
   }
 
@@ -456,6 +463,7 @@ ${bold("EXAMPLES")}
 
   try {
     await fly.deploySafe(app, {
+      routerId,
       image: deployConfig.image,
       config: deployConfig.configPath,
       region: args.region,
@@ -484,7 +492,7 @@ ${bold("EXAMPLES")}
   out.header("Step 6: Post-flight Audit").blank();
 
   const auditSpinner = out.spinner("Auditing Deployment");
-  const audit = await auditDeploy(fly, app, network);
+  const audit = await auditDeploy(fly, flyAppName, network);
   auditSpinner.success("Audit Complete");
 
   if (audit.public_ips_released > 0) {
