@@ -164,11 +164,13 @@ export const deployTransition = async (
     }
 
     case "deploy": {
-      ctx.out.blank().dim("Deploying with --no-public-ips --flycast ...");
+      ctx.out.blank();
+      const deploySpinner = ctx.out.spinner("Deploying to Fly.io");
 
       try {
         await ctx.fly.deploy.app(ctx.app, ctx.deployOptions);
       } catch (e) {
+        deploySpinner.fail("Deploy Failed");
         if (e instanceof FlyDeployError) {
           ctx.out.dim(`  ${e.detail}`);
           return Result.err(e.message);
@@ -184,7 +186,7 @@ export const deployTransition = async (
         }
       }
 
-      ctx.out.ok("Deploy Succeeded");
+      deploySpinner.success("Deploy Succeeded");
       return Result.ok("audit");
     }
 

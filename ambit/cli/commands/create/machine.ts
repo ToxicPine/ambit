@@ -164,19 +164,21 @@ export const createTransition = async (
       );
 
       const dockerDir = ROUTER_DOCKER_DIR;
+      const deploySpinner = ctx.out.spinner("Deploying Router to Fly.io");
 
       try {
         await ctx.fly.deploy.router(ctx.appName, dockerDir, {
           region: ctx.region,
         });
       } catch (e) {
+        deploySpinner.fail("Router Deploy Failed");
         if (e instanceof FlyDeployError) {
           ctx.out.dim(`  ${e.detail}`);
           return Result.err(e.message);
         }
         throw e;
       }
-      ctx.out.ok("Router Deployed");
+      deploySpinner.success("Router Deployed");
 
       const machines = await ctx.fly.machines.list(ctx.appName);
       const m = machines.find((m) => m.private_ip);

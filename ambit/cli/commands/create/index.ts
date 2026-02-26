@@ -128,8 +128,7 @@ const stageTailscaleConfig = async (
       )
       .link("  https://login.tailscale.com/admin/acls/visual/tags")
       .blank()
-      .dim("  Or you can do it manually in the JSON editor:")
-      .link("  https://login.tailscale.com/admin/acls/file")
+      .dim("  Or you can do it manually with this JSON config:")
       .dim(`    "tagOwners": { "${opts.tag}": ["autogroup:admin"] }`)
       .blank();
     return out.die(`Set Up ${opts.tag} in Tailscale, Then Try Again`);
@@ -147,25 +146,21 @@ const stageTailscaleConfig = async (
       approverSpinner.fail(`Auto-approve Not Configured for ${opts.tag}`);
       out.blank()
         .text(
-          "  In JSON mode, ambit can't interactively approve subnet routes.",
+          "  In JSON mode, ambit can't interactively approve the router's",
         )
         .text(
-          `  Add an autoApprovers rule so Tailscale automatically trusts`,
+          `  network connections. You can set this up from the Tailscale dashboard:`,
         )
-        .text(
-          `  routes advertised by ${opts.tag}:`,
-        )
+        .link("  https://login.tailscale.com/admin/acls/visual/auto-approvers")
+        .dim(`  Route: ${FLY_PRIVATE_SUBNET}  Owner: ${opts.tag}`)
         .blank()
-        .dim(
-          "  https://login.tailscale.com/admin/acls/file",
-        )
-        .blank()
+        .dim("  Or you can do it manually with this JSON config:")
         .dim(
           `    "autoApprovers": { "routes": { "${FLY_PRIVATE_SUBNET}": ["${opts.tag}"] } }`,
         )
         .blank();
       return out.die(
-        `Add autoApprovers for ${opts.tag} to Use --json`,
+        `Set Up Auto-approve for ${opts.tag} to Use --json`,
       );
     }
 
@@ -295,7 +290,6 @@ const stageSummary = async (
         .dim(`     Route: ${ctx.subnet}  Owner: ${opts.tag}`)
         .blank()
         .dim("     Or you can do it manually with this JSON config:")
-        .link("     https://login.tailscale.com/admin/acls/file")
         .dim(
           `     "autoApprovers": { "routes": { "${ctx.subnet}": ["${opts.tag}"] } }`,
         );
@@ -320,7 +314,6 @@ const stageSummary = async (
       .dim(`     Source: group:YOUR_GROUP  Destination: ${opts.tag}:*`)
       .blank()
       .dim("     Or you can do it manually with this JSON config:")
-      .link("     https://login.tailscale.com/admin/acls/file")
       .dim(
         `     {"action": "accept", "src": ["group:YOUR_GROUP"], "dst": ["${opts.tag}:53"]}`,
       )
