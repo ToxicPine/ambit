@@ -10,11 +10,9 @@ import { type Machine, runMachine } from "@/lib/machine.ts";
 import { registerCommand } from "@/cli/mod.ts";
 import { getRouterTag } from "@/util/naming.ts";
 import { isPublicTld } from "@/util/guard.ts";
+import { createFlyProvider, type FlyProvider } from "@/providers/fly.ts";
 import {
-  createFlyProvider,
-  type FlyProvider,
-} from "@/providers/fly.ts";
-import {
+  type AclSetResult,
   createTailscaleProvider,
   type TailscaleProvider,
 } from "@/providers/tailscale.ts";
@@ -24,7 +22,13 @@ import {
   TAILSCALE_API_KEY_PREFIX,
 } from "@/util/constants.ts";
 import { resolveOrg } from "@/util/resolve.ts";
-import { isAutoApproverConfigured, isTagOwnerConfigured } from "@/util/tailscale-local.ts";
+import {
+  assertAdditivePatch,
+  isAutoApproverConfigured,
+  isTagOwnerConfigured,
+  patchAutoApprover,
+  patchTagOwner,
+} from "@/util/tailscale-local.ts";
 import {
   type CreateCtx,
   type CreatePhase,
@@ -62,9 +66,29 @@ const stageFlyConfig = async (
 // Stage 2: Tailscale Configuration
 // =============================================================================
 
+const handleAclSetFailure = (
+  out: Output<CreateResult>,
+  result: AclSetResult,
+  action: string,
+): never => {
+  if (result.status === 403) {
+    out.err(`${action}: Permission Denied (HTTP 403)`);
+    return out.die(
+      "Your API Token Lacks ACL Write Permission. Re-run with --manual to Skip ACL Changes",
+    );
+  }
+  return out.die(`${action}: ${result.error ?? `HTTP ${result.status}`}`);
+};
+
 const stageTailscaleConfig = async (
   out: Output<CreateResult>,
-  opts: { json: boolean; apiKey?: string; tag: string; network: string },
+  opts: {
+    json: boolean;
+    manual: boolean;
+    apiKey?: string;
+    tag: string;
+    network: string;
+  },
 ): Promise<TailscaleProvider> => {
   out.header("Step 2: Tailscale Configuration").blank();
 
@@ -79,7 +103,9 @@ const stageTailscaleConfig = async (
     out.dim(
       "Ambit Needs an API Access Token (Not an Auth Key) to Manage Your Tailnet.",
     )
-      .dim("Create One at:").link("  https://login.tailscale.com/admin/settings/keys")
+      .dim("Create One at:").link(
+        "  https://login.tailscale.com/admin/settings/keys",
+      )
       .blank();
 
     apiKey = await readSecret("API access token (tskey-api-...): ");
@@ -107,10 +133,34 @@ const stageTailscaleConfig = async (
   await credentials.setTailscaleApiKey(apiKey);
 
   const tagOwnerSpinner = out.spinner(`Checking tagOwners for ${opts.tag}`);
-  const policy = await tailscale.acl.getPolicy();
+  let policy = await tailscale.acl.getPolicy();
   const hasTagOwner = isTagOwnerConfigured(policy, opts.tag);
 
-  if (!hasTagOwner) {
+  if (!hasTagOwner && !opts.manual && policy) {
+    tagOwnerSpinner.stop();
+    const beforeTagOwner = policy;
+    policy = patchTagOwner(policy, opts.tag);
+    assertAdditivePatch(beforeTagOwner, policy);
+    const validateTagOwner = await tailscale.acl.validatePolicy(policy);
+    if (!validateTagOwner.ok) {
+      return handleAclSetFailure(
+        out,
+        validateTagOwner,
+        `Validating tagOwners patch for ${opts.tag}`,
+      );
+    }
+    const patchSpinner = out.spinner(`Adding ${opts.tag} to tagOwners`);
+    const result = await tailscale.acl.setPolicy(policy!);
+    if (!result.ok) {
+      patchSpinner.fail(`Adding ${opts.tag} to tagOwners`);
+      return handleAclSetFailure(
+        out,
+        result,
+        `Adding ${opts.tag} to tagOwners`,
+      );
+    }
+    patchSpinner.success(`Added ${opts.tag} to tagOwners`);
+  } else if (!hasTagOwner) {
     tagOwnerSpinner.fail(`${opts.tag} Not Set Up Yet`);
     out.blank()
       .text(
@@ -132,11 +182,39 @@ const stageTailscaleConfig = async (
       .dim(`    "tagOwners": { "${opts.tag}": ["autogroup:admin"] }`)
       .blank();
     return out.die(`Set Up ${opts.tag} in Tailscale, Then Try Again`);
+  } else {
+    tagOwnerSpinner.success(`${opts.tag} Found in Tailscale ACL`);
   }
 
-  tagOwnerSpinner.success(`${opts.tag} Found in Tailscale ACL`);
-
-  if (opts.json) {
+  if (!opts.manual) {
+    const hasApprover = isAutoApproverConfigured(policy, opts.tag);
+    if (!hasApprover && policy) {
+      const beforeApprover = policy;
+      policy = patchAutoApprover(policy, opts.tag, FLY_PRIVATE_SUBNET);
+      assertAdditivePatch(beforeApprover, policy);
+      const validateApprover = await tailscale.acl.validatePolicy(policy);
+      if (!validateApprover.ok) {
+        return handleAclSetFailure(
+          out,
+          validateApprover,
+          `Validating autoApprover patch for ${opts.tag}`,
+        );
+      }
+      const approverSpinner = out.spinner(
+        `Adding autoApprover for ${opts.tag}`,
+      );
+      const result = await tailscale.acl.setPolicy(policy!);
+      if (!result.ok) {
+        approverSpinner.fail(`Adding autoApprover for ${opts.tag}`);
+        return handleAclSetFailure(
+          out,
+          result,
+          `Adding autoApprover for ${opts.tag}`,
+        );
+      }
+      approverSpinner.success(`Added autoApprover for ${opts.tag}`);
+    }
+  } else if (opts.json) {
     const approverSpinner = out.spinner(
       `Checking autoApprovers for ${opts.tag}`,
     );
@@ -263,7 +341,6 @@ const stageSummary = async (
     .text(`  npx @cardelli/ambit deploy <app-name>.${opts.network}`)
     .blank();
 
-
   out.dim("Invite People to Your Tailnet:")
     .link("  https://login.tailscale.com/admin/users")
     .blank();
@@ -286,7 +363,9 @@ const stageSummary = async (
         )
         .blank()
         .dim("     You can do this from the Tailscale dashboard:")
-        .link("     https://login.tailscale.com/admin/acls/visual/auto-approvers")
+        .link(
+          "     https://login.tailscale.com/admin/acls/visual/auto-approvers",
+        )
         .dim(`     Route: ${ctx.subnet}  Owner: ${opts.tag}`)
         .blank()
         .dim("     Or you can do it manually with this JSON config:")
@@ -302,7 +381,11 @@ const stageSummary = async (
     }
 
     out.blank()
-      .text(`  ${hasAutoApprover ? "1" : "2"}. Control Who Can Reach Apps on This Network:`)
+      .text(
+        `  ${
+          hasAutoApprover ? "1" : "2"
+        }. Control Who Can Reach Apps on This Network:`,
+      )
       .dim(
         "     This lets you restrict which users or devices can access your apps.",
       )
@@ -340,7 +423,7 @@ const stageSummary = async (
 const create = async (argv: string[]): Promise<void> => {
   const opts = {
     string: ["org", "region", "api-key", "tag"],
-    boolean: ["help", "yes", "json", "no-auto-approve"],
+    boolean: ["help", "yes", "json", "no-auto-approve", "manual"],
     alias: { y: "yes" },
   } as const;
   const args = parseArgs(argv, opts);
@@ -358,7 +441,8 @@ ${bold("OPTIONS")}
   --region <region>   Fly.io region (default: iad)
   --api-key <key>     Tailscale API access token (tskey-api-...)
   --tag <tag>         Tailscale ACL tag for the router (default: tag:ambit-<network>)
-  --no-auto-approve        Skip waiting for router and approving routes
+  --manual            Skip automatic Tailscale ACL configuration (tagOwners + autoApprovers)
+  --no-auto-approve   Skip waiting for router and approving routes
   -y, --yes           Skip confirmation prompts
   --json              Output as JSON (implies --no-auto-approve)
 
@@ -368,9 +452,14 @@ ${bold("DESCRIPTION")}
 
     my-app.${args._[0] || "<network>"} resolves to my-app.flycast
 
+  By default, ambit auto-configures your Tailscale ACL policy (tagOwners
+  and autoApprovers). Use --manual if your API token lacks ACL write
+  permission or you prefer to manage the policy yourself.
+
 ${bold("EXAMPLES")}
   ambit create browsers
   ambit create browsers --org my-org --region sea
+  ambit create browsers --manual
 `);
     return;
   }
@@ -388,7 +477,8 @@ ${bold("EXAMPLES")}
     );
   }
   const tag = args.tag || getRouterTag(network);
-  const shouldApprove = !(args["no-auto-approve"] || args.json);
+  const manual = !!args.manual;
+  const shouldApprove = !manual || !(args["no-auto-approve"] || args.json);
 
   out.blank()
     .header("=".repeat(50))
@@ -404,6 +494,7 @@ ${bold("EXAMPLES")}
 
   const tailscale = await stageTailscaleConfig(out, {
     json: args.json,
+    manual,
     apiKey: args["api-key"],
     tag,
     network,

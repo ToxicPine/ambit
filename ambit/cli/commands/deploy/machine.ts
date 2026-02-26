@@ -130,11 +130,13 @@ export const deployTransition = async (
         }
       }
 
-      await ctx.out.spin("Creating App", () =>
-        ctx.fly.apps.create(ctx.app, ctx.org, {
-          network: ctx.network,
-          routerId: ctx.routerId,
-        })
+      await ctx.out.spin(
+        "Creating App",
+        () =>
+          ctx.fly.apps.create(ctx.app, ctx.org, {
+            network: ctx.network,
+            routerId: ctx.routerId,
+          }),
       );
       ctx.out.ok(
         `Created App '${ctx.flyAppName}' on Network '${ctx.network}'`,
@@ -149,14 +151,14 @@ export const deployTransition = async (
       }
 
       if (ctx.routerPrivateIp) {
-        const proxyUrl = `socks5://[${ctx.routerPrivateIp}]:${SOCKS_PROXY_PORT}`;
+        const proxyUrl =
+          `socks5://[${ctx.routerPrivateIp}]:${SOCKS_PROXY_PORT}`;
         await ctx.out.spin("Setting Outbound Proxy", () =>
           ctx.fly.secrets.set(
             ctx.flyAppName,
             { [SECRET_AMBIT_OUTBOUND_PROXY]: proxyUrl },
             { stage: true },
-          )
-        );
+          ));
         ctx.out.ok(`Outbound Proxy: ${proxyUrl}`);
       }
 

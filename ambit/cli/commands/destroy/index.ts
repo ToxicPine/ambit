@@ -25,10 +25,12 @@ ${bold("SUBCOMMANDS")}
   app        Destroy a workload app on a network
 
 ${bold("OPTIONS")}
+  --manual   Skip automatic Tailscale ACL cleanup (network subcommand)
   --help     Show help for a subcommand
 
 ${bold("EXAMPLES")}
   ambit destroy network browsers
+  ambit destroy network browsers --yes
   ambit destroy app my-app.browsers
   ambit destroy app my-app --network browsers
 

@@ -232,7 +232,11 @@ const stageSummary = (out: DoctorOutput, results: CheckResult[]): void => {
   }
 
   out.blank();
-  out.text(issues === 0 ? "All Checks Passed." : `${issues} Issue${issues > 1 ? "s" : ""} Found.`);
+  out.text(
+    issues === 0
+      ? "All Checks Passed."
+      : `${issues} Issue${issues > 1 ? "s" : ""} Found.`,
+  );
   out.blank();
   out.print();
 };
@@ -242,7 +246,10 @@ const stageSummary = (out: DoctorOutput, results: CheckResult[]): void => {
 // =============================================================================
 
 const doctorNetwork = async (argv: string[]): Promise<void> => {
-  const opts = { string: ["network", "org"], boolean: ["help", "json"] } as const;
+  const opts = {
+    string: ["network", "org"],
+    boolean: ["help", "json"],
+  } as const;
   const args = parseArgs(argv, opts);
   checkArgs(args, opts, "ambit doctor network");
 
@@ -276,8 +283,8 @@ ${bold("CHECKS")}
   const results: CheckResult[] = [];
   const report = makeReporter(results, out);
 
-  const network =
-    (typeof args._[0] === "string" ? args._[0] : undefined) || args.network;
+  const network = (typeof args._[0] === "string" ? args._[0] : undefined) ||
+    args.network;
 
   const { fly, tailscale, org } = await initSession(out, {
     json: args.json,
@@ -294,7 +301,10 @@ ${bold("CHECKS")}
 // =============================================================================
 
 const doctorApp = async (argv: string[]): Promise<void> => {
-  const opts = { string: ["network", "org"], boolean: ["help", "json"] } as const;
+  const opts = {
+    string: ["network", "org"],
+    boolean: ["help", "json"],
+  } as const;
   const args = parseArgs(argv, opts);
   checkArgs(args, opts, "ambit doctor app");
 

@@ -67,17 +67,38 @@ Open `http://my-crazy-site.lab`. It works for you and nobody else.
 
 ### `ambit create <network>`
 
-This is the first command you run, it sets up your private network: a named slice of the cloud that only your devices can reach. Under the hood it handles Fly.io and Tailscale authentication, deploys the router, sets up DNS, and configures your local machine to accept the new routes.
+This is the first command you run, it sets up your private network: a named slice of the cloud that only your devices can reach. Under the hood it handles Fly.io and Tailscale authentication, deploys the router, sets up DNS, configures your local machine to accept the new routes, and automatically adds the router's tag to your Tailscale ACL policy.
 
-| Flag                   | Description                                                |
-| ---------------------- | ---------------------------------------------------------- |
-| `--org <org>`          | Fly.io organization slug                                   |
-| `--region <region>`    | Fly.io region (default: `iad`)                             |
-| `--api-key <key>`      | Tailscale API access token (tskey-api-...)                 |
-| `--tag <tag>`          | Tailscale ACL tag for the router (default: `tag:ambit-<network>`) |
-| `--no-auto-approve`    | Skip waiting for router and approving routes               |
-| `-y`, `--yes`          | Skip confirmation prompts                                  |
-| `--json`               | Machine-readable JSON output (implies `--no-auto-approve`) |
+| Flag                | Description                                                                 |
+| ------------------- | --------------------------------------------------------------------------- |
+| `--org <org>`       | Fly.io organization slug                                                    |
+| `--region <region>` | Fly.io region (default: `iad`)                                              |
+| `--api-key <key>`   | Tailscale API access token (tskey-api-...)                                  |
+| `--tag <tag>`       | Tailscale ACL tag for the router (default: `tag:ambit-<network>`)           |
+| `--manual`          | Skip automatic Tailscale ACL configuration (tagOwners + autoApprovers)      |
+| `--no-auto-approve` | Skip waiting for router and approving routes                                |
+| `-y`, `--yes`       | Skip confirmation prompts                                                   |
+| `--json`            | Machine-readable JSON output (implies `--no-auto-approve`)                  |
+
+### `ambit share <network> <member> [<member>...]`
+
+Grants one or more members access to a network by adding two ACL rules per member: one for DNS (so they can resolve `*.<network>` names) and one for the subnet (so they can reach apps). All members are validated before any changes are made. The command is idempotent — safe to re-run.
+
+Each member must be one of:
+- `group:<name>` — a Tailscale group
+- `tag:<name>` — a device tag
+- `autogroup:<name>` — a built-in Tailscale group (e.g. `autogroup:member`)
+- A valid email address — a specific Tailscale user
+
+```bash
+npx @cardelli/ambit share browsers group:team
+npx @cardelli/ambit share browsers group:team alice@example.com group:contractors
+```
+
+| Flag          | Description              |
+| ------------- | ------------------------ |
+| `--org <org>` | Fly.io organization slug |
+| `--json`      | Machine-readable JSON    |
 
 ### `ambit deploy <app>.<network>`
 
@@ -173,11 +194,12 @@ Lists all discovered routers across networks in a table showing the network name
 
 ### `ambit destroy network <name>`
 
-Tears down a network: destroys the router, cleans up DNS, and removes the Tailscale device. If there are workload apps still on the network, ambit warns you before proceeding. Reminds you to clean up any ACL entries you added.
+Tears down a network: destroys the router, cleans up DNS, removes the Tailscale device, and automatically removes the router's tag from your Tailscale ACL policy (tagOwners and autoApprovers). If there are workload apps still on the network, ambit warns you before proceeding.
 
 | Flag              | Description                    |
 | ----------------- | ------------------------------ |
 | `--org <org>`     | Fly.io organization slug       |
+| `--manual`        | Skip automatic Tailscale ACL cleanup (tagOwners + autoApprovers) |
 | `-y`, `--yes`     | Skip confirmation prompts      |
 | `--json`          | Machine-readable JSON output   |
 
@@ -218,20 +240,12 @@ Checks app health: verifies the app is deployed and running, then checks the rou
 
 ## Access Control
 
-Ambit doesn't touch your Tailscale ACL policy. After creating a router, it prints the exact policy entries you need so you can control who on your tailnet can reach which networks. By default, if you haven't restricted anything, all your devices can reach everything.
+By default, `ambit create` automatically adds the router's tag to your Tailscale ACL policy (`tagOwners` and `autoApprovers`). `ambit destroy network` automatically removes them. Pass `--manual` to either command to skip this and manage the policy yourself — useful if your API token lacks ACL write permission (`policy_file` scope).
 
-If you want to lock it down, two rules do the job — one for DNS queries and one for data traffic:
+If you want to lock down which users can reach which networks, two rules do the job — one for DNS queries and one for data traffic:
 
 ```jsonc
 {
-  "tagOwners": {
-    "tag:ambit-infra": ["autogroup:admin"]
-  },
-  "autoApprovers": {
-    "routes": {
-      "fdaa:X:XXXX::/48": ["tag:ambit-infra"]
-    }
-  },
   "acls": [
     {
       "action": "accept",
@@ -242,6 +256,8 @@ If you want to lock it down, two rules do the job — one for DNS queries and on
   ]
 }
 ```
+
+These `acls` entries are never touched automatically — ambit only manages `tagOwners` and `autoApprovers`.
 
 ## Multiple Networks
 

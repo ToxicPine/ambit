@@ -8,10 +8,7 @@ import { checkArgs } from "@/lib/args.ts";
 import { createOutput, type Output } from "@/lib/output.ts";
 import { type Machine, runMachine } from "@/lib/machine.ts";
 import { registerCommand } from "@/cli/mod.ts";
-import {
-  createFlyProvider,
-  type FlyProvider,
-} from "@/providers/fly.ts";
+import { createFlyProvider, type FlyProvider } from "@/providers/fly.ts";
 import { getWorkloadAppName } from "@/util/naming.ts";
 import { findRouterApp, getRouterMachineInfo } from "@/util/discovery.ts";
 import { resolveOrg } from "@/util/resolve.ts";
@@ -61,7 +58,9 @@ const stageNetworkVerification = async (
   out: Output<DeployResult>,
   fly: FlyProvider,
   opts: { org: string; network: string; app: string },
-): Promise<{ routerId: string; flyAppName: string; routerPrivateIp?: string }> => {
+): Promise<
+  { routerId: string; flyAppName: string; routerPrivateIp?: string }
+> => {
   out.header("Step 2: Network Verification").blank();
 
   const routerSpinner = out.spinner("Checking for Router on Network");
@@ -93,7 +92,12 @@ const stageNetworkVerification = async (
 
 const stagePreflightCheck = async (
   out: Output<DeployResult>,
-  opts: { template?: string; image?: string; config?: string; mainPort: string },
+  opts: {
+    template?: string;
+    image?: string;
+    config?: string;
+    mainPort: string;
+  },
 ): Promise<DeployConfig> => {
   out.header("Step 3: Pre-flight Check").blank();
 
@@ -202,9 +206,7 @@ const stageSummary = (
   out.blank()
     .header("=".repeat(50))
     .header(
-      hasIssues
-        ? "  Deploy Completed (with Warnings)"
-        : "  Deploy Completed!",
+      hasIssues ? "  Deploy Completed (with Warnings)" : "  Deploy Completed!",
     )
     .header("=".repeat(50))
     .blank()

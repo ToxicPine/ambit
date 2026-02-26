@@ -70,6 +70,9 @@ npx skills add ToxicPine/ambit-skills --skill ambit-cli
 npx @cardelli/ambit create lab
 npx @cardelli/ambit deploy my-app.lab
 # → http://my-app.lab, visible only to your devices
+
+npx @cardelli/ambit share lab group:team alice@example.com
+# → grants your whole team access to the lab network
 ```
 
 **Deploy a headless browser from a template:**

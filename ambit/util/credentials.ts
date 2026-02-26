@@ -3,7 +3,12 @@
 // =============================================================================
 
 import { z } from "zod";
-import { commandExists, ensureConfigDir, fileExists, getConfigDir } from "@/lib/cli.ts";
+import {
+  commandExists,
+  ensureConfigDir,
+  fileExists,
+  getConfigDir,
+} from "@/lib/cli.ts";
 import { ENV_TAILSCALE_API_KEY, FLYCTL_INSTALL_URL } from "@/util/constants.ts";
 
 // =============================================================================

@@ -183,8 +183,7 @@ ${bold("EXAMPLES")}
     return;
   }
 
-  const network =
-    typeof args._[0] === "string" ? args._[0] : undefined;
+  const network = typeof args._[0] === "string" ? args._[0] : undefined;
 
   const prereqOut = createOutput<Record<string, unknown>>(args.json);
   const { fly, tailscale, org } = await initSession(prereqOut, {
@@ -263,7 +262,9 @@ const stageAppStatus = async (
     out.header("  Machines").blank();
     for (const m of machines) {
       out.text(
-        `    ${m.id}  ${m.region}  ${m.state}${m.private_ip ? `  ${m.private_ip}` : ""}`,
+        `    ${m.id}  ${m.region}  ${m.state}${
+          m.private_ip ? `  ${m.private_ip}` : ""
+        }`,
       );
     }
   }
@@ -276,7 +277,9 @@ const stageAppStatus = async (
   if (flycastIps.length > 0) {
     out.header("  Flycast IPs").blank();
     for (const ip of flycastIps) {
-      out.text(`    ${ip.Address}  (network: ${ip.Network?.Name ?? "default"})`);
+      out.text(
+        `    ${ip.Address}  (network: ${ip.Network?.Name ?? "default"})`,
+      );
     }
     out.blank();
   }
@@ -297,7 +300,11 @@ const stageAppStatus = async (
     out.header("  Router").blank()
       .text(`    App:         ${router.appName}`)
       .text(`    State:       ${routerMachine?.state ?? "unknown"}`)
-      .text(`    Tailscale:   ${ts ? (ts.online ? "online" : "offline") : "not found"}`);
+      .text(
+        `    Tailscale:   ${
+          ts ? (ts.online ? "online" : "offline") : "not found"
+        }`,
+      );
 
     if (routerMachine?.privateIp) {
       out.text(
@@ -327,7 +334,10 @@ const stageAppStatus = async (
 // =============================================================================
 
 const statusApp = async (argv: string[]): Promise<void> => {
-  const opts = { string: ["network", "org"], boolean: ["help", "json"] } as const;
+  const opts = {
+    string: ["network", "org"],
+    boolean: ["help", "json"],
+  } as const;
   const args = parseArgs(argv, opts);
   checkArgs(args, opts, "ambit status app");
 

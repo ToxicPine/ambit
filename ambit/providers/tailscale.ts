@@ -26,6 +26,12 @@ export interface DeviceRoutes {
   unapproved: string[];
 }
 
+export interface AclSetResult {
+  ok: boolean;
+  status: number;
+  error?: string;
+}
+
 export interface TailscaleProvider {
   auth: {
     validateKey(): Promise<boolean>;
@@ -47,6 +53,8 @@ export interface TailscaleProvider {
   };
   acl: {
     getPolicy(): Promise<Record<string, unknown> | null>;
+    setPolicy(policy: Record<string, unknown>): Promise<AclSetResult>;
+    validatePolicy(policy: Record<string, unknown>): Promise<AclSetResult>;
   };
 }
 
@@ -84,7 +92,7 @@ export const createTailscaleProvider = (
       const response = await fetch(`${API_BASE}${path}`, {
         method,
         headers: headers(),
-        body: body ? JSON.stringify(body) : undefined,
+        body: body ? JSON.stringify(body, null, 2) : undefined,
       });
 
       if (!response.ok) {
@@ -264,6 +272,41 @@ export const createTailscaleProvider = (
           return null;
         }
         return result.data;
+      },
+
+      async setPolicy(policy: Record<string, unknown>): Promise<AclSetResult> {
+        const result = await request<void>(
+          "POST",
+          `/tailnet/${tailnet}/acl`,
+          policy,
+        );
+        if (!result.ok) {
+          return { ok: false, status: result.status, error: result.error };
+        }
+        return { ok: true, status: result.status };
+      },
+
+      async validatePolicy(
+        policy: Record<string, unknown>,
+      ): Promise<AclSetResult> {
+        const result = await request<Record<string, unknown>>(
+          "POST",
+          `/tailnet/${tailnet}/acl/validate`,
+          policy,
+        );
+        if (!result.ok) {
+          return { ok: false, status: result.status, error: result.error };
+        }
+
+        const body = result.data ?? {};
+        if (Object.keys(body).length > 0) {
+          return {
+            ok: false,
+            status: result.status,
+            error: JSON.stringify(body),
+          };
+        }
+        return { ok: true, status: result.status };
       },
     },
   };

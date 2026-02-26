@@ -197,7 +197,9 @@ export const fetchTemplate = async (
       const stat = Deno.statSync(templateDir);
       if (!stat.isDirectory) {
         return cleanFail(
-          `Template Path '${ref.path}' Is Not a Directory in ${formatRepo(ref)}`,
+          `Template Path '${ref.path}' Is Not a Directory in ${
+            formatRepo(ref)
+          }`,
         );
       }
     } catch {

@@ -97,8 +97,9 @@ const destroyAppTransition = async (
 
     case "delete_app": {
       if (ctx.flyAppName) {
-        await ctx.out.spin("Deleting App", () =>
-          ctx.fly.apps.delete(ctx.flyAppName!)
+        await ctx.out.spin(
+          "Deleting App",
+          () => ctx.fly.apps.delete(ctx.flyAppName!),
         );
         ctx.out.ok("Fly App Destroyed");
       } else {

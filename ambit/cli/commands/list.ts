@@ -8,10 +8,7 @@ import { bold } from "@/lib/cli.ts";
 import { checkArgs } from "@/lib/args.ts";
 import { createOutput, type Output } from "@/lib/output.ts";
 import { registerCommand } from "@/cli/mod.ts";
-import {
-  discoverRouters,
-  type RouterWithInfo,
-} from "@/util/discovery.ts";
+import { discoverRouters, type RouterWithInfo } from "@/util/discovery.ts";
 import { initSession } from "@/util/session.ts";
 
 // =============================================================================
@@ -24,7 +21,10 @@ type ListResult = { routers: RouterWithInfo[] };
 // Stage: Render
 // =============================================================================
 
-const stageRender = (out: Output<ListResult>, routers: RouterWithInfo[]): void => {
+const stageRender = (
+  out: Output<ListResult>,
+  routers: RouterWithInfo[],
+): void => {
   if (routers.length === 0) {
     out.blank()
       .text("No Routers Found.")

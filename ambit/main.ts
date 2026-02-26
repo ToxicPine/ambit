@@ -10,6 +10,7 @@
 // Commands:
 //   create     Create a Tailscale subnet router on a Fly.io custom network
 //   deploy     Deploy an app safely on a custom private network
+//   share      Grant a group access to a network via Tailscale ACL rules
 //   status     Show router status, network, and tailnet info
 //   destroy    Destroy a network (router) or a workload app
 //   doctor     Check that Tailscale and the router are working correctly
@@ -28,6 +29,7 @@ import { Spinner, statusErr } from "@/lib/cli.ts";
 
 import "./cli/commands/create/index.ts";
 import "./cli/commands/deploy/index.ts";
+import "./cli/commands/share.ts";
 import "./cli/commands/list.ts";
 import "./cli/commands/status.ts";
 import "./cli/commands/destroy/index.ts";

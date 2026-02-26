@@ -12,10 +12,7 @@ import {
   SECRET_ROUTER_ID,
   SECRET_TAILSCALE_AUTHKEY,
 } from "@/util/constants.ts";
-import {
-  FlyDeployError,
-  type FlyProvider,
-} from "@/providers/fly.ts";
+import { FlyDeployError, type FlyProvider } from "@/providers/fly.ts";
 import { getRouterAppName } from "@/util/naming.ts";
 import {
   enableAcceptRoutes,
@@ -139,8 +136,10 @@ export const createTransition = async (
       const suffix = randomId(8);
       ctx.appName = getRouterAppName(ctx.network, suffix);
       ctx.routerId = suffix;
-      await ctx.out.spin("Creating App", () =>
-        ctx.fly.apps.create(ctx.appName, ctx.org, { network: ctx.network })
+      await ctx.out.spin(
+        "Creating App",
+        () =>
+          ctx.fly.apps.create(ctx.appName, ctx.org, { network: ctx.network }),
       );
       ctx.out.ok(`Created App: ${ctx.appName}`);
       return Result.ok("deploy_router");
@@ -155,12 +154,14 @@ export const createTransition = async (
       });
       ctx.out.ok("Auth Key Created");
 
-      await ctx.out.spin("Setting Secrets", () =>
-        ctx.fly.secrets.set(ctx.appName, {
-          [SECRET_TAILSCALE_AUTHKEY]: authKey,
-          [SECRET_NETWORK_NAME]: ctx.network,
-          [SECRET_ROUTER_ID]: ctx.routerId,
-        }, { stage: true })
+      await ctx.out.spin(
+        "Setting Secrets",
+        () =>
+          ctx.fly.secrets.set(ctx.appName, {
+            [SECRET_TAILSCALE_AUTHKEY]: authKey,
+            [SECRET_NETWORK_NAME]: ctx.network,
+            [SECRET_ROUTER_ID]: ctx.routerId,
+          }, { stage: true }),
       );
 
       const dockerDir = ROUTER_DOCKER_DIR;

@@ -51,6 +51,7 @@ ${bold("USAGE")}
 ${bold("COMMANDS")}
   create     Create a Tailscale subnet router on a Fly.io custom network
   deploy     Deploy an app safely on a custom private network
+  share      Grant a Tailscale group access to a network via ACL rules
   list       List all discovered routers across networks
   status     Show router status, network, and tailnet info
   destroy    Destroy a network (router) or a workload app
@@ -62,6 +63,7 @@ ${bold("OPTIONS")}
 
 ${bold("EXAMPLES")}
   ambit create browsers
+  ambit share browsers group:team
   ambit list
   ambit status --network browsers
   ambit destroy network browsers

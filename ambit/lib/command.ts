@@ -70,13 +70,11 @@ export const runCommand = (
     const child = spawn(cmd, cmdArgs, {
       cwd: options?.cwd,
       env: options?.env ? { ...process.env, ...options.env } : undefined,
-      stdio: interactive
-        ? "inherit"
-        : [
-          options?.stdin === "inherit" ? "inherit" : "ignore",
-          "pipe",
-          "pipe",
-        ],
+      stdio: interactive ? "inherit" : [
+        options?.stdin === "inherit" ? "inherit" : "ignore",
+        "pipe",
+        "pipe",
+      ],
     });
 
     if (interactive) {

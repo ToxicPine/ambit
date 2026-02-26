@@ -9,12 +9,16 @@ import { createOutput, type Output } from "@/lib/output.ts";
 import { Result } from "@/lib/result.ts";
 import { type Machine, runMachine } from "@/lib/machine.ts";
 import type { FlyProvider } from "@/providers/fly.ts";
-import type { TailscaleProvider } from "@/providers/tailscale.ts";
+import type { AclSetResult, TailscaleProvider } from "@/providers/tailscale.ts";
 import type { TailscaleDevice } from "@/schemas/tailscale.ts";
+import { findRouterApp, listWorkloadAppsOnNetwork } from "@/util/discovery.ts";
+import { getRouterTag } from "@/util/naming.ts";
 import {
-  findRouterApp,
-  listWorkloadAppsOnNetwork,
-} from "@/util/discovery.ts";
+  isAutoApproverConfigured,
+  isTagOwnerConfigured,
+  unpatchAutoApprover,
+  unpatchTagOwner,
+} from "@/util/tailscale-local.ts";
 import { initSession } from "@/util/session.ts";
 
 // =============================================================================
@@ -26,6 +30,7 @@ type DestroyNetworkPhase =
   | "clear_dns"
   | "remove_device"
   | "delete_app"
+  | "clean_acl"
   | "complete";
 
 type DestroyNetworkResult = {
@@ -42,6 +47,7 @@ interface DestroyNetworkCtx {
   org: string;
   yes: boolean;
   json: boolean;
+  manual: boolean;
   appName?: string;
   device?: TailscaleDevice;
   tag?: string;
@@ -57,6 +63,7 @@ const DESTROY_NETWORK_PHASES: { phase: DestroyNetworkPhase; label: string }[] =
     { phase: "clear_dns", label: "Split DNS Cleared" },
     { phase: "remove_device", label: "Tailscale Device Removed" },
     { phase: "delete_app", label: "Fly App Destroyed" },
+    { phase: "clean_acl", label: "ACL Policy Cleaned" },
   ];
 
 const reportSkipped = (
@@ -169,13 +176,70 @@ const destroyNetworkTransition = async (
 
     case "delete_app": {
       if (ctx.appName) {
-        await ctx.out.spin("Deleting App", () =>
-          ctx.fly.apps.delete(ctx.appName!)
+        await ctx.out.spin(
+          "Deleting App",
+          () => ctx.fly.apps.delete(ctx.appName!),
         );
         ctx.out.ok("Fly App Destroyed");
       } else {
         ctx.out.skip("Fly App Already Destroyed");
       }
+      return Result.ok(ctx.manual ? "complete" : "clean_acl");
+    }
+
+    case "clean_acl": {
+      const tag = ctx.tag || getRouterTag(ctx.network);
+      let policy = await ctx.tailscale.acl.getPolicy();
+      if (!policy) {
+        ctx.out.skip("Could Not Read ACL Policy");
+        return Result.ok("complete");
+      }
+
+      let changed = false;
+
+      if (isTagOwnerConfigured(policy, tag)) {
+        policy = unpatchTagOwner(policy, tag);
+        changed = true;
+      }
+
+      if (isAutoApproverConfigured(policy, tag)) {
+        policy = unpatchAutoApprover(policy, tag);
+        changed = true;
+      }
+
+      if (changed) {
+        const validateResult: AclSetResult = await ctx.tailscale.acl
+          .validatePolicy(policy!);
+        if (!validateResult.ok) {
+          ctx.out.warn(
+            `ACL Policy Validation Failed — Skipping Cleanup: ${
+              validateResult.error ?? `HTTP ${validateResult.status}`
+            }`,
+          );
+          return Result.ok("complete");
+        }
+        const spinner = ctx.out.spinner(`Removing ${tag} from ACL policy`);
+        const result: AclSetResult = await ctx.tailscale.acl.setPolicy(policy!);
+        if (!result.ok) {
+          spinner.fail(`Removing ${tag} from ACL policy`);
+          if (result.status === 403) {
+            ctx.out.warn(
+              "Your API Token Lacks ACL Write Permission. Re-run with --manual to Skip ACL Changes",
+            );
+          } else {
+            ctx.out.warn(
+              `Failed to Update ACL Policy: ${
+                result.error ?? `HTTP ${result.status}`
+              }`,
+            );
+          }
+          return Result.ok("complete");
+        }
+        spinner.success(`Removed ${tag} from ACL policy`);
+      } else {
+        ctx.out.skip(`No ACL Entries Found for ${tag}`);
+      }
+
       return Result.ok("complete");
     }
 
@@ -192,7 +256,13 @@ const stageDestroy = async (
   out: Output<DestroyNetworkResult>,
   fly: FlyProvider,
   tailscale: TailscaleProvider,
-  opts: { network: string; org: string; yes: boolean; json: boolean },
+  opts: {
+    network: string;
+    org: string;
+    yes: boolean;
+    json: boolean;
+    manual: boolean;
+  },
 ): Promise<void> => {
   const ctx: DestroyNetworkCtx = { fly, tailscale, out, ...opts };
 
@@ -237,7 +307,16 @@ const stageSummary = (
 
   out.ok("Router Destroyed");
 
-  if (ctx.tag) {
+  const tag = ctx.tag || getRouterTag(ctx.network);
+
+  if (!ctx.manual) {
+    out.blank()
+      .dim(
+        "If You Added ACL Rules Referencing This Router, Remember to Remove:",
+      )
+      .dim(`  acls: rules referencing ${tag}`)
+      .blank();
+  } else if (ctx.tag) {
     out.blank()
       .dim(
         "If You Added ACL Policy Entries for This Router, Remember to Remove:",
@@ -265,7 +344,7 @@ const stageSummary = (
 export const destroyNetwork = async (argv: string[]): Promise<void> => {
   const opts = {
     string: ["network", "org"],
-    boolean: ["help", "yes", "json"],
+    boolean: ["help", "yes", "json", "manual"],
     alias: { y: "yes" },
   } as const;
   const args = parseArgs(argv, opts);
@@ -280,20 +359,27 @@ ${bold("USAGE")}
 
 ${bold("OPTIONS")}
   --org <org>        Fly.io organization slug
+  --manual           Skip automatic Tailscale ACL cleanup (tagOwners + autoApprovers)
   -y, --yes          Skip confirmation prompts
   --json             Output as JSON
 
+${bold("DESCRIPTION")}
+  By default, ambit removes the router's tag from your Tailscale ACL
+  policy (tagOwners and autoApprovers). Use --manual if your API token
+  lacks ACL write permission or you prefer to manage the policy yourself.
+
 ${bold("EXAMPLES")}
   ambit destroy network browsers
-  ambit destroy network browsers --org my-org --yes
+  ambit destroy network browsers --yes
+  ambit destroy network browsers --manual --org my-org
 `);
     return;
   }
 
   const out = createOutput<DestroyNetworkResult>(args.json);
 
-  const network =
-    (typeof args._[0] === "string" ? args._[0] : undefined) || args.network;
+  const network = (typeof args._[0] === "string" ? args._[0] : undefined) ||
+    args.network;
 
   if (!network) {
     return out.die(
@@ -311,5 +397,6 @@ ${bold("EXAMPLES")}
     org,
     yes: args.yes,
     json: args.json,
+    manual: !!args.manual,
   });
 };

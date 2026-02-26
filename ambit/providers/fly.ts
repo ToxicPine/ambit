@@ -21,7 +21,11 @@ import {
 } from "@/schemas/fly.ts";
 import { fileExists } from "@/lib/cli.ts";
 import { getWorkloadAppName } from "@/util/naming.ts";
-import { extractErrorDetail, getSizeConfig, mapMachines } from "@/util/fly-transforms.ts";
+import {
+  extractErrorDetail,
+  getSizeConfig,
+  mapMachines,
+} from "@/util/fly-transforms.ts";
 
 // =============================================================================
 // Deploy Error
@@ -96,7 +100,11 @@ export interface FlyProvider {
   apps: {
     list(org?: string): Promise<FlyApp[]>;
     listWithNetwork(org: string): Promise<FlyAppInfo[]>;
-    create(name: string, org: string, opts?: { network?: string; routerId?: string }): Promise<void>;
+    create(
+      name: string,
+      org: string,
+      opts?: { network?: string; routerId?: string },
+    ): Promise<void>;
     delete(name: string): Promise<void>;
     exists(name: string): Promise<boolean>;
     getConfig(name: string): Promise<Record<string, unknown> | null>;
@@ -107,7 +115,11 @@ export interface FlyProvider {
     destroy(app: string, machineId: string): Promise<void>;
   };
   secrets: {
-    set(app: string, secrets: Record<string, string>, opts?: { stage?: boolean }): Promise<void>;
+    set(
+      app: string,
+      secrets: Record<string, string>,
+      opts?: { stage?: boolean },
+    ): Promise<void>;
   };
   ips: {
     list(app: string): Promise<FlyIp[]>;
@@ -119,7 +131,11 @@ export interface FlyProvider {
     remove(app: string, hostname: string): Promise<void>;
   };
   deploy: {
-    router(app: string, dir: string, config?: { region?: string }): Promise<void>;
+    router(
+      app: string,
+      dir: string,
+      config?: { region?: string },
+    ): Promise<void>;
     app(app: string, options: SafeDeployOptions): Promise<void>;
   };
 }
@@ -155,7 +171,9 @@ export const createFlyProvider = (): FlyProvider => {
         }
 
         if (!interactive) {
-          return die("Not Authenticated with Fly.io. Run 'fly auth login' First");
+          return die(
+            "Not Authenticated with Fly.io. Run 'fly auth login' First",
+          );
         }
 
         const loginResult = await runCommand(["fly", "auth", "login"], {
@@ -165,7 +183,12 @@ export const createFlyProvider = (): FlyProvider => {
           return die("Fly.io Authentication Failed");
         }
 
-        const checkResult = await runCommand(["fly", "auth", "whoami", "--json"]);
+        const checkResult = await runCommand([
+          "fly",
+          "auth",
+          "whoami",
+          "--json",
+        ]);
         if (!checkResult.ok) {
           return die("Fly.io Authentication Verification Failed");
         }
@@ -240,7 +263,9 @@ export const createFlyProvider = (): FlyProvider => {
         const token = await provider.auth.getToken();
 
         const response = await fetch(
-          `https://api.machines.dev/v1/apps?org_slug=${encodeURIComponent(org)}`,
+          `https://api.machines.dev/v1/apps?org_slug=${
+            encodeURIComponent(org)
+          }`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -250,7 +275,9 @@ export const createFlyProvider = (): FlyProvider => {
         );
 
         if (!response.ok) {
-          return die(`Failed to List Apps via REST API: HTTP ${response.status}`);
+          return die(
+            `Failed to List Apps via REST API: HTTP ${response.status}`,
+          );
         }
 
         const data = await response.json();
@@ -298,7 +325,13 @@ export const createFlyProvider = (): FlyProvider => {
       },
 
       async exists(name: string): Promise<boolean> {
-        const result = await runCommand(["fly", "status", "-a", name, "--json"]);
+        const result = await runCommand([
+          "fly",
+          "status",
+          "-a",
+          name,
+          "--json",
+        ]);
         return result.json<{ ID?: string }>().match({
           ok: (data) => {
             const parsed = FlyStatusSchema.safeParse(data);
