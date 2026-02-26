@@ -65,14 +65,8 @@ const publish = async (dir: string) => {
   console.log(`Published ${pkg.name}@${pkg.version}`);
 };
 
-// Phase 1: Build + publish ambit (base — others depend on it)
 console.log("\n=== @cardelli/ambit ===\n");
 await build("./ambit");
 await publish("./ambit/npm");
-
-// Phase 2: Build + publish dependents
-console.log("\n=== @cardelli/mcp ===\n");
-await build("./ambit-mcp");
-await publish("./ambit-mcp/npm");
 
 console.log("\n=== All Packages Published ===\n");
