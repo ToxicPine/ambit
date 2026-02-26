@@ -5,8 +5,10 @@ set -e
 # ambit - Self-Configuring Tailscale Subnet Router
 # =============================================================================
 # State is persisted to /var/lib/tailscale via Fly volume.
-# On first run: creates auth key (with tags), authenticates, approves routes.
+# On first run: authenticates with a pre-minted auth key, advertises routes.
 # On restart: reuses existing state, no new device created.
+# The router never receives the user's API token — only a single-use,
+# tag-scoped auth key that expires after 5 minutes.
 # =============================================================================
 
 echo "Router: Enabling IP Forwarding"
@@ -33,42 +35,9 @@ if /usr/local/bin/tailscale status --json 2>/dev/null | jq -e '.BackendState == 
     --hostname="${FLY_APP_NAME:-ambit}" \
     --advertise-routes="${SUBNET}"
 else
-  # First run - need to authenticate
-  if [ -n "${TAILSCALE_API_TOKEN}" ]; then
-    echo "Router: Creating Auth Key (First Run)"
-
-    TAGS_JSON="[]"
-    if [ -n "${TAILSCALE_TAGS}" ]; then
-      TAGS_JSON=$(echo "${TAILSCALE_TAGS}" | jq -R 'split(",")')
-    fi
-
-    AUTH_KEY_RESPONSE=$(curl -s -X POST \
-      -u "${TAILSCALE_API_TOKEN}:" \
-      -H "Content-Type: application/json" \
-      -d "$(jq -n \
-        --argjson tags "${TAGS_JSON}" \
-        '{
-          capabilities: { devices: { create: {
-            reusable: false,
-            ephemeral: false,
-            preauthorized: true,
-            tags: $tags
-          }}},
-          expirySeconds: 300
-        }' | jq 'if .capabilities.devices.create.tags == [] then .capabilities.devices.create |= del(.tags) else . end')" \
-      "https://api.tailscale.com/api/v2/tailnet/-/keys")
-
-    TAILSCALE_AUTHKEY=$(echo "${AUTH_KEY_RESPONSE}" | jq -r '.key')
-
-    if [ -z "${TAILSCALE_AUTHKEY}" ] || [ "${TAILSCALE_AUTHKEY}" = "null" ]; then
-      echo "Router: ERROR - Failed to Create Auth Key"
-      echo "${AUTH_KEY_RESPONSE}"
-      exit 1
-    fi
-
-    echo "Router: Auth Key Created"
-  elif [ -z "${TAILSCALE_AUTHKEY}" ]; then
-    echo "Router: ERROR - No TAILSCALE_API_TOKEN or TAILSCALE_AUTHKEY Provided"
+  # First run - authenticate with pre-minted auth key
+  if [ -z "${TAILSCALE_AUTHKEY}" ]; then
+    echo "Router: ERROR - No TAILSCALE_AUTHKEY Provided"
     exit 1
   fi
 
@@ -77,40 +46,6 @@ else
     --authkey="${TAILSCALE_AUTHKEY}" \
     --hostname="${FLY_APP_NAME:-ambit}" \
     --advertise-routes="${SUBNET}"
-fi
-
-echo "Router: Getting Node Key"
-NODE_KEY=$(/usr/local/bin/tailscale status --json | jq -r '.Self.PublicKey')
-echo "Router: Node Key ${NODE_KEY}"
-
-# Self-approve routes if we have API access
-# This is a fallback — if the user has autoApprovers configured in their
-# Tailscale policy file, routes are approved automatically and this block
-# is a no-op (routes are already enabled).
-if [ -n "${TAILSCALE_API_TOKEN}" ]; then
-  echo "Router: Finding Device ID"
-
-  DEVICES_RESPONSE=$(curl -s \
-    -u "${TAILSCALE_API_TOKEN}:" \
-    "https://api.tailscale.com/api/v2/tailnet/-/devices")
-
-  DEVICE_ID=$(echo "${DEVICES_RESPONSE}" | jq -r ".devices[] | select(.nodeKey == \"${NODE_KEY}\") | .id")
-
-  if [ -n "${DEVICE_ID}" ] && [ "${DEVICE_ID}" != "null" ]; then
-    echo "Router: Device ID ${DEVICE_ID}"
-    echo "Router: Approving Subnet Routes"
-
-    curl -s -X POST \
-      -u "${TAILSCALE_API_TOKEN}:" \
-      -H "Content-Type: application/json" \
-      -d "{\"routes\": [\"${SUBNET}\"]}" \
-      "https://api.tailscale.com/api/v2/device/${DEVICE_ID}/routes" > /dev/null
-
-    echo "Router: Routes Approved"
-  else
-    echo "Router: WARNING - Could Not Find Device ID"
-    echo "Router: Routes May Need Manual Approval"
-  fi
 fi
 
 echo "Router: Fully Configured"

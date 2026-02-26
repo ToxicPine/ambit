@@ -31,7 +31,7 @@ import { findRouterApp } from "@/src/discovery.ts";
 const create = async (argv: string[]): Promise<void> => {
   const args = parseArgs(argv, {
     string: ["org", "region", "api-key", "tag"],
-    boolean: ["help", "yes", "json", "self-approve"],
+    boolean: ["help", "yes", "json", "no-auto-approve"],
     alias: { y: "yes" },
   });
 
@@ -47,9 +47,9 @@ ${bold("OPTIONS")}
   --region <region>   Fly.io region (default: iad)
   --api-key <key>     Tailscale API access token (tskey-api-...)
   --tag <tag>         Tailscale ACL tag for the router (default: tag:ambit-<network>)
-  --self-approve      Approve subnet routes via API (when autoApprovers not configured)
+  --no-auto-approve        Skip waiting for router and approving routes
   -y, --yes           Skip confirmation prompts
-  --json              Output as JSON
+  --json              Output as JSON (implies --no-auto-approve)
 
 ${bold("DESCRIPTION")}
   Deploys a Tailscale subnet router onto a Fly.io custom private network.
@@ -60,7 +60,6 @@ ${bold("DESCRIPTION")}
 ${bold("EXAMPLES")}
   ambit create browsers
   ambit create browsers --org my-org --region sea
-  ambit create browsers --self-approve
 `);
     return;
   }
@@ -83,7 +82,7 @@ ${bold("EXAMPLES")}
     );
   }
   const tag = args.tag || getRouterTag(network);
-  const selfApprove = args["self-approve"] ?? false;
+  const shouldApprove = !(args["no-auto-approve"] || args.json);
 
   out.blank()
     .header("=".repeat(50))
@@ -110,8 +109,8 @@ ${bold("EXAMPLES")}
   const existingRouter = await findRouterApp(fly, org, network);
   if (existingRouter) {
     return out.die(
-      `A router already exists for network "${network}": ${existingRouter.appName}. ` +
-      `Use "ambit destroy ${network}" first, or choose a different network name.`
+      `A Router Already Exists for Network "${network}": ${existingRouter.appName}. ` +
+      `Use "ambit destroy ${network}" First, or Choose a Different Network Name.`
     );
   }
 
@@ -132,9 +131,9 @@ ${bold("EXAMPLES")}
     }
 
     out.dim(
-      "ambit needs an API access token (not an auth key) to manage your tailnet.",
+      "Ambit Needs an API Access Token (Not an Auth Key) to Manage Your Tailnet.",
     )
-      .dim("Create one at: https://login.tailscale.com/admin/settings/keys")
+      .dim("Create One at: https://login.tailscale.com/admin/settings/keys")
       .blank();
 
     apiKey = await readSecret("API access token (tskey-api-...): ");
@@ -173,10 +172,10 @@ ${bold("EXAMPLES")}
   if (!hasTagOwner) {
     tagOwnerSpinner.fail(`Tag ${tag} Not Configured in tagOwners`);
     out.blank()
-      .text(`  The tag ${tag} does not exist in your Tailscale ACL tagOwners.`)
-      .text("  Tailscale will reject auth keys for undefined tags.")
+      .text(`  The Tag ${tag} Does Not Exist in Your Tailscale ACL tagOwners.`)
+      .text("  Tailscale Will Reject Auth Keys for Undefined Tags.")
       .blank()
-      .text("  Add this tag in your Tailscale ACL settings:")
+      .text("  Add This Tag in Your Tailscale ACL Settings:")
       .dim("  https://login.tailscale.com/admin/acls/visual/tags")
       .blank()
       .dim(`    "tagOwners": { "${tag}": ["autogroup:admin"] }`)
@@ -205,10 +204,18 @@ ${bold("EXAMPLES")}
   await fly.createApp(routerAppName, org, { network });
   out.ok(`Created App: ${routerAppName}`);
 
+  const authKeySpinner = out.spinner("Creating Tag-Scoped Auth Key");
+  const authKey = await tailscale.createAuthKey({
+    reusable: false,
+    ephemeral: false,
+    preauthorized: true,
+    tags: [tag],
+  });
+  authKeySpinner.success("Auth Key Created (Single-Use, 5min Expiry)");
+
   await fly.setSecrets(routerAppName, {
-    TAILSCALE_API_TOKEN: apiKey,
+    TAILSCALE_AUTHKEY: authKey,
     NETWORK_NAME: network,
-    TAILSCALE_TAGS: tag,
     ROUTER_ID: suffix,
   }, { stage: true });
   out.ok("Set Router Secrets");
@@ -228,67 +235,80 @@ ${bold("EXAMPLES")}
   }
   out.ok("Router Deployed");
 
-  out.blank();
-  const joinSpinner = out.spinner("Waiting for Router to Join Tailnet");
-
-  const device = await waitForDevice(tailscale, routerAppName, 180000);
-
-  joinSpinner.success(`Router Joined Tailnet: ${device.addresses[0]}`);
-
-  const machines = await fly.listMachines(routerAppName);
-  const routerMachine = machines.find((m) => m.private_ip);
-  const subnet = routerMachine?.private_ip
-    ? extractSubnet(routerMachine.private_ip)
-    : null;
-
-  if (subnet) {
-    out.ok(`Subnet: ${subnet}`);
-
-    hasAutoApprover = await tailscale.isAutoApproverConfigured(tag);
-    if (selfApprove) {
-      const approveSpinner = out.spinner("Approving Subnet Routes via API");
-      await tailscale.approveSubnetRoutes(device.id, [subnet]);
-      approveSpinner.success("Subnet Routes Approved via API");
-    } else if (!hasAutoApprover) {
-      out.warn("autoApprovers Not Configured — Routes Need Manual Approval")
-        .dim("  See ACL recommendations below.");
-    }
-  }
-
-  if (device.advertisedRoutes && device.advertisedRoutes.length > 0) {
-    out.ok(`Routes: ${device.advertisedRoutes.join(", ")}`);
-  }
-
-  const dnsSpinner = out.spinner("Configuring Split DNS");
-
-  await tailscale.setSplitDns(network, [device.addresses[0]]);
-
-  dnsSpinner.success(`Split DNS Configured: *.${network} -> Router`);
-
   // ==========================================================================
-  // Step 4: Local Client Configuration
+  // Step 4: Wait for Router, Approve Routes, Configure DNS
   // ==========================================================================
 
-  out.blank().header("Step 4: Local Client Configuration").blank();
+  let device: Awaited<ReturnType<typeof waitForDevice>> | null = null;
+  let routerMachine: { private_ip?: string; state?: string } | undefined;
+  let subnet: string | null = null;
 
-  if (await isTailscaleInstalled()) {
-    if (await isAcceptRoutesEnabled()) {
-      out.ok("Accept Routes Already Enabled");
-    } else {
-      const routeSpinner = out.spinner("Enabling Accept Routes");
+  if (shouldApprove) {
+    out.blank();
+    const joinSpinner = out.spinner("Waiting for Router to Join Tailnet");
 
-      if (await enableAcceptRoutes()) {
-        routeSpinner.success("Accept Routes Enabled");
+    device = await waitForDevice(tailscale, routerAppName, 180000);
+
+    joinSpinner.success(`Router Joined Tailnet: ${device.addresses[0]}`);
+
+    const machines = await fly.listMachines(routerAppName);
+    routerMachine = machines.find((m) => m.private_ip);
+    subnet = routerMachine?.private_ip
+      ? extractSubnet(routerMachine.private_ip)
+      : null;
+
+    if (subnet) {
+      out.ok(`Subnet: ${subnet}`);
+
+      hasAutoApprover = await tailscale.isAutoApproverConfigured(tag);
+      if (!hasAutoApprover) {
+        const approveSpinner = out.spinner("Approving Subnet Routes");
+        await tailscale.approveSubnetRoutes(device.id, [subnet]);
+        approveSpinner.success("Subnet Routes Approved");
       } else {
-        routeSpinner.fail("Could Not Enable Accept Routes");
-        out.blank()
-          .dim("Run Manually with Elevated Permissions:")
-          .dim("  sudo tailscale set --accept-routes");
+        out.ok("Routes Auto-Approved via ACL Policy");
       }
     }
+
+    if (device.advertisedRoutes && device.advertisedRoutes.length > 0) {
+      out.ok(`Routes: ${device.advertisedRoutes.join(", ")}`);
+    }
+
+    const dnsSpinner = out.spinner("Configuring Split DNS");
+
+    await tailscale.setSplitDns(network, [device.addresses[0]]);
+
+    dnsSpinner.success(`Split DNS Configured: *.${network} -> Router`);
+
+    // ========================================================================
+    // Step 5: Local Client Configuration
+    // ========================================================================
+
+    out.blank().header("Step 5: Local Client Configuration").blank();
+
+    if (await isTailscaleInstalled()) {
+      if (await isAcceptRoutesEnabled()) {
+        out.ok("Accept Routes Already Enabled");
+      } else {
+        const routeSpinner = out.spinner("Enabling Accept Routes");
+
+        if (await enableAcceptRoutes()) {
+          routeSpinner.success("Accept Routes Enabled");
+        } else {
+          routeSpinner.fail("Could Not Enable Accept Routes");
+          out.blank()
+            .dim("Run Manually With Elevated Permissions:")
+            .dim("  sudo tailscale set --accept-routes");
+        }
+      }
+    } else {
+      out.warn("Tailscale CLI Not Found")
+        .dim("  Ensure Accept-Routes is Enabled on This Device");
+    }
   } else {
-    out.warn("Tailscale CLI Not Found")
-      .dim("  Ensure Accept-Routes Is Enabled on This Device");
+    out.blank().info(
+      "Skipping Route Approval and DNS Configuration (Use ambit doctor to Verify Later)",
+    );
   }
 
   // ==========================================================================
@@ -297,8 +317,11 @@ ${bold("EXAMPLES")}
 
   out.done({
     network,
-    router: { appName: routerAppName, tailscaleIp: device.addresses[0] },
-    subnet: subnet || "unknown",
+    router: {
+      appName: routerAppName,
+      tailscaleIp: device?.addresses[0] ?? "pending",
+    },
+    subnet: subnet || "pending",
     tag,
   });
 
@@ -309,43 +332,41 @@ ${bold("EXAMPLES")}
     .blank()
     .text(`Any Flycast app on the "${network}" network is reachable as:`)
     .text(`  <app-name>.${network}`)
-    .blank()
-    .text(`SOCKS5 proxy available at:`)
-    .text(`  socks5://[${routerMachine?.private_ip ?? "ROUTER_IP"}]:1080`)
-    .dim("Containers on this network can use it to reach your tailnet.")
-    .blank()
-    .dim("Deploy an app to this network:")
+    .blank();
+
+  if (routerMachine?.private_ip) {
+    out.text("SOCKS5 Proxy Available at:")
+      .text(`  socks5://[${routerMachine.private_ip}]:1080`)
+      .dim("Containers on This Network Can Use It to Reach Your Tailnet.")
+      .blank();
+  }
+
+  out.dim("Deploy an App to This Network:")
     .dim(`  ambit deploy my-app --network ${network}`)
     .blank()
-    .dim("Invite people to your tailnet:")
+    .dim("Invite People to Your Tailnet:")
     .dim("  https://login.tailscale.com/admin/users")
-    .dim("Control their access:")
+    .dim("Control Their Access:")
     .dim("  https://login.tailscale.com/admin/acls/visual/general-access-rules")
     .blank();
 
   if (subnet && !hasAutoApprover) {
     out.header("Recommended: Configure autoApprovers")
       .blank()
-      .dim("  Add to your tailnet policy file at:")
+      .dim("  Add to Your Tailnet Policy File at:")
       .dim("  https://login.tailscale.com/admin/acls/file")
       .blank()
       .text(`  "autoApprovers": { "routes": { "${subnet}": ["${tag}"] } }`)
+      .blank()
+      .dim("  Routes Were Approved via API for This Session.")
+      .dim("  autoApprovers Will Auto-Approve on Future Restarts.")
       .blank();
-    if (selfApprove) {
-      out.dim("  Routes were approved via API for this session.")
-        .dim("  autoApprovers will auto-approve on future deploys/restarts.");
-    } else {
-      out.dim("  Without autoApprovers, you must manually approve routes:")
-        .dim("  https://login.tailscale.com/admin/machines")
-        .dim(`  Or re-create with: ambit create ${network} --self-approve`);
-    }
-    out.blank();
   }
 
   if (subnet) {
     out.header("Recommended ACL Rules:")
       .blank()
-      .dim("  To restrict access, add ACL rules to your policy file:")
+      .dim("  To Restrict Access, Add ACL Rules to Your Policy File:")
       .dim("  https://login.tailscale.com/admin/acls/file")
       .blank()
       .dim(
@@ -354,6 +375,12 @@ ${bold("EXAMPLES")}
       .dim(
         `    {"action": "accept", "src": ["group:YOUR_GROUP"], "dst": ["${subnet}:*"]}`,
       )
+      .blank();
+  }
+
+  if (!shouldApprove) {
+    out.dim("Route Approval Was Skipped. To Complete Setup:")
+      .dim(`  ambit doctor --network ${network}`)
       .blank();
   }
 
