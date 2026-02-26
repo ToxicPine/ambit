@@ -14,7 +14,7 @@
 // =============================================================================
 
 import type { FlyProvider } from "./providers/fly.ts";
-import { getRouterSuffix } from "./providers/fly.ts";
+import { getRouterSuffix, getWorkloadAppName } from "./providers/fly.ts";
 import type { TailscaleProvider } from "./providers/tailscale.ts";
 import { extractSubnet } from "./schemas/config.ts";
 
@@ -120,7 +120,9 @@ export const listWorkloadAppsOnNetwork = async (
     }));
 };
 
-/** Find a specific workload app by name, optionally verifying network. */
+/** Find a specific workload app by logical name, optionally scoped to a network.
+ *  When a network is provided, resolves the router-suffixed Fly app name
+ *  (e.g. "thing" on network "lab" with routerId "abc123" → "thing-abc123"). */
 export const findWorkloadApp = async (
   fly: FlyProvider,
   org: string,
@@ -142,8 +144,17 @@ export const findWorkloadApp = async (
     }));
 
   if (network) {
+    // Resolve the router's suffix so we can match the suffixed Fly app name
+    const router = await findRouterApp(fly, org, network);
+    if (router) {
+      const suffixedName = getWorkloadAppName(appName, router.routerId);
+      const found = workloads.find((a) => a.appName === suffixedName && a.network === network);
+      if (found) return found;
+    }
+    // Fallback: try exact match (for pre-suffix apps or direct Fly name)
     return workloads.find((a) => a.appName === appName && a.network === network) ?? null;
   }
+  // Without network, try exact match only
   return workloads.find((a) => a.appName === appName) ?? null;
 };
 

@@ -145,7 +145,7 @@ ${bold("EXAMPLES")}
 
   if (workloadApps.length > 0) {
     out.warn(
-      `${workloadApps.length} workload app(s) still on network '${network}':`,
+      `${workloadApps.length} Workload App(s) Still on Network '${network}':`,
     );
     for (const wa of workloadApps) {
       out.text(`  - ${wa.appName}`);
@@ -377,7 +377,7 @@ ${bold("EXAMPLES")}
 
   const appSpinner = out.spinner("Destroying Fly App");
   try {
-    await fly.deleteApp(app);
+    await fly.deleteApp(workloadApp.appName);
     appSpinner.success("Fly App Destroyed");
   } catch {
     appSpinner.fail("Could Not Destroy Fly App");
@@ -387,7 +387,7 @@ ${bold("EXAMPLES")}
   // Done
   // ===========================================================================
 
-  out.done({ destroyed: true, appName: app, network });
+  out.done({ destroyed: true, appName: workloadApp.appName, network });
 
   out.ok("App Destroyed");
   out.blank();
