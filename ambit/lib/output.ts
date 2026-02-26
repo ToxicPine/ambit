@@ -3,6 +3,7 @@
 // =============================================================================
 
 import {
+  blue,
   bold,
   dim,
   Spinner,
@@ -92,6 +93,11 @@ export class Output<T extends Record<string, unknown>> {
 
   dim(text: string): this {
     if (!this.jsonMode) console.log(dim(text));
+    return this;
+  }
+
+  link(text: string): this {
+    if (!this.jsonMode) console.log(blue(text));
     return this;
   }
 

@@ -21,7 +21,6 @@ import {
 import { getCredentialStore } from "@/util/credentials.ts";
 import {
   FLY_PRIVATE_SUBNET,
-  SOCKS_PROXY_PORT,
   TAILSCALE_API_KEY_PREFIX,
 } from "@/util/constants.ts";
 import { resolveOrg } from "@/util/resolve.ts";
@@ -80,7 +79,7 @@ const stageTailscaleConfig = async (
     out.dim(
       "Ambit Needs an API Access Token (Not an Auth Key) to Manage Your Tailnet.",
     )
-      .dim("Create One at: https://login.tailscale.com/admin/settings/keys")
+      .dim("Create One at:").link("  https://login.tailscale.com/admin/settings/keys")
       .blank();
 
     apiKey = await readSecret("API access token (tskey-api-...): ");
@@ -112,22 +111,31 @@ const stageTailscaleConfig = async (
   const hasTagOwner = isTagOwnerConfigured(policy, opts.tag);
 
   if (!hasTagOwner) {
-    tagOwnerSpinner.fail(`Tag ${opts.tag} Not Configured in tagOwners`);
+    tagOwnerSpinner.fail(`${opts.tag} Not Set Up Yet`);
     out.blank()
       .text(
-        `  The Tag ${opts.tag} Does Not Exist in Your Tailscale ACL tagOwners.`,
+        `  You need to grant yourself permission to create the "${opts.network}"`,
       )
-      .text("  Tailscale Will Reject Auth Keys for Undefined Tags.")
+      .text(
+        `  network by setting up ${opts.tag} in Tailscale.`,
+      )
       .blank()
-      .text("  Add This Tag in Your Tailscale ACL Settings:")
-      .dim("  https://login.tailscale.com/admin/acls/visual/tags")
+      .text(
+        `  You can create the tag and assign it to yourself or a group`,
+      )
+      .text(
+        `  you're a part of in the Tailscale dashboard:`,
+      )
+      .link("  https://login.tailscale.com/admin/acls/visual/tags")
       .blank()
+      .dim("  Or you can do it manually in the JSON editor:")
+      .link("  https://login.tailscale.com/admin/acls/file")
       .dim(`    "tagOwners": { "${opts.tag}": ["autogroup:admin"] }`)
       .blank();
-    return out.die(`Add ${opts.tag} to tagOwners Before Creating Router`);
+    return out.die(`Set Up ${opts.tag} in Tailscale, Then Try Again`);
   }
 
-  tagOwnerSpinner.success(`Tag ${opts.tag} Configured in tagOwners`);
+  tagOwnerSpinner.success(`${opts.tag} Found in Tailscale ACL`);
 
   if (opts.json) {
     const approverSpinner = out.spinner(
@@ -136,15 +144,20 @@ const stageTailscaleConfig = async (
     const hasApprover = isAutoApproverConfigured(policy, opts.tag);
 
     if (!hasApprover) {
-      approverSpinner.fail(`autoApprovers Not Configured for ${opts.tag}`);
+      approverSpinner.fail(`Auto-approve Not Configured for ${opts.tag}`);
       out.blank()
-        .text("  JSON mode skips interactive route approval.")
         .text(
-          `  Configure autoApprovers for ${opts.tag} so routes are approved on deploy.`,
+          "  In JSON mode, ambit can't interactively approve subnet routes.",
+        )
+        .text(
+          `  Add an autoApprovers rule so Tailscale automatically trusts`,
+        )
+        .text(
+          `  routes advertised by ${opts.tag}:`,
         )
         .blank()
         .dim(
-          "  Add to your ACL at: https://login.tailscale.com/admin/acls/file",
+          "  https://login.tailscale.com/admin/acls/file",
         )
         .blank()
         .dim(
@@ -152,11 +165,11 @@ const stageTailscaleConfig = async (
         )
         .blank();
       return out.die(
-        `Configure autoApprovers for ${opts.tag} Before Using --json`,
+        `Add autoApprovers for ${opts.tag} to Use --json`,
       );
     }
 
-    approverSpinner.success(`autoApprovers Configured for ${opts.tag}`);
+    approverSpinner.success(`Auto-approve Configured for ${opts.tag}`);
   }
 
   out.blank();
@@ -249,65 +262,77 @@ const stageSummary = async (
     .header("  Router Created!")
     .header("=".repeat(50))
     .blank()
-    .text(`Any Flycast App on the "${opts.network}" Network Is Reachable as:`)
-    .text(`  <app-name>.${opts.network}`)
+    .text(`The "${opts.network}" Network Is Ready.`)
+    .blank()
+    .text(`You Can Deploy Apps to It With:`)
+    .text(`  npx @cardelli/ambit deploy <app-name>.${opts.network}`)
+    .blank();
+
+
+  out.dim("Invite People to Your Tailnet:")
+    .link("  https://login.tailscale.com/admin/users")
     .blank();
 
   if (ctx.subnet) {
-    const machines = await fly.machines.list(ctx.appName);
-    const routerMachine = machines.find((m) => m.private_ip);
-    if (routerMachine?.private_ip) {
-      out.text("SOCKS5 Proxy Available at:")
-        .text(`  socks5://[${routerMachine.private_ip}]:${SOCKS_PROXY_PORT}`)
-        .dim("Containers on This Network Can Use It to Reach Your Tailnet.")
-        .blank();
-    }
-  }
-
-  out.dim("Deploy an App to This Network:")
-    .dim(`  ambit deploy my-app --network ${opts.network}`)
-    .blank()
-    .dim("Invite People to Your Tailnet:")
-    .dim("  https://login.tailscale.com/admin/users")
-    .dim("Control Their Access:")
-    .dim(
-      "  https://login.tailscale.com/admin/acls/visual/general-access-rules",
-    )
-    .blank();
-
-  if (ctx.subnet && !hasAutoApprover) {
-    out.header("Recommended: Configure autoApprovers")
-      .blank()
-      .dim("  Add to Your Tailnet Policy File at:")
-      .dim("  https://login.tailscale.com/admin/acls/file")
+    out.header("Next: Allow Traffic Through the Router")
       .blank()
       .text(
-        `  "autoApprovers": { "routes": { "${ctx.subnet}": ["${opts.tag}"] } }`,
+        "  You must configure Tailscale so that traffic can flow from your",
       )
-      .blank()
-      .dim("  Routes Were Approved via API for This Session.")
-      .dim("  autoApprovers Will Auto-Approve on Future Restarts.")
-      .blank();
-  }
+      .text(
+        `  devices through the router and into the "${opts.network}" network.`,
+      );
 
-  if (ctx.subnet) {
-    out.header("Recommended ACL Rules:")
-      .blank()
-      .dim("  To Restrict Access, Add ACL Rules to Your Policy File:")
-      .dim("  https://login.tailscale.com/admin/acls/file")
-      .blank()
+    if (!hasAutoApprover) {
+      out.blank()
+        .text("  1. Automatically Allow Traffic Through the Router:")
+        .dim(
+          "     Tailscale needs to trust the router's network connections.",
+        )
+        .blank()
+        .dim("     You can do this from the Tailscale dashboard:")
+        .link("     https://login.tailscale.com/admin/acls/visual/auto-approvers")
+        .dim(`     Route: ${ctx.subnet}  Owner: ${opts.tag}`)
+        .blank()
+        .dim("     Or you can do it manually with this JSON config:")
+        .link("     https://login.tailscale.com/admin/acls/file")
+        .dim(
+          `     "autoApprovers": { "routes": { "${ctx.subnet}": ["${opts.tag}"] } }`,
+        );
+
+      if (opts.shouldApprove) {
+        out.blank().dim(
+          "     Traffic Was Allowed via API for This Session.",
+        );
+      }
+    }
+
+    out.blank()
+      .text(`  ${hasAutoApprover ? "1" : "2"}. Control Who Can Reach Apps on This Network:`)
       .dim(
-        `    {"action": "accept", "src": ["group:YOUR_GROUP"], "dst": ["${opts.tag}:53"]}`,
+        "     This lets you restrict which users or devices can access your apps.",
+      )
+      .blank()
+      .dim("     You can do this from the Tailscale dashboard:")
+      .link(
+        "     https://login.tailscale.com/admin/acls/visual/general-access-rules",
+      )
+      .dim(`     Source: group:YOUR_GROUP  Destination: ${opts.tag}:*`)
+      .blank()
+      .dim("     Or you can do it manually with this JSON config:")
+      .link("     https://login.tailscale.com/admin/acls/file")
+      .dim(
+        `     {"action": "accept", "src": ["group:YOUR_GROUP"], "dst": ["${opts.tag}:53"]}`,
       )
       .dim(
-        `    {"action": "accept", "src": ["group:YOUR_GROUP"], "dst": ["${ctx.subnet}:*"]}`,
+        `     {"action": "accept", "src": ["group:YOUR_GROUP"], "dst": ["${ctx.subnet}:*"]}`,
       )
       .blank();
   }
 
   if (!opts.shouldApprove) {
     out.dim("Route Approval Was Skipped. To Complete Setup:")
-      .dim(`  ambit doctor --network ${opts.network}`)
+      .dim(`  ambit doctor network ${opts.network}`)
       .blank();
   }
 
