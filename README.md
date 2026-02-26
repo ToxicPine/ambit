@@ -40,12 +40,6 @@ Ambit is available on npm:
 npx @cardelli/ambit --help
 ```
 
-Ambit MCP is installed per-project via its setup command:
-
-```bash
-npx @cardelli/mcp setup --create --yes
-```
-
 ## Agent Skills
 
 Install [skills](https://skills.sh) to give your AI coding agent reference documentation for the CLI and MCP tools. Works with Claude Code, Cursor, Windsurf, and other AI coding agents:
@@ -59,21 +53,14 @@ npx skills add ToxicPine/ambit-skills --skill ambit-cli
 **Set Up a Private Network and Deploy an App:**
 
 ```bash
-ambit create lab
-ambit deploy my-app.lab
+npx @cardelli/ambit create lab
+npx @cardelli/ambit deploy my-app.lab
 # → http://my-app.lab, visible only to your devices
-```
-
-**Give your AI agent deploy access (run once per project):**
-
-```bash
-npx @cardelli/mcp setup --create --yes
-# → agent can now deploy to your private network, nothing else
 ```
 
 **Deploy a headless browser from a template:**
 
 ```bash
-ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic
+npx @cardelli/ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic
 # → headless Chrome on your private network, reachable via CDP at my-browser.lab:9222
 ```
