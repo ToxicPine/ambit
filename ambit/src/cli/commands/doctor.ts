@@ -19,6 +19,7 @@ import {
   getRouterMachineInfo,
   getRouterTailscaleInfo,
   listRouterApps,
+  type RouterApp,
 } from "@/src/discovery.ts";
 import { resolveOrg } from "@/src/resolve.ts";
 
@@ -120,50 +121,76 @@ ${bold("CHECKS")}
   // Router Checks
   // =========================================================================
 
+  // Helper: check a single router's health and routes
+  const checkRouter = async (app: RouterApp) => {
+    const network = app.network;
+
+    report(
+      `Router Exists (${network})`,
+      true,
+    );
+
+    const machine = await getRouterMachineInfo(fly, app.appName);
+    report(
+      `Router Running (${network})`,
+      machine?.state === "started",
+      machine ? `Machine State: ${machine.state}` : "No Machine Found",
+    );
+
+    const ts = await getRouterTailscaleInfo(tailscale, app.appName);
+    report(
+      `Router in Tailnet (${network})`,
+      ts !== null,
+      "Router May Still Be Starting, or Check Router Logs",
+    );
+
+    // Check route approval — approve unapproved routes if found
+    if (ts) {
+      const device = await tailscale.getDeviceByHostname(app.appName);
+      if (device) {
+        const routes = await tailscale.getDeviceRoutes(device.id);
+        if (routes && routes.unapproved.length > 0) {
+          await tailscale.approveSubnetRoutes(device.id, routes.advertised);
+          report(
+            `Routes Approved (${network})`,
+            true,
+            `Approved: ${routes.unapproved.join(", ")}`,
+          );
+        } else if (routes && routes.advertised.length > 0) {
+          report(
+            `Routes Approved (${network})`,
+            true,
+          );
+        } else {
+          report(
+            `Routes Approved (${network})`,
+            false,
+            "No Routes Advertised — Router May Need Restart",
+          );
+        }
+      }
+    }
+  };
+
   if (args.network) {
     const app = await findRouterApp(fly, org, args.network);
-    report(
-      `Router Exists (${args.network})`,
-      app !== null,
-      `Create with: ambit create ${args.network}`,
-    );
-
-    const machine = app ? await getRouterMachineInfo(fly, app.appName) : null;
-    report(
-      `Router Running (${args.network})`,
-      machine?.state === "started",
-      machine ? `Machine state: ${machine.state}` : "No machine found",
-    );
-
-    const ts = app
-      ? await getRouterTailscaleInfo(tailscale, app.appName)
-      : null;
-    report(
-      `Router in Tailnet (${args.network})`,
-      ts !== null,
-      "Router may still be starting, or check router logs",
-    );
+    if (!app) {
+      report(
+        `Router Exists (${args.network})`,
+        false,
+        `Create with: ambit create ${args.network}`,
+      );
+    } else {
+      await checkRouter(app);
+    }
   } else {
     const routerApps = await listRouterApps(fly, org);
     if (routerApps.length === 0) {
       report("Routers Discovered", false, "Run: ambit create <network>");
     } else {
-      let runningCount = 0;
-      let inTailnetCount = 0;
-
       for (const app of routerApps) {
-        const machine = await getRouterMachineInfo(fly, app.appName);
-        if (machine?.state === "started") runningCount++;
-
-        const ts = await getRouterTailscaleInfo(tailscale, app.appName);
-        if (ts) inTailnetCount++;
+        await checkRouter(app);
       }
-
-      report(
-        "Routers Discovered",
-        runningCount > 0,
-        `${routerApps.length} Router(s): ${runningCount} Running, ${inTailnetCount} In Tailnet`,
-      );
     }
   }
 

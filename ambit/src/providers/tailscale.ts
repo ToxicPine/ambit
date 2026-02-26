@@ -21,12 +21,19 @@ const API_BASE = "https://api.tailscale.com/api/v2";
 // Tailscale Provider Interface
 // =============================================================================
 
+export interface DeviceRoutes {
+  advertised: string[];
+  enabled: string[];
+  unapproved: string[];
+}
+
 export interface TailscaleProvider {
   validateApiKey(): Promise<boolean>;
   createAuthKey(opts?: AuthKeyCapabilities): Promise<string>;
   listDevices(): Promise<TailscaleDevice[]>;
   getDeviceByHostname(hostname: string): Promise<TailscaleDevice | null>;
   deleteDevice(id: string): Promise<void>;
+  getDeviceRoutes(deviceId: string): Promise<DeviceRoutes | null>;
   approveSubnetRoutes(deviceId: string, routes: string[]): Promise<void>;
   setSplitDns(domain: string, nameservers: string[]): Promise<void>;
   clearSplitDns(domain: string): Promise<void>;
@@ -165,6 +172,25 @@ export const createTailscaleProvider = (
       if (!result.ok) {
         return die(`Failed to Delete Device: ${result.error}`);
       }
+    },
+
+    async getDeviceRoutes(deviceId: string): Promise<DeviceRoutes | null> {
+      const result = await request<{
+        advertisedRoutes?: string[];
+        enabledRoutes?: string[];
+      }>("GET", `/device/${deviceId}/routes`);
+
+      if (!result.ok || !result.data) return null;
+
+      const advertised = result.data.advertisedRoutes ?? [];
+      const enabled = result.data.enabledRoutes ?? [];
+      const enabledSet = new Set(enabled);
+
+      return {
+        advertised,
+        enabled,
+        unapproved: advertised.filter((r) => !enabledSet.has(r)),
+      };
     },
 
     async approveSubnetRoutes(

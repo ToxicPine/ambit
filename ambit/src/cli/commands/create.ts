@@ -185,6 +185,28 @@ ${bold("EXAMPLES")}
 
   tagOwnerSpinner.success(`Tag ${tag} Configured in tagOwners`);
 
+  // In JSON mode (no interactive approval), autoApprovers must be configured
+  // so routes are approved automatically when the router advertises them.
+  if (args.json) {
+    const approverSpinner = out.spinner(`Checking autoApprovers for ${tag}`);
+    const hasApprover = await tailscale.isAutoApproverConfigured(tag);
+
+    if (!hasApprover) {
+      approverSpinner.fail(`autoApprovers Not Configured for ${tag}`);
+      out.blank()
+        .text("  JSON mode skips interactive route approval.")
+        .text(`  Configure autoApprovers for ${tag} so routes are approved on deploy.`)
+        .blank()
+        .dim("  Add to your ACL at: https://login.tailscale.com/admin/acls/file")
+        .blank()
+        .dim(`    "autoApprovers": { "routes": { "fdaa::/16": ["${tag}"] } }`)
+        .blank();
+      return out.die(`Configure autoApprovers for ${tag} Before Using --json`);
+    }
+
+    approverSpinner.success(`autoApprovers Configured for ${tag}`);
+  }
+
   out.blank();
 
   // ==========================================================================

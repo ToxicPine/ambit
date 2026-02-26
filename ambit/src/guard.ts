@@ -269,35 +269,6 @@ export function scanFlyToml(tomlContent: string): PreflightResult {
     );
   }
 
-  // Check [[services]] for TLS on 443 — dangerous if a public IP were ever added
-  const services = parsed.services as
-    | Array<Record<string, unknown>>
-    | undefined;
-  if (Array.isArray(services)) {
-    result.warnings.push(
-      "fly.toml uses [[services]] blocks. Consider migrating to [http_service].",
-    );
-
-    for (const svc of services) {
-      const ports = svc.ports as Array<Record<string, unknown>> | undefined;
-      if (!Array.isArray(ports)) continue;
-
-      for (const port of ports) {
-        const handlers = port.handlers as string[] | undefined;
-        if (
-          port.port === 443 &&
-          Array.isArray(handlers) &&
-          handlers.includes("tls")
-        ) {
-          result.errors.push(
-            "Service has TLS handler on port 443. " +
-              "This is designed for public HTTPS and incompatible with Flycast-only deployment.",
-          );
-        }
-      }
-    }
-  }
-
   return result;
 }
 

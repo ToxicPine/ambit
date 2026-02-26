@@ -12,7 +12,7 @@ import {
   FlyDeployError,
   getWorkloadAppName,
 } from "@/src/providers/fly.ts";
-import { findRouterApp } from "@/src/discovery.ts";
+import { findRouterApp, getRouterMachineInfo } from "@/src/discovery.ts";
 import { resolveOrg } from "@/src/resolve.ts";
 import { assertNotRouter, auditDeploy, scanFlyToml } from "@/src/guard.ts";
 import { fetchTemplate, parseTemplateRef } from "@/src/template.ts";
@@ -430,6 +430,14 @@ ${bold("EXAMPLES")}
     await fly.createApp(app, org, { network, routerId });
     out.ok(`Created App '${flyAppName}' on Network '${network}'`);
     created = true;
+  }
+
+  // Set AMBIT_OUTBOUND_PROXY so workloads can reach the tailnet via SOCKS5
+  const routerMachine = await getRouterMachineInfo(fly, router.appName);
+  if (routerMachine?.privateIp) {
+    const proxyUrl = `socks5://[${routerMachine.privateIp}]:1080`;
+    await fly.setSecrets(flyAppName, { AMBIT_OUTBOUND_PROXY: proxyUrl }, { stage: true });
+    out.ok(`Outbound Proxy: ${proxyUrl}`);
   }
 
   out.blank();
