@@ -3,8 +3,8 @@
 // =============================================================================
 
 import { z } from "zod";
-import { commandExists, ensureConfigDir, fileExists } from "@/lib/cli.ts";
-import { getConfigDir } from "./schemas/config.ts";
+import { commandExists, ensureConfigDir, fileExists, getConfigDir } from "@/lib/cli.ts";
+import { ENV_TAILSCALE_API_KEY, FLYCTL_INSTALL_URL } from "@/util/constants.ts";
 
 // =============================================================================
 // Schema
@@ -66,8 +66,7 @@ export const getCredentialStore = (): CredentialStore => {
 
   return {
     async getTailscaleApiKey(): Promise<string | null> {
-      // Environment variable takes priority
-      const envKey = Deno.env.get("TAILSCALE_API_KEY");
+      const envKey = Deno.env.get(ENV_TAILSCALE_API_KEY);
       if (envKey) return envKey;
 
       return await fileStore.getTailscaleApiKey();

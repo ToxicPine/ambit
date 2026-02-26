@@ -10,7 +10,7 @@ import { z } from "zod";
 
 export const FlyAuthSchema = z.object({
   email: z.string(),
-}).passthrough();
+}).loose();
 
 export type FlyAuth = z.infer<typeof FlyAuthSchema>;
 
@@ -24,7 +24,7 @@ export const FlyAppSchema = z.object({
   Organization: z.object({
     Slug: z.string(),
   }).optional(),
-}).passthrough();
+}).loose();
 
 export type FlyApp = z.infer<typeof FlyAppSchema>;
 
@@ -39,7 +39,7 @@ export const FlyStatusSchema = z.object({
   Name: z.string().optional(),
   Hostname: z.string().optional(),
   Deployed: z.boolean().optional(),
-}).passthrough();
+}).loose();
 
 export type FlyStatus = z.infer<typeof FlyStatusSchema>;
 
@@ -51,7 +51,7 @@ export const FlyMachineGuestSchema = z.object({
   cpu_kind: z.string(),
   cpus: z.number(),
   memory_mb: z.number(),
-}).passthrough();
+}).loose();
 
 export const FlyMachineConfigSchema = z.object({
   guest: FlyMachineGuestSchema.optional(),
@@ -63,13 +63,13 @@ export const FlyMachineConfigSchema = z.object({
         z.object({
           port: z.number(),
           handlers: z.array(z.string()).optional(),
-        }).passthrough(),
+        }).loose(),
       ).optional(),
       protocol: z.string().optional(),
       internal_port: z.number().optional(),
-    }).passthrough(),
+    }).loose(),
   ).optional(),
-}).passthrough();
+}).loose();
 
 export const FlyMachineSchema = z.object({
   id: z.string(),
@@ -80,7 +80,7 @@ export const FlyMachineSchema = z.object({
   config: FlyMachineConfigSchema.optional(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
-}).passthrough();
+}).loose();
 
 export type FlyMachine = z.infer<typeof FlyMachineSchema>;
 
@@ -99,54 +99,7 @@ export const FlyOrgsSchema = z.record(z.string(), z.string());
 export const FlyDeploySchema = z.object({
   ID: z.string().optional(),
   Status: z.string().optional(),
-}).passthrough();
-
-// =============================================================================
-// Machine State Mapping
-// =============================================================================
-
-/**
- * Map Fly machine state to internal state.
- * Fly states: created, starting, started, stopping, stopped, destroying, destroyed
- */
-export const mapFlyMachineState = (
-  flyState: string,
-): "creating" | "running" | "frozen" | "failed" => {
-  switch (flyState.toLowerCase()) {
-    case "started":
-      return "running";
-    case "stopped":
-    case "suspended":
-      return "frozen";
-    case "created":
-    case "starting":
-      return "creating";
-    case "destroying":
-    case "destroyed":
-    case "failed":
-      return "failed";
-    default:
-      return "creating";
-  }
-};
-
-// =============================================================================
-// Machine Size Mapping
-// =============================================================================
-
-/**
- * Map Fly guest config to machine size enum.
- */
-export const mapFlyMachineSize = (
-  guest?: z.infer<typeof FlyMachineGuestSchema>,
-): "shared-cpu-1x" | "shared-cpu-2x" | "shared-cpu-4x" => {
-  if (!guest) return "shared-cpu-1x";
-
-  const cpus = guest.cpus;
-  if (cpus >= 4) return "shared-cpu-4x";
-  if (cpus >= 2) return "shared-cpu-2x";
-  return "shared-cpu-1x";
-};
+}).loose();
 
 export type FlyOrgs = z.infer<typeof FlyOrgsSchema>;
 
@@ -157,7 +110,7 @@ export type FlyOrgs = z.infer<typeof FlyOrgsSchema>;
 export const FlyIpNetworkSchema = z.object({
   Name: z.string(),
   Organization: z.object({ Slug: z.string() }).optional(),
-}).passthrough();
+}).loose();
 
 export const FlyIpSchema = z.object({
   ID: z.string().optional(),
@@ -166,7 +119,7 @@ export const FlyIpSchema = z.object({
   Region: z.string().optional(),
   CreatedAt: z.string().optional(),
   Network: FlyIpNetworkSchema.optional(),
-}).passthrough();
+}).loose();
 
 export type FlyIp = z.infer<typeof FlyIpSchema>;
 
@@ -181,11 +134,11 @@ export const FlyAppInfoSchema = z.object({
   network: z.string(),
   status: z.string(),
   organization: z.object({ slug: z.string() }).optional(),
-}).passthrough();
+}).loose();
 
 export type FlyAppInfo = z.infer<typeof FlyAppInfoSchema>;
 
 export const FlyAppInfoListSchema = z.object({
   total_apps: z.number(),
   apps: z.array(FlyAppInfoSchema),
-}).passthrough();
+}).loose();

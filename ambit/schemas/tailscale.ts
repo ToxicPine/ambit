@@ -35,7 +35,7 @@ export const TailscaleDeviceSchema = z.object({
   tags: z.array(z.string()).optional(),
   advertisedRoutes: z.array(z.string()).optional(),
   enabledRoutes: z.array(z.string()).optional(),
-}).passthrough();
+}).loose();
 
 export type TailscaleDevice = z.infer<typeof TailscaleDeviceSchema>;
 

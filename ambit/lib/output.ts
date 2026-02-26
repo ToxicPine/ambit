@@ -10,7 +10,7 @@ import {
   statusInfo,
   statusOk,
   statusWarn,
-} from "./cli.ts";
+} from "@/lib/cli.ts";
 
 // =============================================================================
 // Result Types - Discriminated Union Base Types
@@ -59,6 +59,11 @@ export class Output<T extends Record<string, unknown>> {
   // ===========================================================================
   // Human-Mode Output (no-op in JSON mode)
   // ===========================================================================
+
+  skip(text: string): this {
+    if (!this.jsonMode) console.log(dim(`~ ${text}`));
+    return this;
+  }
 
   ok(text: string): this {
     if (!this.jsonMode) statusOk(text);
@@ -116,6 +121,22 @@ export class Output<T extends Record<string, unknown>> {
   }
 
   // ===========================================================================
+  // Async Spinner Wrapper
+  // ===========================================================================
+
+  async spin<R>(label: string, fn: () => Promise<R>): Promise<R> {
+    const s = this.spinner(label);
+    try {
+      const result = await fn();
+      s.success(label);
+      return result;
+    } catch (e) {
+      s.fail(label);
+      throw e;
+    }
+  }
+
+  // ===========================================================================
   // Terminal Output
   // ===========================================================================
 
@@ -125,7 +146,7 @@ export class Output<T extends Record<string, unknown>> {
     } else {
       statusErr(message);
     }
-    Deno.exit(1);
+    throw new Error("exit");
   }
 
   isJson(): boolean {

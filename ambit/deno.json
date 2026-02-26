@@ -1,26 +1,8 @@
 {
   "name": "@cardelli/ambit",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "Deploy apps to the cloud that only you and your AI agents can reach",
   "license": "MIT",
-  "exports": {
-    ".": "./main.ts",
-    "./providers/fly": "./src/providers/fly.ts",
-    "./providers/tailscale": "./src/providers/tailscale.ts",
-    "./schemas/config": "./src/schemas/config.ts",
-    "./schemas/fly": "./src/schemas/fly.ts",
-    "./schemas/tailscale": "./src/schemas/tailscale.ts",
-    "./lib/cli": "./lib/cli.ts",
-    "./lib/command": "./lib/command.ts",
-    "./lib/output": "./lib/output.ts",
-    "./lib/result": "./lib/result.ts",
-    "./lib/paths": "./lib/paths.ts",
-    "./src/credentials": "./src/credentials.ts",
-    "./src/discovery": "./src/discovery.ts",
-    "./src/guard": "./src/guard.ts",
-    "./src/resolve": "./src/resolve.ts",
-    "./src/template": "./src/template.ts"
-  },
   "tasks": {
     "dev": "deno run --watch main.ts",
     "run": "deno run -A main.ts",
@@ -29,6 +11,10 @@
     "check-versions": "deno run --allow-net --allow-run=git scripts/check-versions.ts",
     "build": "deno run -A scripts/build_npm.ts"
   },
+  "exports": {
+    ".": "./main.ts"
+  },
+  "exclude": ["**/npm/"],
   "imports": {
     "@/": "./",
     "@cliffy/table": "jsr:@cliffy/table@^1.0.0",

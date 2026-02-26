@@ -13,10 +13,14 @@
 //
 // =============================================================================
 
-import type { FlyProvider } from "./providers/fly.ts";
-import { getRouterSuffix, getWorkloadAppName } from "./providers/fly.ts";
-import type { TailscaleProvider } from "./providers/tailscale.ts";
-import { extractSubnet } from "./schemas/config.ts";
+import type { FlyProvider } from "@/providers/fly.ts";
+import { getRouterSuffix, getWorkloadAppName } from "@/util/naming.ts";
+import type { TailscaleProvider } from "@/providers/tailscale.ts";
+import { extractSubnet } from "@/util/fly-transforms.ts";
+import {
+  DEFAULT_FLY_NETWORK,
+  ROUTER_APP_PREFIX,
+} from "@/util/constants.ts";
 
 // =============================================================================
 // Types
@@ -47,13 +51,6 @@ export interface RouterTailscaleInfo {
 }
 
 // =============================================================================
-// Constants
-// =============================================================================
-
-const ROUTER_APP_PREFIX = "ambit-";
-const DEFAULT_NETWORK = "default";
-
-// =============================================================================
 // 1. Which routers exist? (Fly REST API)
 // =============================================================================
 
@@ -62,13 +59,13 @@ export const listRouterApps = async (
   fly: FlyProvider,
   org: string,
 ): Promise<RouterApp[]> => {
-  const apps = await fly.listAppsWithNetwork(org);
+  const apps = await fly.apps.listWithNetwork(org);
 
   return apps
     .filter(
       (app) =>
         app.name.startsWith(ROUTER_APP_PREFIX) &&
-        app.network !== DEFAULT_NETWORK,
+        app.network !== DEFAULT_FLY_NETWORK,
     )
     .map((app) => ({
       appName: app.name,
@@ -105,7 +102,7 @@ export const listWorkloadAppsOnNetwork = async (
   org: string,
   network: string,
 ): Promise<WorkloadApp[]> => {
-  const apps = await fly.listAppsWithNetwork(org);
+  const apps = await fly.apps.listWithNetwork(org);
 
   return apps
     .filter(
@@ -129,13 +126,13 @@ export const findWorkloadApp = async (
   appName: string,
   network?: string,
 ): Promise<WorkloadApp | null> => {
-  const apps = await fly.listAppsWithNetwork(org);
+  const apps = await fly.apps.listWithNetwork(org);
 
   const workloads = apps
     .filter(
       (app) =>
         !app.name.startsWith(ROUTER_APP_PREFIX) &&
-        app.network !== DEFAULT_NETWORK,
+        app.network !== DEFAULT_FLY_NETWORK,
     )
     .map((app) => ({
       appName: app.name,
@@ -167,7 +164,7 @@ export const getRouterMachineInfo = async (
   fly: FlyProvider,
   appName: string,
 ): Promise<RouterMachineInfo | null> => {
-  const machines = await fly.listMachines(appName);
+  const machines = await fly.machines.list(appName);
   const machine = machines[0];
   if (!machine) return null;
 
@@ -192,7 +189,7 @@ export const getRouterTailscaleInfo = async (
   appName: string,
 ): Promise<RouterTailscaleInfo | null> => {
   try {
-    const device = await tailscale.getDeviceByHostname(appName);
+    const device = await tailscale.devices.getByHostname(appName);
     if (!device) return null;
 
     return {
@@ -204,4 +201,38 @@ export const getRouterTailscaleInfo = async (
   } catch {
     return null;
   }
+};
+
+// =============================================================================
+// 4. Hydrated Router (all three sources combined)
+// =============================================================================
+
+/** A router app with its machine and Tailscale state hydrated. */
+export type RouterWithInfo = RouterApp & {
+  machine: RouterMachineInfo | null;
+  tailscale: RouterTailscaleInfo | null;
+};
+
+/**
+ * Discover all routers in an org and hydrate each with machine + Tailscale state.
+ * Shows a spinner while fetching. Fetches all routers in parallel.
+ */
+export const discoverRouters = async (
+  out: { spinner(msg: string): { success(msg: string): void } },
+  fly: FlyProvider,
+  tailscale: TailscaleProvider,
+  org: string,
+): Promise<RouterWithInfo[]> => {
+  const spinner = out.spinner("Discovering Routers");
+  const routerApps = await listRouterApps(fly, org);
+  spinner.success(
+    `Found ${routerApps.length} Router${routerApps.length !== 1 ? "s" : ""}`,
+  );
+  return Promise.all(
+    routerApps.map(async (app) => ({
+      ...app,
+      machine: await getRouterMachineInfo(fly, app.appName),
+      tailscale: await getRouterTailscaleInfo(tailscale, app.appName),
+    })),
+  );
 };

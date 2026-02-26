@@ -11,7 +11,8 @@
 // =============================================================================
 
 import { parse as parseToml } from "@std/toml";
-import type { FlyProvider } from "./providers/fly.ts";
+import type { FlyProvider } from "@/providers/fly.ts";
+import { ROUTER_APP_PREFIX } from "@/util/constants.ts";
 
 // =============================================================================
 // Public TLD Blocklist (source: https://data.iana.org/TLD/tlds-alpha-by-domain.txt)
@@ -225,7 +226,7 @@ export interface DeployAuditResult {
  * Workload apps must not start with the ambit- prefix.
  */
 export function assertNotRouter(app: string): void {
-  if (app.startsWith("ambit-")) {
+  if (app.startsWith(ROUTER_APP_PREFIX)) {
     throw new Error(
       "Cannot deploy ambit infrastructure apps (ambit-* prefix). " +
         "Use 'ambit create' to manage routers.",
@@ -269,6 +270,25 @@ export function scanFlyToml(tomlContent: string): PreflightResult {
     );
   }
 
+  // Check [[services]] for TLS handler on port 443
+  if (Array.isArray(parsed.services)) {
+    const hasTlsHandler = parsed.services.some((svc) => {
+      const ports = (svc as Record<string, unknown>)?.ports;
+      if (!Array.isArray(ports)) return false;
+      return ports.some((p) => {
+        const port = p as Record<string, unknown>;
+        const handlers = port?.handlers;
+        return Array.isArray(handlers) && handlers.includes("tls") &&
+          port?.port === 443;
+      });
+    });
+    if (hasTlsHandler) {
+      result.errors.push(
+        "TLS Handler on Port 443 Is Incompatible with Flycast-Only Deployment.",
+      );
+    }
+  }
+
   return result;
 }
 
@@ -293,7 +313,7 @@ export async function auditDeploy(
   };
 
   // Phase 1: Check and clean IPs — only keep Flycast on the target network
-  const ips = await fly.listIps(app);
+  const ips = await fly.ips.list(app);
 
   for (const ip of ips) {
     const ipNetwork = ip.Network?.Name || "default";
@@ -306,26 +326,26 @@ export async function auditDeploy(
       });
     } else if (ip.Type === "private_v6") {
       // Flycast on wrong network (e.g. default from --flycast flag) — release
-      await fly.releaseIp(app, ip.Address);
+      await fly.ips.release(app, ip.Address);
       result.warnings.push(
         `Released Flycast IP ${ip.Address} on wrong network '${ipNetwork}' (expected '${targetNetwork}')`,
       );
     } else {
       // Public IP — release immediately
-      await fly.releaseIp(app, ip.Address);
+      await fly.ips.release(app, ip.Address);
       result.public_ips_released++;
     }
   }
 
   // Phase 2: Remove auto-generated .fly.dev certs to keep the app fully private
-  const certs = await fly.listCerts(app);
+  const certs = await fly.certs.list(app);
   for (const hostname of certs) {
-    await fly.removeCert(app, hostname);
+    await fly.certs.remove(app, hostname);
     result.certs_removed++;
   }
 
   // Phase 3: Inspect merged config for dangerous patterns
-  const config = await fly.getConfig(app);
+  const config = await fly.apps.getConfig(app);
   if (config) {
     const services = config.services as
       | Array<{
@@ -363,10 +383,14 @@ export async function auditDeploy(
   );
 
   if (!hasTargetFlycast) {
-    // Allocate on the target network
-    await fly.allocateFlycastIp(app, targetNetwork);
+    // Allocate on the target network, then re-list to get the actual address
+    await fly.ips.allocateFlycast(app, targetNetwork);
+    const refreshed = await fly.ips.list(app);
+    const newIp = refreshed.find(
+      (ip) => ip.Type === "private_v6" && ip.Network?.Name === targetNetwork,
+    );
     result.flycast_allocations.push({
-      address: "(newly allocated)",
+      address: newIp?.Address ?? "allocated",
       network: targetNetwork,
     });
   }

@@ -1,5 +1,5 @@
 import { assertEquals, assertThrows } from "@std/assert";
-import { assertNotRouter, scanFlyToml } from "./guard.ts";
+import { assertNotRouter, scanFlyToml } from "@/util/guard.ts";
 
 // =============================================================================
 // assertNotRouter
@@ -75,29 +75,9 @@ app = "my-app"
 `;
   const result = scanFlyToml(toml);
   const hasPortError = result.errors.some((e) =>
-    e.includes("TLS handler on port 443")
+    e.includes("TLS Handler on Port 443")
   );
   assertEquals(hasPortError, true);
-});
-
-Deno.test("scanFlyToml: warns on [[services]] blocks", () => {
-  const toml = `
-app = "my-app"
-
-[[services]]
-  internal_port = 8080
-  protocol = "tcp"
-
-  [[services.ports]]
-    port = 80
-    handlers = ["http"]
-`;
-  const result = scanFlyToml(toml);
-  assertEquals(result.errors.length, 0);
-  const hasServicesWarn = result.warnings.some((w) =>
-    w.includes("[[services]]")
-  );
-  assertEquals(hasServicesWarn, true);
 });
 
 Deno.test("scanFlyToml: returns error on invalid TOML", () => {

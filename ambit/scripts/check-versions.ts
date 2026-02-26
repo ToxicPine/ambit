@@ -218,7 +218,7 @@ Options:
   }
 
   const dockerfiles: Record<string, string> = {
-    router: await git("show", "HEAD:src/docker/router/Dockerfile"),
+    router: await git("show", "HEAD:router/Dockerfile"),
   };
 
   const checks: VersionCheck[] = [

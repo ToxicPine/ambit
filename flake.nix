@@ -40,30 +40,16 @@
             ];
           };
 
-          packages = {
-            default = mkDenoPackage {
-              pname = "ambit";
-              version = "0.1.0";
-              entrypoint = "ambit/main.ts";
-            };
-
+          packages = let
             ambit = mkDenoPackage {
               pname = "ambit";
-              version = "0.1.0";
-              entrypoint = "ambit/main.ts";
-            };
-
-            ambit-mcp = mkDenoPackage {
-              pname = "ambit-mcp";
-              version = "0.1.0";
-              entrypoint = "ambit-mcp/main.ts";
-            };
-
-            chromatic = mkDenoPackage {
-              pname = "chromatic";
               version = "0.2.0";
-              entrypoint = "chromatic/main.ts";
+              entrypoint = "ambit/main.ts";
+              depsHash = "sha256-5mMA8eUfyWt2wX+sspQtMQWrrdx0Xk1cgOfJko0AQTQ=";
             };
+          in {
+            inherit ambit;
+            default = ambit;
           };
         };
     };

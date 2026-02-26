@@ -23,16 +23,15 @@
 //
 // =============================================================================
 
-import { runCli } from "./src/cli/mod.ts";
-import { Spinner, statusErr } from "./lib/cli.ts";
+import { runCli } from "@/cli/mod.ts";
+import { Spinner, statusErr } from "@/lib/cli.ts";
 
-// Import commands to register them
-import "./src/cli/commands/create.ts";
-import "./src/cli/commands/deploy.ts";
-import "./src/cli/commands/list.ts";
-import "./src/cli/commands/status.ts";
-import "./src/cli/commands/destroy.ts";
-import "./src/cli/commands/doctor.ts";
+import "./cli/commands/create/index.ts";
+import "./cli/commands/deploy/index.ts";
+import "./cli/commands/list.ts";
+import "./cli/commands/status.ts";
+import "./cli/commands/destroy/index.ts";
+import "./cli/commands/doctor.ts";
 
 // =============================================================================
 // Main
@@ -41,7 +40,6 @@ import "./src/cli/commands/doctor.ts";
 const main = async (): Promise<void> => {
   const spinner = new Spinner();
 
-  // Handle signals
   try {
     Deno.addSignalListener("SIGINT", () => {
       spinner.stop();

@@ -4,7 +4,7 @@
 
 import { prompt } from "@/lib/cli.ts";
 import type { Output } from "@/lib/output.ts";
-import type { FlyProvider } from "./providers/fly.ts";
+import type { FlyProvider } from "@/providers/fly.ts";
 
 // =============================================================================
 // Resolve Org
@@ -16,7 +16,7 @@ import type { FlyProvider } from "./providers/fly.ts";
 export const resolveOrg = async (
   fly: FlyProvider,
   args: { org?: string; json?: boolean },
-  out: Output<Record<string, unknown>>,
+  out: Output<any>,
 ): Promise<string> => {
   if (args.org) return args.org;
 
@@ -24,7 +24,7 @@ export const resolveOrg = async (
     return out.die("--org Is Required in JSON Mode");
   }
 
-  const orgs = await fly.listOrgs();
+  const orgs = await fly.orgs.list();
   const orgSlugs = Object.keys(orgs);
 
   if (orgSlugs.length === 0) {
