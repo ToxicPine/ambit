@@ -5,7 +5,8 @@ set -e
 # ambit - Self-Configuring Tailscale Subnet Router
 # =============================================================================
 # State is persisted to /var/lib/tailscale via Fly volume.
-# On first run: authenticates with a pre-minted auth key, advertises routes.
+# On first run: waits for TAILSCALE_AUTHKEY (delivered by the CLI after
+# autoApprovers are in place), then authenticates and advertises routes.
 # On restart: reuses existing state, no new device created.
 # The router never receives the user's API token — only a single-use,
 # tag-scoped auth key that expires after 5 minutes.
@@ -41,10 +42,12 @@ if /usr/local/bin/tailscale status --json 2>/dev/null | jq -e '.BackendState == 
     --hostname="${FLY_APP_NAME:-ambit}" \
     --advertise-routes="${SUBNET}"
 else
-  # First run - authenticate with pre-minted auth key
+  # First run — auth key is delivered by the CLI via `fly secrets set` after
+  # autoApprovers are configured. If it's not here yet, wait for the restart
+  # that the non-staged secrets set triggers.
   if [ -z "${TAILSCALE_AUTHKEY}" ]; then
-    echo "Router: ERROR - No TAILSCALE_AUTHKEY Provided"
-    exit 1
+    echo "Router: Waiting for Auth Key (CLI will deliver via secrets)"
+    while true; do sleep 5; done
   fi
 
   echo "Router: Authenticating to Tailscale"

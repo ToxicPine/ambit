@@ -17,16 +17,12 @@ import {
   type TailscaleProvider,
 } from "@/providers/tailscale.ts";
 import { getCredentialStore } from "@/util/credentials.ts";
-import {
-  FLY_PRIVATE_SUBNET,
-  TAILSCALE_API_KEY_PREFIX,
-} from "@/util/constants.ts";
+import { TAILSCALE_API_KEY_PREFIX } from "@/util/constants.ts";
 import { resolveOrg } from "@/util/resolve.ts";
 import {
   assertAdditivePatch,
   isAutoApproverConfigured,
   isTagOwnerConfigured,
-  patchAutoApprover,
   patchTagOwner,
 } from "@/util/tailscale-local.ts";
 import {
@@ -186,35 +182,7 @@ const stageTailscaleConfig = async (
     tagOwnerSpinner.success(`${opts.tag} Found in Tailscale ACL`);
   }
 
-  if (!opts.manual) {
-    const hasApprover = isAutoApproverConfigured(policy, opts.tag);
-    if (!hasApprover && policy) {
-      const beforeApprover = policy;
-      policy = patchAutoApprover(policy, opts.tag, FLY_PRIVATE_SUBNET);
-      assertAdditivePatch(beforeApprover, policy);
-      const validateApprover = await tailscale.acl.validatePolicy(policy);
-      if (!validateApprover.ok) {
-        return handleAclSetFailure(
-          out,
-          validateApprover,
-          `Validating autoApprover patch for ${opts.tag}`,
-        );
-      }
-      const approverSpinner = out.spinner(
-        `Adding autoApprover for ${opts.tag}`,
-      );
-      const result = await tailscale.acl.setPolicy(policy!);
-      if (!result.ok) {
-        approverSpinner.fail(`Adding autoApprover for ${opts.tag}`);
-        return handleAclSetFailure(
-          out,
-          result,
-          `Adding autoApprover for ${opts.tag}`,
-        );
-      }
-      approverSpinner.success(`Added autoApprover for ${opts.tag}`);
-    }
-  } else if (opts.json) {
+  if (opts.manual && opts.json) {
     const approverSpinner = out.spinner(
       `Checking autoApprovers for ${opts.tag}`,
     );
@@ -224,21 +192,21 @@ const stageTailscaleConfig = async (
       approverSpinner.fail(`Auto-approve Not Configured for ${opts.tag}`);
       out.blank()
         .text(
-          "  In JSON mode, ambit can't interactively approve the router's",
+          "  In --manual --json mode, ambit can't interactively approve the",
         )
         .text(
-          `  network connections. You can set this up from the Tailscale dashboard:`,
+          "  router's subnet routes. Set up autoApprovers first:",
         )
         .link("  https://login.tailscale.com/admin/acls/visual/auto-approvers")
-        .dim(`  Route: ${FLY_PRIVATE_SUBNET}  Owner: ${opts.tag}`)
+        .dim(`  Route: <subnet>/48  Owner: ${opts.tag}`)
         .blank()
-        .dim("  Or you can do it manually with this JSON config:")
+        .dim("  Or in the ACL file:")
         .dim(
-          `    "autoApprovers": { "routes": { "${FLY_PRIVATE_SUBNET}": ["${opts.tag}"] } }`,
+          `    "autoApprovers": { "routes": { "<subnet>/48": ["${opts.tag}"] } }`,
         )
         .blank();
       return out.die(
-        `Set Up Auto-approve for ${opts.tag} to Use --json`,
+        `Set Up Auto-approve for ${opts.tag} to Use --manual --json`,
       );
     }
 
@@ -263,6 +231,7 @@ const stageDeploy = async (
     region: string;
     tag: string;
     shouldApprove: boolean;
+    manual: boolean;
   },
 ): Promise<void> => {
   out.header("Step 3: Deploy Subnet Router").blank();
@@ -506,6 +475,7 @@ ${bold("EXAMPLES")}
     region,
     tag,
     shouldApprove,
+    manual,
   });
 };
 

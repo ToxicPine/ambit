@@ -19,8 +19,6 @@ export const ROUTER_DOCKER_DIR = new URL("../router", import.meta.url)
 
 export const SOCKS_PROXY_PORT = 1080;
 
-export const FLY_PRIVATE_SUBNET = "fdaa::/16";
-
 // =============================================================================
 // Tailscale
 // =============================================================================

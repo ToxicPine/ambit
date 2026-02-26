@@ -15,13 +15,15 @@ import {
 import { FlyDeployError, type FlyProvider } from "@/providers/fly.ts";
 import { getRouterAppName } from "@/util/naming.ts";
 import {
+  assertAdditivePatch,
   enableAcceptRoutes,
   isAcceptRoutesEnabled,
   isAutoApproverConfigured,
   isTailscaleInstalled,
+  patchAutoApprover,
   waitForDevice,
 } from "@/util/tailscale-local.ts";
-import type { TailscaleProvider } from "@/providers/tailscale.ts";
+import type { AclSetResult, TailscaleProvider } from "@/providers/tailscale.ts";
 import type { TailscaleDevice } from "@/schemas/tailscale.ts";
 import { findRouterApp, getRouterMachineInfo } from "@/util/discovery.ts";
 
@@ -32,7 +34,6 @@ import { findRouterApp, getRouterMachineInfo } from "@/util/discovery.ts";
 export type CreatePhase =
   | "create_app"
   | "deploy_router"
-  | "await_device"
   | "approve_routes"
   | "configure_dns"
   | "accept_routes"
@@ -58,6 +59,7 @@ export interface CreateCtx {
   region: string;
   tag: string;
   shouldApprove: boolean;
+  manual: boolean;
   appName: string;
   routerId: string;
   device?: TailscaleDevice;
@@ -71,7 +73,6 @@ export interface CreateCtx {
 const CREATE_PHASES: { phase: CreatePhase; label: string }[] = [
   { phase: "create_app", label: "Fly App Created" },
   { phase: "deploy_router", label: "Router Deployed" },
-  { phase: "await_device", label: "Router in Tailnet" },
   { phase: "approve_routes", label: "Routes Approved" },
   { phase: "configure_dns", label: "Split DNS Configured" },
   { phase: "accept_routes", label: "Accept Routes Enabled" },
@@ -108,7 +109,7 @@ export const hydrateCreate = async (
   if (!ctx.shouldApprove) return "complete";
 
   const device = await ctx.tailscale.devices.getByHostname(router.appName);
-  if (!device) return "await_device";
+  if (!device) return "approve_routes";
 
   ctx.device = device;
 
@@ -146,19 +147,10 @@ export const createTransition = async (
     }
 
     case "deploy_router": {
-      const authKey = await ctx.tailscale.auth.createKey({
-        reusable: false,
-        ephemeral: false,
-        preauthorized: true,
-        tags: [ctx.tag],
-      });
-      ctx.out.ok("Auth Key Created");
-
       await ctx.out.spin(
-        "Setting Secrets",
+        "Staging Secrets",
         () =>
           ctx.fly.secrets.set(ctx.appName, {
-            [SECRET_TAILSCALE_AUTHKEY]: authKey,
             [SECRET_NETWORK_NAME]: ctx.network,
             [SECRET_ROUTER_ID]: ctx.routerId,
           }, { stage: true }),
@@ -185,36 +177,102 @@ export const createTransition = async (
       const m = machines.find((m) => m.private_ip);
       if (m?.private_ip) ctx.subnet = extractSubnet(m.private_ip);
 
-      if (!ctx.shouldApprove) return Result.ok("complete");
-
-      return Result.ok("await_device");
+      return Result.ok("approve_routes");
     }
 
-    case "await_device": {
-      ctx.device = await waitForDevice(ctx.tailscale, ctx.appName, 180000);
-      ctx.out.ok(`Router Joined Tailnet: ${ctx.device.addresses[0]}`);
-
+    case "approve_routes": {
       if (!ctx.subnet) {
         const machines = await ctx.fly.machines.list(ctx.appName);
         const m = machines.find((m) => m.private_ip);
         if (m?.private_ip) ctx.subnet = extractSubnet(m.private_ip);
       }
+      if (!ctx.subnet) return Result.err("Missing Subnet");
 
-      return Result.ok("approve_routes");
-    }
+      let policy = await ctx.tailscale.acl.getPolicy();
+      const hasAutoApprover = isAutoApproverConfigured(policy, ctx.tag);
+      let approverReady = hasAutoApprover;
 
-    case "approve_routes": {
-      if (!ctx.device || !ctx.subnet) {
-        return Result.err("Missing Device or Subnet");
+      if (!hasAutoApprover && !ctx.manual && policy) {
+        const before = policy;
+        policy = patchAutoApprover(policy, ctx.tag, ctx.subnet);
+        assertAdditivePatch(before, policy);
+        const vr: AclSetResult = await ctx.tailscale.acl.validatePolicy(
+          policy,
+        );
+        if (!vr.ok) {
+          ctx.out.warn(
+            `Could Not Validate autoApprover Patch: ${vr.error ?? `HTTP ${vr.status}`}`,
+          );
+        } else {
+          const sr = await ctx.tailscale.acl.setPolicy(policy);
+          if (sr.ok) {
+            ctx.out.ok(`Added autoApprover for ${ctx.tag} → ${ctx.subnet}`);
+            approverReady = true;
+          } else if (sr.status === 403) {
+            ctx.out.warn(
+              "API Token Lacks ACL Write Permission — Will Approve Routes Manually",
+            );
+          } else {
+            ctx.out.warn(
+              `Could Not Set autoApprover: ${sr.error ?? `HTTP ${sr.status}`}`,
+            );
+          }
+        }
       }
 
-      const policy = await ctx.tailscale.acl.getPolicy();
-      const hasAutoApprover = isAutoApproverConfigured(policy, ctx.tag);
-      if (hasAutoApprover) {
-        ctx.out.ok("Routes Auto-Approved via ACL Policy");
-      } else {
+      // If the device isn't in the tailnet yet, the router hasn't
+      // authenticated. Mint an auth key and deliver it — the non-staged
+      // secrets set triggers a Fly restart. The router boots with the key,
+      // authenticates, and advertises routes. With autoApprover in place,
+      // routes are auto-approved immediately.
+      if (!ctx.device) {
+        const existing = await ctx.tailscale.devices.getByHostname(
+          ctx.appName,
+        );
+        if (existing) {
+          ctx.device = existing;
+        } else {
+          const authKey = await ctx.tailscale.auth.createKey({
+            reusable: false,
+            ephemeral: false,
+            preauthorized: true,
+            tags: [ctx.tag],
+          });
+          ctx.out.ok("Auth Key Created");
+
+          const keySpinner = ctx.out.spinner(
+            "Delivering Auth Key (restarting router)",
+          );
+          await ctx.fly.secrets.set(ctx.appName, {
+            [SECRET_TAILSCALE_AUTHKEY]: authKey,
+          });
+          keySpinner.success("Auth Key Delivered");
+
+          if (!ctx.shouldApprove) {
+            ctx.out.dim("  Skipping Route Approval (--no-auto-approve)");
+            return Result.ok("complete");
+          }
+
+          ctx.device = await waitForDevice(
+            ctx.tailscale,
+            ctx.appName,
+            180000,
+          );
+          ctx.out.ok(`Router Joined Tailnet: ${ctx.device.addresses[0]}`);
+        }
+      }
+
+      const routes = await ctx.tailscale.routes.get(ctx.device.id);
+      if (routes && routes.unapproved.length > 0) {
+        if (approverReady) {
+          ctx.out.warn(
+            "Routes Not Auto-Approved Despite autoApprover — Approving Manually",
+          );
+        }
         await ctx.tailscale.routes.approve(ctx.device.id, [ctx.subnet]);
         ctx.out.ok("Subnet Routes Approved");
+      } else {
+        ctx.out.ok("Routes Auto-Approved via ACL Policy");
       }
       return Result.ok("configure_dns");
     }
