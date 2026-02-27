@@ -35,15 +35,15 @@ Ambit is the core tool. It deploys your apps — databases, dashboards, internal
 
 ---
 
-### [Templates](./ambit-templates/)
+### [Templates](https://github.com/ToxicPine/ambit-templates)
 
-The [ambit-templates](./ambit-templates/) directory has ready-to-deploy examples for common setups.
+The [ambit-templates](https://github.com/ToxicPine/ambit-templates) repo has ready-to-deploy examples for common setups.
 
 | Template | Description |
 | --- | --- |
-| [wetty](./ambit-templates/wetty/) | A cloud devshell — Nix-based environment with a web terminal, persistent home directory, passwordless sudo, and auto start/stop. |
-| [opencode](./ambit-templates/opencode/) | A private [OpenCode](https://opencode.ai) web workspace — Nix-based environment with persistent home and auto start/stop. |
-| [chromatic](./ambit-templates/chromatic/) | A headless Chrome instance exposing the Chrome DevTools Protocol — for AI agents or scripts that need to drive a browser on your private network. |
+| [wetty](https://github.com/ToxicPine/ambit-templates/tree/master/wetty) | A cloud devshell — Nix-based environment with a web terminal, persistent home directory, passwordless sudo, and auto start/stop. |
+| [opencode](https://github.com/ToxicPine/ambit-templates/tree/master/opencode) | A private [OpenCode](https://opencode.ai) web workspace — Nix-based environment with persistent home and auto start/stop. |
+| [chromatic](https://github.com/ToxicPine/ambit-templates/tree/master/chromatic) | A headless Chrome instance exposing the Chrome DevTools Protocol — for AI agents or scripts that need to drive a browser on your private network. |
 | [openclaw](https://github.com/ToxicPine/ambit-openclaw) | A self-hosted [OpenClaw](https://openclaw.ai) instance — a personal AI assistant you can talk to from WhatsApp, Telegram, Discord, and other chat apps. |
 
 ## Installation
