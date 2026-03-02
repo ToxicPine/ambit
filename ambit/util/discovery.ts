@@ -14,6 +14,7 @@
 // =============================================================================
 
 import type { FlyProvider } from "@/providers/fly.ts";
+import type { FlyAppStatus, FlyMachineState } from "@/schemas/fly.ts";
 import { getRouterSuffix, getWorkloadAppName } from "@/util/naming.ts";
 import type { TailscaleProvider } from "@/providers/tailscale.ts";
 import { extractSubnet } from "@/util/fly-transforms.ts";
@@ -29,12 +30,13 @@ export interface RouterApp {
   network: string;
   org: string;
   routerId: string;
+  status: FlyAppStatus;
 }
 
 /** Machine state for a router, from the Fly Machines API. */
 export interface RouterMachineInfo {
   region: string;
-  state: string;
+  state: FlyMachineState;
   privateIp?: string;
   subnet?: string;
 }
@@ -69,6 +71,7 @@ export const listRouterApps = async (
       network: app.network,
       org: app.organization?.slug ?? org,
       routerId: getRouterSuffix(app.name, app.network),
+      status: app.status,
     }));
 };
 
@@ -91,6 +94,7 @@ export interface WorkloadApp {
   appName: string;
   network: string;
   org: string;
+  status: FlyAppStatus;
 }
 
 /** List all non-router apps on a specific custom network in an org. */
@@ -111,6 +115,7 @@ export const listWorkloadAppsOnNetwork = async (
       appName: app.name,
       network: app.network,
       org: app.organization?.slug ?? org,
+      status: app.status,
     }));
 };
 
@@ -135,6 +140,7 @@ export const findWorkloadApp = async (
       appName: app.name,
       network: app.network,
       org: app.organization?.slug ?? org,
+      status: app.status,
     }));
 
   if (network) {

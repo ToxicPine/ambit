@@ -181,7 +181,7 @@ async function createUpdateBranch(
   const updatedTree = currentTree
     .split("\n")
     .map((line) => {
-      if (line.includes("src/docker/router/Dockerfile")) {
+      if (line.includes("ambit/router/Dockerfile")) {
         return line.replace(/\b[a-f0-9]{40}\b/, blobs.router);
       }
       return line;
@@ -218,7 +218,7 @@ Options:
   }
 
   const dockerfiles: Record<string, string> = {
-    router: await git("show", "HEAD:router/Dockerfile"),
+    router: await git("show", "HEAD:ambit/router/Dockerfile"),
   };
 
   const checks: VersionCheck[] = [

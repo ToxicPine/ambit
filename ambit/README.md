@@ -160,13 +160,42 @@ These work with all three modes.
 | `-y`, `--yes`         | Skip confirmation prompts                                      |
 | `--json`              | Machine-readable JSON output                                   |
 
-### `ambit status [network|app]`
+### `ambit list networks|apps`
 
-Without a subcommand, defaults to showing all routers (same as `status network`).
+#### `ambit list networks`
 
-#### `ambit status network [<name>]`
+Lists all networks and their routers in a table showing the network name, app name, region, machine state, Tailscale connectivity status, and ACL tag.
 
-Without a network name, shows a summary table of all routers. With a name, shows detailed status for a specific network: machine state, SOCKS proxy, Tailscale IP, subnet, and apps on the network.
+| Flag              | Description                    |
+| ----------------- | ------------------------------ |
+| `--org <org>`     | Fly.io organization slug       |
+| `--json`          | Machine-readable JSON output   |
+
+#### `ambit list apps <network>`
+
+Lists all workload apps on a specific network in a table showing the app name, region, and machine state.
+
+| Flag              | Description                    |
+| ----------------- | ------------------------------ |
+| `--org <org>`     | Fly.io organization slug       |
+| `--json`          | Machine-readable JSON output   |
+
+### `ambit status [networks|network|app]`
+
+Without a subcommand, defaults to showing all networks (same as `status networks`).
+
+#### `ambit status networks`
+
+Shows a summary table of all networks and their routers.
+
+| Flag              | Description                    |
+| ----------------- | ------------------------------ |
+| `--org <org>`     | Fly.io organization slug       |
+| `--json`          | Machine-readable JSON output   |
+
+#### `ambit status network <name>`
+
+Shows detailed status for a specific network: machine state, SOCKS proxy, Tailscale IP, subnet, and apps on the network.
 
 | Flag              | Description                    |
 | ----------------- | ------------------------------ |
@@ -176,16 +205,6 @@ Without a network name, shows a summary table of all routers. With a name, shows
 #### `ambit status app <app>.<network>`
 
 Shows detailed status for a specific app: machines, Flycast IPs, and the backing router.
-
-| Flag                 | Description                                  |
-| -------------------- | -------------------------------------------- |
-| `--network <name>`   | Target network (if not using dot syntax)     |
-| `--org <org>`        | Fly.io organization slug                     |
-| `--json`             | Machine-readable JSON output                 |
-
-### `ambit list`
-
-Lists all discovered routers across networks in a table showing the network name, app name, region, machine state, Tailscale connectivity status, and ACL tag.
 
 | Flag              | Description                    |
 | ----------------- | ------------------------------ |

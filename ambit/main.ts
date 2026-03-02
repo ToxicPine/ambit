@@ -17,7 +17,10 @@
 //
 // Examples:
 //   ambit create browsers
+//   ambit list networks
+//   ambit list apps browsers
 //   ambit status
+//   ambit status network browsers
 //   ambit destroy network browsers
 //   ambit destroy app my-app.browsers
 //   ambit doctor
@@ -30,8 +33,8 @@ import { Spinner, statusErr } from "@/lib/cli.ts";
 import "./cli/commands/create/index.ts";
 import "./cli/commands/deploy/index.ts";
 import "./cli/commands/share.ts";
-import "./cli/commands/list.ts";
-import "./cli/commands/status.ts";
+import "./cli/commands/list/index.ts";
+import "./cli/commands/status/index.ts";
 import "./cli/commands/destroy/index.ts";
 import "./cli/commands/doctor.ts";
 

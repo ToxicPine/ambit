@@ -15,6 +15,42 @@ export const FlyAuthSchema = z.object({
 export type FlyAuth = z.infer<typeof FlyAuthSchema>;
 
 // =============================================================================
+// State Enums
+// =============================================================================
+
+/** App-level status from the Fly GraphQL API / REST API (AppState enum). */
+export const FlyAppStatusEnum = z.enum(["deployed", "pending", "suspended"]);
+export type FlyAppStatus = z.infer<typeof FlyAppStatusEnum>;
+
+/**
+ * Machine-level state from the Fly Machines API.
+ * Persistent: created, started, stopped, suspended, failed
+ * Transient: creating, starting, stopping, restarting, suspending, destroying,
+ *            updating, replacing, launch_failed
+ * Terminal: destroyed, replaced, migrated
+ */
+export const FlyMachineStateEnum = z.enum([
+  "created",
+  "started",
+  "stopped",
+  "suspended",
+  "failed",
+  "creating",
+  "starting",
+  "stopping",
+  "restarting",
+  "suspending",
+  "destroying",
+  "updating",
+  "replacing",
+  "launch_failed",
+  "destroyed",
+  "replaced",
+  "migrated",
+]);
+export type FlyMachineState = z.infer<typeof FlyMachineStateEnum>;
+
+// =============================================================================
 // App Schemas
 // =============================================================================
 
@@ -74,7 +110,7 @@ export const FlyMachineConfigSchema = z.object({
 export const FlyMachineSchema = z.object({
   id: z.string(),
   name: z.string(),
-  state: z.string(),
+  state: FlyMachineStateEnum.catch("created"),
   region: z.string(),
   private_ip: z.string().optional(),
   config: FlyMachineConfigSchema.optional(),
@@ -132,7 +168,8 @@ export const FlyIpListSchema = z.array(FlyIpSchema);
 export const FlyAppInfoSchema = z.object({
   name: z.string(),
   network: z.string(),
-  status: z.string(),
+  status: FlyAppStatusEnum.catch("pending"),
+  machine_count: z.number().optional(),
   organization: z.object({ slug: z.string() }).optional(),
 }).loose();
 
