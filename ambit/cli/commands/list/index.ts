@@ -4,6 +4,7 @@
 
 import { parseArgs } from "@std/cli";
 import { bold } from "@/lib/cli.ts";
+import { checkArgs } from "@/lib/args.ts";
 import { registerCommand } from "@/cli/mod.ts";
 import { listNetworks } from "./networks.ts";
 import { listApps } from "./apps.ts";
@@ -47,7 +48,10 @@ const list = async (argv: string[]): Promise<void> => {
   if (subcommand === "networks") return listNetworks(argv.slice(1));
   if (subcommand === "apps") return listApps(argv.slice(1));
 
-  const args = parseArgs(argv, { boolean: ["help"] });
+  const opts = { boolean: ["help"] } as const;
+  const args = parseArgs(argv, opts);
+  checkArgs(args, opts, "ambit list", 0);
+
   if (args.help) {
     showListHelp();
     return;

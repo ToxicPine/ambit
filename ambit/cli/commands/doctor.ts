@@ -251,7 +251,7 @@ const doctorNetwork = async (argv: string[]): Promise<void> => {
     boolean: ["help", "json"],
   } as const;
   const args = parseArgs(argv, opts);
-  checkArgs(args, opts, "ambit doctor network");
+  checkArgs(args, opts, "ambit doctor network", 1);
 
   if (args.help) {
     console.log(`
@@ -306,7 +306,7 @@ const doctorApp = async (argv: string[]): Promise<void> => {
     boolean: ["help", "json"],
   } as const;
   const args = parseArgs(argv, opts);
-  checkArgs(args, opts, "ambit doctor app");
+  checkArgs(args, opts, "ambit doctor app", 1);
 
   if (args.help) {
     console.log(`
@@ -418,7 +418,10 @@ const doctor = async (argv: string[]): Promise<void> => {
   if (subcommand === "network") return doctorNetwork(argv.slice(1));
   if (subcommand === "app") return doctorApp(argv.slice(1));
 
-  const args = parseArgs(argv, { boolean: ["help"] });
+  const opts = { string: ["org"], boolean: ["help", "json"] } as const;
+  const args = parseArgs(argv, opts);
+  checkArgs(args, opts, "ambit doctor", 0);
+
   if (args.help) {
     showDoctorHelp();
     return;

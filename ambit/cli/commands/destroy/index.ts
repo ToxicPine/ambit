@@ -4,6 +4,7 @@
 
 import { parseArgs } from "@std/cli";
 import { bold } from "@/lib/cli.ts";
+import { checkArgs } from "@/lib/args.ts";
 import { registerCommand } from "@/cli/mod.ts";
 import { destroyNetwork } from "./network.ts";
 import { destroyApp } from "./app.ts";
@@ -53,7 +54,10 @@ const destroy = async (argv: string[]): Promise<void> => {
     return destroyApp(argv.slice(1));
   }
 
-  const args = parseArgs(argv, { boolean: ["help"] });
+  const opts = { boolean: ["help"] } as const;
+  const args = parseArgs(argv, opts);
+  checkArgs(args, opts, "ambit destroy", 0);
+
   if (args.help) {
     showDestroyHelp();
     return;

@@ -70,7 +70,7 @@ const stageRender = (
 export const listNetworks = async (argv: string[]): Promise<void> => {
   const opts = { string: ["org"], boolean: ["help", "json"] } as const;
   const args = parseArgs(argv, opts);
-  checkArgs(args, opts, "ambit list networks");
+  checkArgs(args, opts, "ambit list networks", 0);
 
   if (args.help) {
     console.log(`

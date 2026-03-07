@@ -17,7 +17,7 @@ import { initSession } from "@/util/session.ts";
 export const statusNetworks = async (argv: string[]): Promise<void> => {
   const opts = { string: ["org"], boolean: ["help", "json"] } as const;
   const args = parseArgs(argv, opts);
-  checkArgs(args, opts, "ambit status networks");
+  checkArgs(args, opts, "ambit status networks", 0);
 
   if (args.help) {
     console.log(`

@@ -160,7 +160,7 @@ export const statusApp = async (argv: string[]): Promise<void> => {
     boolean: ["help", "json"],
   } as const;
   const args = parseArgs(argv, opts);
-  checkArgs(args, opts, "ambit status app");
+  checkArgs(args, opts, "ambit status app", 1);
 
   if (args.help) {
     console.log(`

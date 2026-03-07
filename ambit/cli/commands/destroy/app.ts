@@ -183,7 +183,7 @@ export const destroyApp = async (argv: string[]): Promise<void> => {
     alias: { y: "yes" },
   } as const;
   const args = parseArgs(argv, opts);
-  checkArgs(args, opts, "ambit destroy app");
+  checkArgs(args, opts, "ambit destroy app", 1);
 
   if (args.help) {
     console.log(`

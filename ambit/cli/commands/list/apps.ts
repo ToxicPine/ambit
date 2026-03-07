@@ -33,7 +33,7 @@ type ListAppsResult = {
 export const listApps = async (argv: string[]): Promise<void> => {
   const opts = { string: ["org"], boolean: ["help", "json"] } as const;
   const args = parseArgs(argv, opts);
-  checkArgs(args, opts, "ambit list apps");
+  checkArgs(args, opts, "ambit list apps", 1);
 
   if (args.help) {
     console.log(`

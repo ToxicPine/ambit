@@ -237,7 +237,7 @@ const deploy = async (argv: string[]): Promise<void> => {
     default: { "main-port": "80" },
   } as const;
   const args = parseArgs(argv, opts);
-  checkArgs(args, opts, "ambit deploy");
+  checkArgs(args, opts, "ambit deploy", 1);
 
   if (args.help) {
     console.log(`

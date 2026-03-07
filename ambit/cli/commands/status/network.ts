@@ -113,7 +113,7 @@ const stageNetworkStatus = async (
 export const statusNetwork = async (argv: string[]): Promise<void> => {
   const opts = { string: ["org"], boolean: ["help", "json"] } as const;
   const args = parseArgs(argv, opts);
-  checkArgs(args, opts, "ambit status network");
+  checkArgs(args, opts, "ambit status network", 1);
 
   if (args.help) {
     console.log(`

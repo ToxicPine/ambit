@@ -396,7 +396,7 @@ const create = async (argv: string[]): Promise<void> => {
     alias: { y: "yes" },
   } as const;
   const args = parseArgs(argv, opts);
-  checkArgs(args, opts, "ambit create");
+  checkArgs(args, opts, "ambit create", 1);
 
   if (args.help) {
     console.log(`

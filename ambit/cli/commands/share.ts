@@ -269,7 +269,7 @@ const share = async (argv: string[]): Promise<void> => {
     boolean: ["help", "json"],
   } as const;
   const args = parseArgs(argv, opts);
-  checkArgs(args, opts, "ambit share");
+  checkArgs(args, opts, "ambit share", Infinity);
 
   if (args.help) {
     console.log(`
