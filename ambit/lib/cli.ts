@@ -135,15 +135,12 @@ export const readSecret = async (message: string): Promise<string> => {
 
   await Deno.stdout.write(encoder.encode(message));
 
+  const { spawnSync } = await import("node:child_process");
+
   let echoDisabled = false;
   try {
-    const sttyOff = await new Deno.Command("stty", {
-      args: ["-echo"],
-      stdin: "inherit",
-      stdout: "null",
-      stderr: "null",
-    }).output();
-    echoDisabled = sttyOff.success;
+    const sttyOff = spawnSync("stty", ["-echo"], { stdio: "inherit" });
+    echoDisabled = sttyOff.status === 0;
 
     const buf = new Uint8Array(1024);
     const n = await Deno.stdin.read(buf);
@@ -152,12 +149,7 @@ export const readSecret = async (message: string): Promise<string> => {
     return decoder.decode(buf.subarray(0, n)).trim();
   } finally {
     if (echoDisabled) {
-      await new Deno.Command("stty", {
-        args: ["echo"],
-        stdin: "inherit",
-        stdout: "null",
-        stderr: "null",
-      }).output();
+      spawnSync("stty", ["echo"], { stdio: "inherit" });
     }
     await Deno.stdout.write(encoder.encode("\n"));
   }
