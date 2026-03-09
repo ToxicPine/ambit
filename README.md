@@ -60,7 +60,7 @@ npx @cardelli/ambit --help
 
 ## Agent Skills
 
-Install [skills](https://skills.sh) to give your AI coding agent reference documentation for the CLI and MCP tools. Works with Claude Code, Cursor, Windsurf, and other AI coding agents:
+**HIGHLY RECOMMENDED:** Install [skills](https://skills.sh) to give your AI coding agent reference documentation for the CLI and MCP tools. Works with Claude Code, Cursor, Windsurf, and other AI coding agents:
 
 ```bash
 npx skills add ToxicPine/ambit-skills --skill ambit-cli
