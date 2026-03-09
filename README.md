@@ -8,9 +8,13 @@
 
 A toolkit for hosting apps in the cloud so that only you — and the AI agents you work with — can reach them.
 
-When you put something on the internet, you normally have to build login pages, configure firewalls, and worry about bots or strangers stumbling across it. These tools skip all of that. Your apps live in the cloud but are completely invisible to the public internet: there is no address for a stranger to find, no door for them to knock on. The only machines that can connect are the ones you have explicitly added to your private network.
+When you put something on the internet, you often have to build login pages, configure firewalls, and worry about bots or strangers stumbling across it. These tools skip all of that. Your apps live in the cloud but are completely invisible to the public internet: everything — your apps, your agents, your databases — live behind the same virtual private network (VPN), and only the devices that you've added to the network can access them.
+
+**NOTE:** This relies on [Tailscale](https://tailscale.com/), you should look into Tailscale first.
 
 ### Example: Cloud IDE (OpenCode) in 4 Steps
+
+This is an IDE for Claude Code, Codex, etc, that you can access from desktop or mobile, with seamless handoff.
 
 1. **Install [Tailscale](https://tailscale.com/download)**.
 2. **Create a Network:**
@@ -23,7 +27,7 @@ When you put something on the internet, you normally have to build login pages, 
    npx @cardelli/ambit deploy my-ide.lab --template ToxicPine/ambit-templates/opencode
    ```
 
-Open `http://my-ide.lab` on any device on your Tailscale network. You now have a persistent [OpenCode](https://opencode.ai) workspace running in the cloud — accessible from your laptop, tablet, or phone, completely invisible to the public internet, and available only to you.
+Open `http://my-ide.lab` on any device connected to your network (via Tailscale). You now have a persistent [OpenCode](https://opencode.ai) workspace running in the cloud — accessible from your laptop, tablet, or phone, completely invisible to the public internet, and available only to you.
 
 ## Projects
 
