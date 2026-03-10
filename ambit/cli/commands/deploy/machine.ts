@@ -150,17 +150,21 @@ export const deployTransition = async (
         ctx.out.skip(`App '${ctx.flyAppName}' Exists`);
       }
 
+      const ambitSecrets: Record<string, string> = {
+        AMBIT_APP_NAME: ctx.app,
+        AMBIT_NETWORK_NAME: ctx.network,
+      };
+
       if (ctx.routerPrivateIp) {
         const proxyUrl =
           `socks5://[${ctx.routerPrivateIp}]:${SOCKS_PROXY_PORT}`;
-        await ctx.out.spin("Setting Outbound Proxy", () =>
-          ctx.fly.secrets.set(
-            ctx.flyAppName,
-            { [SECRET_AMBIT_OUTBOUND_PROXY]: proxyUrl },
-            { stage: true },
-          ));
+        ambitSecrets[SECRET_AMBIT_OUTBOUND_PROXY] = proxyUrl;
         ctx.out.ok(`Outbound Proxy: ${proxyUrl}`);
       }
+
+      await ctx.out.spin("Staging Ambit Secrets", () =>
+        ctx.fly.secrets.set(ctx.flyAppName, ambitSecrets, { stage: true }),
+      );
 
       return Result.ok("deploy");
     }

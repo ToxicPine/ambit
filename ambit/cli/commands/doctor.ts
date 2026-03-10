@@ -204,6 +204,22 @@ const stageAppChecks = async (
       : "No Machines Found",
   );
 
+  const secrets = await fly.secrets.list(workload.appName);
+  const secretNames = new Set(secrets.map((s) => s.name));
+  const hasAmbitSecrets =
+    secretNames.has("AMBIT_APP_NAME") &&
+    secretNames.has("AMBIT_NETWORK_NAME");
+
+  if (!hasAmbitSecrets) {
+    await fly.secrets.set(workload.appName, {
+      AMBIT_APP_NAME: app,
+      AMBIT_NETWORK_NAME: network,
+    });
+    report(`Ambit Secrets Set (${app}.${network})`, true, "Auto-configured");
+  } else {
+    report(`Ambit Secrets Set (${app}.${network})`, true);
+  }
+
   const router = await findRouterApp(fly, org, network);
   if (!router) {
     report(

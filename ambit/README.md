@@ -104,7 +104,7 @@ npx @cardelli/ambit share browsers group:team alice@example.com group:contractor
 
 This puts an app onto your private network. This is what you run whenever you want to host something. If the app doesn't exist yet, ambit creates it on the right network for you. The network can be specified as part of the name (`my-app.lab`) or with `--network` (`my-app --network lab`).
 
-Before deploying, ambit scans your config for settings that don't make sense on a private network (like `force_https`, which only matters for public traffic). After deploying, it checks that no public IPs were allocated, releases any that were, and verifies the app has a private address on the network you specified.
+Before deploying, ambit scans your config for settings that don't make sense on a private network (like `force_https`, which only matters for public traffic). After deploying, it checks that no public IPs were allocated, releases any that were, and verifies the app has a private address on the network you specified. Three environment variables are set automatically: `AMBIT_APP_NAME`, `AMBIT_NETWORK_NAME`, and `AMBIT_OUTBOUND_PROXY`.
 
 There are three deployment modes. They are mutually exclusive — you can only use one at a time.
 
