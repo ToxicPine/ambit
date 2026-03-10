@@ -4,7 +4,7 @@
 
 import { join } from "@std/path";
 import { fileExists } from "@/lib/cli.ts";
-import { createOutput } from "@/lib/output.ts";
+import type { createOutput } from "@/lib/output.ts";
 import { scanFlyToml } from "@/util/guard.ts";
 import { fetchTemplate, parseTemplateRef } from "@/util/template.ts";
 

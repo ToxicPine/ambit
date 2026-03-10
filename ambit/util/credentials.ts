@@ -9,7 +9,7 @@ import {
   fileExists,
   getConfigDir,
 } from "@/lib/cli.ts";
-import { ENV_TAILSCALE_API_KEY, FLYCTL_INSTALL_URL } from "@/util/constants.ts";
+import { ENV_TAILSCALE_API_KEY } from "@/util/constants.ts";
 
 // =============================================================================
 // Schema

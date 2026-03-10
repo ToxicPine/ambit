@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { parseArgs } from "@std/cli";
-import { bold, die, dim } from "@/lib/cli.ts";
+import { bold, dim } from "@/lib/cli.ts";
 import denoConfig from "@/deno.json" with { type: "json" };
 
 // =============================================================================
@@ -54,6 +54,8 @@ ${bold("COMMANDS")}
   share      Grant a Tailscale group access to a network via ACL rules
   list       List all discovered routers across networks
   status     Show router status, network, and tailnet info
+  secrets    Manage secrets for workload apps
+  logs       Stream logs for a workload app
   destroy    Destroy a network (router) or a workload app
   doctor     Check that Tailscale and the router are working correctly
 

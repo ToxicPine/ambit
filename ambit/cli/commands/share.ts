@@ -8,10 +8,7 @@ import { checkArgs } from "@/lib/args.ts";
 import { createOutput, type Output } from "@/lib/output.ts";
 import { registerCommand } from "@/cli/mod.ts";
 import { z } from "zod";
-import {
-  type AclSetResult,
-  type TailscaleProvider,
-} from "@/providers/tailscale.ts";
+import type { AclSetResult, TailscaleProvider } from "@/providers/tailscale.ts";
 import type { FlyProvider } from "@/providers/fly.ts";
 import { findRouterApp, getRouterMachineInfo } from "@/util/discovery.ts";
 import { getRouterTag } from "@/util/naming.ts";

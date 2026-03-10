@@ -7,10 +7,7 @@ import { Table } from "@cliffy/table";
 import { bold } from "@/lib/cli.ts";
 import { checkArgs } from "@/lib/args.ts";
 import { createOutput } from "@/lib/output.ts";
-import {
-  findRouterApp,
-  listWorkloadAppsOnNetwork,
-} from "@/util/discovery.ts";
+import { findRouterApp, listWorkloadAppsOnNetwork } from "@/util/discovery.ts";
 import { initSession } from "@/util/session.ts";
 import type { FlyAppStatus } from "@/schemas/fly.ts";
 

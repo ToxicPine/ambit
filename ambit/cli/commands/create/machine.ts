@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { randomId } from "@/lib/cli.ts";
-import { type Output } from "@/lib/output.ts";
+import type { Output } from "@/lib/output.ts";
 import { Result } from "@/lib/result.ts";
 import { extractSubnet } from "@/util/fly-transforms.ts";
 import {
@@ -201,7 +201,9 @@ export const createTransition = async (
         );
         if (!vr.ok) {
           ctx.out.warn(
-            `Could Not Validate autoApprover Patch: ${vr.error ?? `HTTP ${vr.status}`}`,
+            `Could Not Validate autoApprover Patch: ${
+              vr.error ?? `HTTP ${vr.status}`
+            }`,
           );
         } else {
           const sr = await ctx.tailscale.acl.setPolicy(policy);

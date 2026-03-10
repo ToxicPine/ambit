@@ -7,7 +7,7 @@ import {
   SECRET_AMBIT_OUTBOUND_PROXY,
   SOCKS_PROXY_PORT,
 } from "@/util/constants.ts";
-import { type Output } from "@/lib/output.ts";
+import type { Output } from "@/lib/output.ts";
 import { Result } from "@/lib/result.ts";
 import {
   FlyDeployError,

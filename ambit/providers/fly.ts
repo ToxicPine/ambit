@@ -115,11 +115,18 @@ export interface FlyProvider {
     destroy(app: string, machineId: string): Promise<void>;
   };
   secrets: {
+    list(app: string): Promise<Array<{ name: string; digest: string }>>;
     set(
       app: string,
       secrets: Record<string, string>,
       opts?: { stage?: boolean },
     ): Promise<void>;
+    unset(
+      app: string,
+      keys: string[],
+      opts?: { stage?: boolean },
+    ): Promise<void>;
+    deploy(app: string): Promise<void>;
   };
   ips: {
     list(app: string): Promise<FlyIp[]>;
@@ -432,6 +439,15 @@ export const createFlyProvider = (): FlyProvider => {
     },
 
     secrets: {
+      async list(
+        app: string,
+      ): Promise<Array<{ name: string; digest: string }>> {
+        const result = await runJson<Array<{ name: string; digest: string }>>(
+          ["fly", "secrets", "list", "-a", app, "--json"],
+        );
+        return result.unwrapOr([]);
+      },
+
       async set(
         app: string,
         secrets: Record<string, string>,
@@ -453,6 +469,40 @@ export const createFlyProvider = (): FlyProvider => {
 
         if (!result.ok) {
           return die("Failed to Set Secrets");
+        }
+      },
+
+      async unset(
+        app: string,
+        keys: string[],
+        opts?: { stage?: boolean },
+      ): Promise<void> {
+        if (keys.length === 0) return;
+
+        const args = ["fly", "secrets", "unset", ...keys, "-a", app];
+
+        if (opts?.stage) {
+          args.push("--stage");
+        }
+
+        const result = await runCommand(args);
+
+        if (!result.ok) {
+          return die("Failed to Unset Secrets");
+        }
+      },
+
+      async deploy(app: string): Promise<void> {
+        const result = await runCommand([
+          "fly",
+          "secrets",
+          "deploy",
+          "-a",
+          app,
+        ]);
+
+        if (!result.ok) {
+          return die("Failed to Deploy Secrets");
         }
       },
     },

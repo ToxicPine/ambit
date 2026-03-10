@@ -2,8 +2,7 @@
 // Fly Transforms — Pure Data Transformations
 // =============================================================================
 
-import type { FlyMachine } from "@/schemas/fly.ts";
-import { type FlyMachineGuestSchema } from "@/schemas/fly.ts";
+import type { FlyMachine, FlyMachineGuestSchema } from "@/schemas/fly.ts";
 import type { z } from "zod";
 
 // =============================================================================

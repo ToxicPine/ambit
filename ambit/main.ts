@@ -12,6 +12,8 @@
 //   deploy     Deploy an app safely on a custom private network
 //   share      Grant a group access to a network via Tailscale ACL rules
 //   status     Show router status, network, and tailnet info
+//   secrets    Manage secrets for workload apps
+//   logs       Stream logs for a workload app
 //   destroy    Destroy a network (router) or a workload app
 //   doctor     Check that Tailscale and the router are working correctly
 //
@@ -37,6 +39,8 @@ import "./cli/commands/list/index.ts";
 import "./cli/commands/status/index.ts";
 import "./cli/commands/destroy/index.ts";
 import "./cli/commands/doctor.ts";
+import "./cli/commands/secrets.ts";
+import "./cli/commands/logs.ts";
 
 // =============================================================================
 // Main

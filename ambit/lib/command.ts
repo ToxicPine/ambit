@@ -3,6 +3,8 @@
 // =============================================================================
 
 import { spawn } from "node:child_process";
+import { createInterface } from "node:readline";
+import process from "node:process";
 import { Result } from "@/lib/result.ts";
 
 // =============================================================================
@@ -114,3 +116,52 @@ export const runJson = <T>(
   args: string[],
   options?: RunOptions,
 ): Promise<Result<T>> => runCommand(args, options).then((r) => r.json<T>());
+
+// =============================================================================
+// Stream Command
+// =============================================================================
+
+export interface StreamHandle {
+  lines: AsyncIterable<string>;
+  done: Promise<CmdResult>;
+}
+
+/**
+ * Spawn a command and stream stdout line-by-line via an async iterable.
+ * Use `done` to check the exit code after the stream ends.
+ */
+export const streamCommand = (
+  args: string[],
+  options?: Omit<RunOptions, "interactive">,
+): StreamHandle => {
+  const [cmd, ...cmdArgs] = args;
+
+  const child = spawn(cmd, cmdArgs, {
+    cwd: options?.cwd,
+    env: options?.env ? { ...process.env, ...options.env } : undefined,
+    stdio: [
+      options?.stdin === "inherit" ? "inherit" : "ignore",
+      "pipe",
+      "pipe",
+    ],
+  });
+
+  child.stdout!.setEncoding("utf8");
+  child.stderr!.setEncoding("utf8");
+
+  const rl = createInterface({ input: child.stdout! });
+
+  const stderr: string[] = [];
+  child.stderr!.on("data", (chunk: string) => stderr.push(chunk));
+
+  const done = new Promise<CmdResult>((resolve) => {
+    child.on("error", (error) => {
+      resolve(new CmdResult(-1, "", error.message));
+    });
+    child.on("close", (code) => {
+      resolve(new CmdResult(code ?? 1, "", stderr.join("")));
+    });
+  });
+
+  return { lines: rl, done };
+};

@@ -44,7 +44,7 @@ export type TemplateFetchResult = Result<
 const fail = (message: string): TemplateFetchResult => Result.err(message);
 
 /** Format a template reference for display. */
-const formatRef = (ref: TemplateRef): string => {
+const _formatRef = (ref: TemplateRef): string => {
   const base = ref.path === "."
     ? `${ref.owner}/${ref.repo}`
     : `${ref.owner}/${ref.repo}/${ref.path}`;

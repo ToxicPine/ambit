@@ -16,6 +16,7 @@ import type { FlyProvider } from "@/providers/fly.ts";
 export const resolveOrg = async (
   fly: FlyProvider,
   args: { org?: string; json?: boolean },
+  // deno-lint-ignore no-explicit-any
   out: Output<any>,
 ): Promise<string> => {
   if (args.org) return args.org;

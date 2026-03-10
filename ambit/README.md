@@ -211,6 +211,61 @@ Shows detailed status for a specific app: machines, Flycast IPs, and the backing
 | `--org <org>`     | Fly.io organization slug       |
 | `--json`          | Machine-readable JSON output   |
 
+### `ambit secrets list|set|unset|deploy <app>.<network>`
+
+Manage secrets for workload apps. Secrets are encrypted environment variables provided to the app at runtime.
+
+#### `ambit secrets list <app>.<network>`
+
+Lists secret names and digests (not values) for an app.
+
+#### `ambit secrets set <app>.<network> KEY=VALUE ...`
+
+Sets one or more secrets. Positional `KEY=VALUE` pairs and `--env` can be combined — positional args take precedence.
+
+| Flag              | Description                                  |
+| ----------------- | -------------------------------------------- |
+| `--env <file>`    | Load secrets from an env file                |
+| `--stage`         | Stage secrets without deploying              |
+| `--org <org>`     | Fly.io organization slug                     |
+| `--json`          | Machine-readable JSON output                 |
+
+#### `ambit secrets unset <app>.<network> KEY ...`
+
+Removes one or more secrets by name.
+
+| Flag              | Description                                  |
+| ----------------- | -------------------------------------------- |
+| `--stage`         | Stage removal without deploying              |
+| `--org <org>`     | Fly.io organization slug                     |
+| `--json`          | Machine-readable JSON output                 |
+
+#### `ambit secrets deploy <app>.<network>`
+
+Deploys staged secrets (from `set --stage` or `unset --stage`).
+
+| Flag              | Description                                  |
+| ----------------- | -------------------------------------------- |
+| `--org <org>`     | Fly.io organization slug                     |
+| `--json`          | Machine-readable JSON output                 |
+
+### `ambit logs <app>.<network>`
+
+Streams logs for a workload app. By default, logs are streamed continuously. Use `--no-tail` to fetch only buffered logs. Pipe through `less` for scrollable output:
+
+```bash
+npx @cardelli/ambit logs my-app.lab | less +F -R          # stream with scroll (Ctrl+C to scroll, F to resume)
+npx @cardelli/ambit logs my-app.lab --no-tail | less -R   # scroll buffered logs
+```
+
+| Flag                 | Description                                  |
+| -------------------- | -------------------------------------------- |
+| `-r`, `--region <r>` | Filter by region                             |
+| `--machine <id>`     | Filter by machine ID                         |
+| `-n`, `--no-tail`    | Only fetch buffered logs (no streaming)      |
+| `--org <org>`        | Fly.io organization slug                     |
+| `--json`             | JSON output                                  |
+
 ### `ambit destroy network <name>`
 
 Tears down a network: destroys the router, cleans up DNS, removes the Tailscale device, and automatically removes the router's tag from your Tailscale ACL policy (tagOwners and autoApprovers). If there are workload apps still on the network, ambit warns you before proceeding.

@@ -281,7 +281,7 @@ const stageDeploy = async (
 
 const stageSummary = async (
   out: Output<CreateResult>,
-  fly: FlyProvider,
+  _fly: FlyProvider,
   tailscale: TailscaleProvider,
   ctx: CreateCtx,
   opts: { network: string; tag: string; shouldApprove: boolean },
