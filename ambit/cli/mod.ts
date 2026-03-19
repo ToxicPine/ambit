@@ -49,6 +49,7 @@ ${bold("USAGE")}
   ambit <command> [options]
 
 ${bold("COMMANDS")}
+  auth       Manage Fly.io and Tailscale authentication
   create     Create a Tailscale subnet router on a Fly.io custom network
   deploy     Deploy an app safely on a custom private network
   share      Grant a Tailscale group access to a network via ACL rules

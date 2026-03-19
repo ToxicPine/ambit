@@ -1,5 +1,5 @@
 // =============================================================================
-// Credential Store - Persistent Tailscale API Key Storage
+// Credential Store - Persistent Tailscale & Fly.io Token Storage
 // =============================================================================
 
 import { z } from "zod";
@@ -9,14 +9,15 @@ import {
   fileExists,
   getConfigDir,
 } from "@/lib/cli.ts";
-import { ENV_TAILSCALE_API_KEY } from "@/util/constants.ts";
+import { ENV_FLY_API_TOKEN, ENV_TAILSCALE_API_KEY } from "@/util/constants.ts";
 
 // =============================================================================
 // Schema
 // =============================================================================
 
 const CredentialsSchema = z.object({
-  apiKey: z.string(),
+  apiKey: z.string().optional(),
+  flyToken: z.string().optional(),
 });
 
 // =============================================================================
@@ -26,6 +27,9 @@ const CredentialsSchema = z.object({
 export interface CredentialStore {
   getTailscaleApiKey(): Promise<string | null>;
   setTailscaleApiKey(key: string): Promise<void>;
+  getFlyToken(): Promise<string | null>;
+  setFlyToken(token: string): Promise<void>;
+  clear(): Promise<void>;
 }
 
 // =============================================================================
@@ -34,30 +38,60 @@ export interface CredentialStore {
 
 const getCredentialsPath = (): string => `${getConfigDir()}/credentials.json`;
 
+const readCredentials = async (): Promise<
+  { apiKey?: string; flyToken?: string }
+> => {
+  const path = getCredentialsPath();
+  if (!(await fileExists(path))) return {};
+
+  try {
+    const content = await Deno.readTextFile(path);
+    const result = CredentialsSchema.safeParse(JSON.parse(content));
+    return result.success ? result.data : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeCredentials = async (
+  data: { apiKey?: string; flyToken?: string },
+): Promise<void> => {
+  await ensureConfigDir();
+  const path = getCredentialsPath();
+  await Deno.writeTextFile(path, JSON.stringify(data, null, 2) + "\n");
+};
+
 export const createConfigCredentialStore = (): CredentialStore => {
   return {
     async getTailscaleApiKey(): Promise<string | null> {
-      const path = getCredentialsPath();
-      if (!(await fileExists(path))) {
-        return null;
-      }
-
-      try {
-        const content = await Deno.readTextFile(path);
-        const result = CredentialsSchema.safeParse(JSON.parse(content));
-        return result.success ? result.data.apiKey : null;
-      } catch {
-        return null;
-      }
+      const data = await readCredentials();
+      return data.apiKey ?? null;
     },
 
     async setTailscaleApiKey(key: string): Promise<void> {
-      await ensureConfigDir();
+      const data = await readCredentials();
+      data.apiKey = key;
+      await writeCredentials(data);
+    },
+
+    async getFlyToken(): Promise<string | null> {
+      const data = await readCredentials();
+      return data.flyToken ?? null;
+    },
+
+    async setFlyToken(token: string): Promise<void> {
+      const data = await readCredentials();
+      data.flyToken = token;
+      await writeCredentials(data);
+    },
+
+    async clear(): Promise<void> {
       const path = getCredentialsPath();
-      await Deno.writeTextFile(
-        path,
-        JSON.stringify({ apiKey: key }, null, 2) + "\n",
-      );
+      try {
+        await Deno.remove(path);
+      } catch {
+        // File may not exist
+      }
     },
   };
 };
@@ -80,6 +114,21 @@ export const getCredentialStore = (): CredentialStore => {
     async setTailscaleApiKey(key: string): Promise<void> {
       await fileStore.setTailscaleApiKey(key);
     },
+
+    async getFlyToken(): Promise<string | null> {
+      const envToken = Deno.env.get(ENV_FLY_API_TOKEN);
+      if (envToken) return envToken;
+
+      return await fileStore.getFlyToken();
+    },
+
+    async setFlyToken(token: string): Promise<void> {
+      await fileStore.setFlyToken(token);
+    },
+
+    async clear(): Promise<void> {
+      await fileStore.clear();
+    },
   };
 };
 
@@ -97,7 +146,7 @@ export const getCredentialStore = (): CredentialStore => {
  */
 export const checkDependencies = async (
   out: { err(msg: string): unknown; die(msg: string): never },
-): Promise<{ tailscaleKey: string }> => {
+): Promise<{ tailscaleKey: string; flyToken: string | null }> => {
   const errors: string[] = [];
 
   if (!(await commandExists("fly"))) {
@@ -106,10 +155,37 @@ export const checkDependencies = async (
     );
   }
 
-  const key = await getCredentialStore().getTailscaleApiKey();
+  const credentials = getCredentialStore();
+
+  const key = await credentials.getTailscaleApiKey();
   if (!key) {
     errors.push(
-      "Tailscale API Key Required. Run 'ambit create' or set TAILSCALE_API_KEY",
+      "Tailscale API Key Required. Run 'ambit auth login' or set TAILSCALE_API_KEY",
+    );
+  }
+
+  let flyToken = await credentials.getFlyToken();
+  if (!flyToken) {
+    // Adopt token from flyctl's own config if available
+    const home = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
+    const configPath = `${home}/.fly/config.yml`;
+    if (await fileExists(configPath)) {
+      try {
+        const content = await Deno.readTextFile(configPath);
+        const match = content.match(/access_token:\s*(.+)/);
+        if (match?.[1]) {
+          const adopted = match[1].trim();
+          await credentials.setFlyToken(adopted);
+          flyToken = adopted;
+        }
+      } catch {
+        // Ignore read errors
+      }
+    }
+  }
+  if (!flyToken) {
+    errors.push(
+      "Fly.io Token Required. Run 'ambit auth login' or set FLY_API_TOKEN",
     );
   }
 
@@ -121,5 +197,5 @@ export const checkDependencies = async (
     return out.die("Missing Prerequisites");
   }
 
-  return { tailscaleKey: key! };
+  return { tailscaleKey: key!, flyToken };
 };

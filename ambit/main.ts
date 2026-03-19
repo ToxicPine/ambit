@@ -32,6 +32,7 @@
 import { runCli } from "@/cli/mod.ts";
 import { Spinner, statusErr } from "@/lib/cli.ts";
 
+import "./cli/commands/auth.ts";
 import "./cli/commands/create/index.ts";
 import "./cli/commands/deploy/index.ts";
 import "./cli/commands/share.ts";

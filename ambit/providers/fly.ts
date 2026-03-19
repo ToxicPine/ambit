@@ -2,7 +2,7 @@
 // Fly.io Provider - Wraps flyctl CLI
 // =============================================================================
 
-import { runCommand, runJson } from "@/lib/command.ts";
+import { runCommand, runJson, type RunOptions } from "@/lib/command.ts";
 import { Result } from "@/lib/result.ts";
 import { commandExists, die } from "@/lib/cli.ts";
 import { dirname, resolve } from "@std/path";
@@ -151,7 +151,25 @@ export interface FlyProvider {
 // Create Fly Provider
 // =============================================================================
 
-export const createFlyProvider = (): FlyProvider => {
+export const createFlyProvider = (token?: string): FlyProvider => {
+  const envOverride = token ? { FLY_API_TOKEN: token } : undefined;
+
+  const run = (args: string[], opts?: RunOptions) =>
+    runCommand(
+      args,
+      envOverride
+        ? { ...opts, env: { ...opts?.env, ...envOverride } }
+        : opts,
+    );
+
+  const runJ = <T>(args: string[], opts?: RunOptions) =>
+    runJson<T>(
+      args,
+      envOverride
+        ? { ...opts, env: { ...opts?.env, ...envOverride } }
+        : opts,
+    );
+
   const provider: FlyProvider = {
     auth: {
       async ensureInstalled(): Promise<void> {
@@ -165,7 +183,7 @@ export const createFlyProvider = (): FlyProvider => {
       async login(opts?: { interactive?: boolean }): Promise<string> {
         const interactive = opts?.interactive ?? true;
 
-        const result = await runCommand(["fly", "auth", "whoami", "--json"]);
+        const result = await run(["fly", "auth", "whoami", "--json"]);
 
         if (result.ok) {
           const auth = result.json<{ email: string }>();
@@ -179,18 +197,18 @@ export const createFlyProvider = (): FlyProvider => {
 
         if (!interactive) {
           return die(
-            "Not Authenticated with Fly.io. Run 'fly auth login' First",
+            "Not Authenticated with Fly.io. Run 'ambit auth login' First",
           );
         }
 
-        const loginResult = await runCommand(["fly", "auth", "login"], {
+        const loginResult = await run(["fly", "auth", "login"], {
           interactive: true,
         });
         if (!loginResult.ok) {
           return die("Fly.io Authentication Failed");
         }
 
-        const checkResult = await runCommand([
+        const checkResult = await run([
           "fly",
           "auth",
           "whoami",
@@ -211,12 +229,14 @@ export const createFlyProvider = (): FlyProvider => {
       },
 
       async getToken(): Promise<string> {
+        if (token) return token;
+
         const home = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
         const configPath = `${home}/.fly/config.yml`;
 
         if (!(await fileExists(configPath))) {
           return die(
-            "Fly Config Not Found at ~/.fly/config.yml. Run 'fly auth login' First",
+            "Fly Config Not Found at ~/.fly/config.yml. Run 'ambit auth login' First",
           );
         }
 
@@ -224,7 +244,7 @@ export const createFlyProvider = (): FlyProvider => {
         const match = content.match(/access_token:\s*(.+)/);
         if (!match || !match[1]) {
           return die(
-            "No Access Token Found in ~/.fly/config.yml. Run 'fly auth login' First",
+            "No Access Token Found in ~/.fly/config.yml. Run 'ambit auth login' First",
           );
         }
 
@@ -234,7 +254,7 @@ export const createFlyProvider = (): FlyProvider => {
 
     orgs: {
       async list(): Promise<Record<string, string>> {
-        const result = await runJson<Record<string, string>>(
+        const result = await runJ<Record<string, string>>(
           ["fly", "orgs", "list", "--json"],
         );
         if (!result.ok) {
@@ -257,7 +277,7 @@ export const createFlyProvider = (): FlyProvider => {
           args.push("--org", org);
         }
 
-        const result = await runCommand(args);
+        const result = await run(args);
         return result.json<FlyApp[]>().flatMap((data) => {
           const parsed = FlyAppsListSchema.safeParse(data);
           return parsed.success
@@ -267,7 +287,7 @@ export const createFlyProvider = (): FlyProvider => {
       },
 
       async listWithNetwork(org: string): Promise<FlyAppInfo[]> {
-        const token = await provider.auth.getToken();
+        const apiToken = await provider.auth.getToken();
 
         const response = await fetch(
           `https://api.machines.dev/v1/apps?org_slug=${
@@ -275,7 +295,7 @@ export const createFlyProvider = (): FlyProvider => {
           }`,
           {
             headers: {
-              Authorization: `Bearer ${token}`,
+              Authorization: `Bearer ${apiToken}`,
               "Content-Type": "application/json",
             },
           },
@@ -310,7 +330,7 @@ export const createFlyProvider = (): FlyProvider => {
           args.push("--network", opts.network);
         }
 
-        const result = await runCommand(args);
+        const result = await run(args);
 
         if (!result.ok) {
           return die(`Failed to Create App '${appName}'`);
@@ -318,7 +338,7 @@ export const createFlyProvider = (): FlyProvider => {
       },
 
       async delete(name: string): Promise<void> {
-        const result = await runCommand([
+        const result = await run([
           "fly",
           "apps",
           "destroy",
@@ -332,7 +352,7 @@ export const createFlyProvider = (): FlyProvider => {
       },
 
       async exists(name: string): Promise<boolean> {
-        const result = await runCommand([
+        const result = await run([
           "fly",
           "status",
           "-a",
@@ -349,7 +369,7 @@ export const createFlyProvider = (): FlyProvider => {
       },
 
       async getConfig(name: string): Promise<Record<string, unknown> | null> {
-        const result = await runCommand(["fly", "config", "show", "-a", name]);
+        const result = await run(["fly", "config", "show", "-a", name]);
         return result.json<Record<string, unknown>>().match({
           ok: (v) => v,
           err: () => null,
@@ -359,7 +379,7 @@ export const createFlyProvider = (): FlyProvider => {
 
     machines: {
       async list(app: string): Promise<FlyMachine[]> {
-        const result = await runJson<FlyMachine[]>(
+        const result = await runJ<FlyMachine[]>(
           ["fly", "machines", "list", "-a", app, "--json"],
         );
 
@@ -403,7 +423,7 @@ export const createFlyProvider = (): FlyProvider => {
           args.push("--region", config.region);
         }
 
-        const result = await runCommand(args);
+        const result = await run(args);
 
         if (!result.ok) {
           return die(result.stderr || "Unknown Error");
@@ -422,7 +442,7 @@ export const createFlyProvider = (): FlyProvider => {
 
       async destroy(app: string, machineId: string): Promise<void> {
         const shortId = machineId.slice(0, 8);
-        const result = await runCommand([
+        const result = await run([
           "fly",
           "machines",
           "destroy",
@@ -442,7 +462,7 @@ export const createFlyProvider = (): FlyProvider => {
       async list(
         app: string,
       ): Promise<Array<{ name: string; digest: string }>> {
-        const result = await runJson<Array<{ name: string; digest: string }>>(
+        const result = await runJ<Array<{ name: string; digest: string }>>(
           ["fly", "secrets", "list", "-a", app, "--json"],
         );
         return result.unwrapOr([]);
@@ -465,7 +485,7 @@ export const createFlyProvider = (): FlyProvider => {
           args.push("--stage");
         }
 
-        const result = await runCommand(args);
+        const result = await run(args);
 
         if (!result.ok) {
           return die("Failed to Set Secrets");
@@ -485,7 +505,7 @@ export const createFlyProvider = (): FlyProvider => {
           args.push("--stage");
         }
 
-        const result = await runCommand(args);
+        const result = await run(args);
 
         if (!result.ok) {
           return die("Failed to Unset Secrets");
@@ -493,7 +513,7 @@ export const createFlyProvider = (): FlyProvider => {
       },
 
       async deploy(app: string): Promise<void> {
-        const result = await runCommand([
+        const result = await run([
           "fly",
           "secrets",
           "deploy",
@@ -509,7 +529,7 @@ export const createFlyProvider = (): FlyProvider => {
 
     ips: {
       async list(app: string): Promise<FlyIp[]> {
-        const result = await runCommand([
+        const result = await run([
           "fly",
           "ips",
           "list",
@@ -526,7 +546,7 @@ export const createFlyProvider = (): FlyProvider => {
       },
 
       async release(app: string, address: string): Promise<void> {
-        const result = await runCommand([
+        const result = await run([
           "fly",
           "ips",
           "release",
@@ -540,7 +560,7 @@ export const createFlyProvider = (): FlyProvider => {
       },
 
       async allocateFlycast(app: string, network: string): Promise<void> {
-        const result = await runCommand([
+        const result = await run([
           "fly",
           "ips",
           "allocate-v6",
@@ -558,7 +578,7 @@ export const createFlyProvider = (): FlyProvider => {
 
     certs: {
       async list(app: string): Promise<string[]> {
-        const result = await runCommand([
+        const result = await run([
           "fly",
           "certs",
           "list",
@@ -574,7 +594,7 @@ export const createFlyProvider = (): FlyProvider => {
       },
 
       async remove(app: string, hostname: string): Promise<void> {
-        await runCommand([
+        await run([
           "fly",
           "certs",
           "remove",
@@ -606,7 +626,7 @@ export const createFlyProvider = (): FlyProvider => {
           args.push("--primary-region", config.region);
         }
 
-        const result = await runCommand(args);
+        const result = await run(args);
 
         if (!result.ok) {
           throw new FlyDeployError(app, result.stderr);
@@ -637,7 +657,7 @@ export const createFlyProvider = (): FlyProvider => {
           args.push("--primary-region", options.region);
         }
 
-        const result = await runCommand(args);
+        const result = await run(args);
 
         if (!result.ok) {
           throw new FlyDeployError(flyAppName, result.stderr);

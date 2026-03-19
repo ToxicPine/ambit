@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { parseArgs } from "@std/cli";
-import { bold, readSecret } from "@/lib/cli.ts";
+import { bold } from "@/lib/cli.ts";
 import { checkArgs } from "@/lib/args.ts";
 import { createOutput, type Output } from "@/lib/output.ts";
 import { type Machine, runMachine } from "@/lib/machine.ts";
@@ -44,7 +44,8 @@ const stageFlyConfig = async (
 ): Promise<{ fly: FlyProvider; org: string; region: string }> => {
   out.header("Step 1: Fly.io Configuration").blank();
 
-  const fly = createFlyProvider();
+  const flyToken = await getCredentialStore().getFlyToken();
+  const fly = createFlyProvider(flyToken ?? undefined);
   await fly.auth.ensureInstalled();
 
   const email = await fly.auth.login({ interactive: !opts.json });
@@ -81,7 +82,6 @@ const stageTailscaleConfig = async (
   opts: {
     json: boolean;
     manual: boolean;
-    apiKey?: string;
     tag: string;
     network: string;
   },
@@ -89,25 +89,12 @@ const stageTailscaleConfig = async (
   out.header("Step 2: Tailscale Configuration").blank();
 
   const credentials = getCredentialStore();
-  let apiKey = opts.apiKey || (await credentials.getTailscaleApiKey());
+  const apiKey = await credentials.getTailscaleApiKey();
 
   if (!apiKey) {
-    if (opts.json) {
-      return out.die("--api-key Is Required in JSON Mode");
-    }
-
-    out.dim(
-      "Ambit Needs an API Access Token (Not an Auth Key) to Manage Your Tailnet.",
-    )
-      .dim("Create One at:").link(
-        "  https://login.tailscale.com/admin/settings/keys",
-      )
-      .blank();
-
-    apiKey = await readSecret("API access token (tskey-api-...): ");
-    if (!apiKey) {
-      return out.die("Tailscale API Access Token Required");
-    }
+    return out.die(
+      "Tailscale API Key Required. Run 'ambit auth login'",
+    );
   }
 
   if (!apiKey.startsWith(TAILSCALE_API_KEY_PREFIX)) {
@@ -125,8 +112,6 @@ const stageTailscaleConfig = async (
     return out.die("Failed to Validate Tailscale API Access Token");
   }
   validateSpinner.success("API Access Token Validated");
-
-  await credentials.setTailscaleApiKey(apiKey);
 
   const tagOwnerSpinner = out.spinner(`Checking tagOwners for ${opts.tag}`);
   let policy = await tailscale.acl.getPolicy();
@@ -391,7 +376,7 @@ const stageSummary = async (
 
 const create = async (argv: string[]): Promise<void> => {
   const opts = {
-    string: ["org", "region", "api-key", "tag"],
+    string: ["org", "region", "tag"],
     boolean: ["help", "yes", "json", "no-auto-approve", "manual"],
     alias: { y: "yes" },
   } as const;
@@ -408,7 +393,6 @@ ${bold("USAGE")}
 ${bold("OPTIONS")}
   --org <org>         Fly.io organization slug
   --region <region>   Fly.io region (default: iad)
-  --api-key <key>     Tailscale API access token (tskey-api-...)
   --tag <tag>         Tailscale ACL tag for the router (default: tag:ambit-<network>)
   --manual            Skip automatic Tailscale ACL configuration (tagOwners + autoApprovers)
   --no-auto-approve   Skip waiting for router and approving routes
@@ -464,7 +448,6 @@ ${bold("EXAMPLES")}
   const tailscale = await stageTailscaleConfig(out, {
     json: args.json,
     manual,
-    apiKey: args["api-key"],
     tag,
     network,
   });

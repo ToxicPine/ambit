@@ -65,15 +65,41 @@ Open `http://my-crazy-site.lab`. It works for you and nobody else.
 
 ## Commands
 
+### `ambit auth login`
+
+Authenticates with both Fly.io and Tailscale. Only prompts for credentials that are missing or invalid — existing valid tokens are preserved. Run this before using any other command.
+
+| Flag                    | Description                                    |
+| ----------------------- | ---------------------------------------------- |
+| `--ts-api-key <key>`    | Tailscale API access token (tskey-api-...)      |
+| `--fly-api-key <token>` | Fly.io API token                                |
+| `--json`                | Machine-readable JSON output                    |
+
+### `ambit auth whoami`
+
+Shows the current authentication status for both Fly.io and Tailscale.
+
+| Flag     | Description                 |
+| -------- | --------------------------- |
+| `--json` | Machine-readable JSON output |
+
+### `ambit auth logout`
+
+Clears all stored credentials and logs out of Fly.io.
+
+| Flag          | Description              |
+| ------------- | ------------------------ |
+| `-y`, `--yes` | Skip confirmation prompt |
+| `--json`      | Machine-readable JSON    |
+
 ### `ambit create <network>`
 
-This is the first command you run, it sets up your private network: a named slice of the cloud that only your devices can reach. Under the hood it handles Fly.io and Tailscale authentication, deploys the router, sets up DNS, configures your local machine to accept the new routes, and automatically adds the router's tag to your Tailscale ACL policy.
+Creates a private network. Deploys a Tailscale subnet router on a Fly.io custom network, sets up DNS, configures your local machine to accept the new routes, and automatically adds the router's tag to your Tailscale ACL policy. Requires `ambit auth login` first.
 
 | Flag                | Description                                                                 |
 | ------------------- | --------------------------------------------------------------------------- |
 | `--org <org>`       | Fly.io organization slug                                                    |
 | `--region <region>` | Fly.io region (default: `iad`)                                              |
-| `--api-key <key>`   | Tailscale API access token (tskey-api-...)                                  |
 | `--tag <tag>`       | Tailscale ACL tag for the router (default: `tag:ambit-<network>`)           |
 | `--manual`          | Skip automatic Tailscale ACL configuration (tagOwners + autoApprovers)      |
 | `--no-auto-approve` | Skip waiting for router and approving routes                                |

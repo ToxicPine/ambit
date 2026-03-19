@@ -27,6 +27,8 @@ export const TAILSCALE_API_KEY_PREFIX = "tskey-api-";
 
 export const ENV_TAILSCALE_API_KEY = "TAILSCALE_API_KEY";
 
+export const ENV_FLY_API_TOKEN = "FLY_API_TOKEN";
+
 // =============================================================================
 // External URLs
 // =============================================================================
