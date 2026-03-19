@@ -121,14 +121,22 @@ ${bold("EXAMPLES")}
     out.ok(`Authenticated as ${email}`);
     flyEmail = email;
   } else {
+    // Adopt from ~/.fly/config.yml if it has a different token than the store
     const storedToken = await credentials.getFlyToken();
-    const storedEmail = storedToken
-      ? await tryFlyWhoami(storedToken)
-      : null;
+    const configToken = await readFlyConfigToken();
+    const bestToken = configToken && configToken !== storedToken
+      ? configToken
+      : storedToken;
 
-    if (storedEmail) {
-      out.ok(`Already Authenticated as ${storedEmail}`);
-      flyEmail = storedEmail;
+    if (bestToken && bestToken !== storedToken) {
+      await credentials.setFlyToken(bestToken);
+    }
+
+    const bestEmail = bestToken ? await tryFlyWhoami(bestToken) : null;
+
+    if (bestEmail) {
+      out.ok(`Already Authenticated as ${bestEmail}`);
+      flyEmail = bestEmail;
     } else {
       if (args.json) {
         return out.die(

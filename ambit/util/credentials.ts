@@ -164,25 +164,7 @@ export const checkDependencies = async (
     );
   }
 
-  let flyToken = await credentials.getFlyToken();
-  if (!flyToken) {
-    // Adopt token from flyctl's own config if available
-    const home = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
-    const configPath = `${home}/.fly/config.yml`;
-    if (await fileExists(configPath)) {
-      try {
-        const content = await Deno.readTextFile(configPath);
-        const match = content.match(/access_token:\s*(.+)/);
-        if (match?.[1]) {
-          const adopted = match[1].trim();
-          await credentials.setFlyToken(adopted);
-          flyToken = adopted;
-        }
-      } catch {
-        // Ignore read errors
-      }
-    }
-  }
+  const flyToken = await credentials.getFlyToken();
   if (!flyToken) {
     errors.push(
       "Fly.io Token Required. Run 'ambit auth login' or set FLY_API_TOKEN",
