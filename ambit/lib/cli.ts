@@ -69,6 +69,11 @@ export class Spinner {
     this.message = message;
     this.frameIndex = 0;
 
+    if (!Deno.stdout.isTerminal()) {
+      console.log(`  ${this.message}`);
+      return;
+    }
+
     const encoder = new TextEncoder();
     const write = (text: string) => Deno.stdout.writeSync(encoder.encode(text));
 
