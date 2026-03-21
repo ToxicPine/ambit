@@ -18,6 +18,7 @@ export const checkArgs = (
     string?: readonly string[] | string[];
     boolean?: readonly string[] | string[];
     alias?: Record<string, string | string[]>;
+    collect?: readonly string[] | string[];
   },
   command: string,
   maxPositional = 0,
@@ -25,6 +26,7 @@ export const checkArgs = (
   const known = new Set<string>(["_"]);
   for (const k of opts.string ?? []) known.add(k);
   for (const k of opts.boolean ?? []) known.add(k);
+  for (const k of opts.collect ?? []) known.add(k);
   for (const [k, v] of Object.entries(opts.alias ?? {})) {
     known.add(k);
     for (const a of Array.isArray(v) ? v : [v]) known.add(a);

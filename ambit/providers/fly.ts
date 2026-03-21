@@ -82,6 +82,26 @@ export interface SafeDeployOptions {
   config?: string;
   region?: string;
   routerId?: string;
+  // VM sizing
+  vmSize?: string;
+  vmCpus?: number;
+  vmMemory?: string;
+  vmCpuKind?: string;
+  vmGpuKind?: string;
+  vmGpus?: number;
+  // Build options (ignored when image is set)
+  dockerfile?: string;
+  buildArg?: string[];
+  buildSecret?: string[];
+  buildTarget?: string;
+  localOnly?: boolean;
+  remoteOnly?: boolean;
+  // Deploy behavior
+  env?: string[];
+  strategy?: string;
+  detach?: boolean;
+  waitTimeout?: string;
+  volumeInitialSize?: number;
 }
 
 // =============================================================================
@@ -656,6 +676,31 @@ export const createFlyProvider = (token?: string): FlyProvider => {
         if (options.region) {
           args.push("--primary-region", options.region);
         }
+
+        // VM sizing
+        if (options.vmSize) args.push("--vm-size", options.vmSize);
+        if (options.vmCpus) args.push("--vm-cpus", String(options.vmCpus));
+        if (options.vmMemory) args.push("--vm-memory", options.vmMemory);
+        if (options.vmCpuKind) args.push("--vm-cpu-kind", options.vmCpuKind);
+        if (options.vmGpuKind) args.push("--vm-gpu-kind", options.vmGpuKind);
+        if (options.vmGpus) args.push("--vm-gpus", String(options.vmGpus));
+
+        // Build options (only meaningful when not using --image)
+        if (!options.image) {
+          if (options.dockerfile) args.push("--dockerfile", options.dockerfile);
+          if (options.buildTarget) args.push("--build-target", options.buildTarget);
+          if (options.localOnly) args.push("--local-only");
+          if (options.remoteOnly) args.push("--remote-only");
+          for (const arg of options.buildArg ?? []) args.push("--build-arg", arg);
+          for (const secret of options.buildSecret ?? []) args.push("--build-secret", secret);
+        }
+
+        // Deploy behavior
+        for (const e of options.env ?? []) args.push("--env", e);
+        if (options.strategy) args.push("--strategy", options.strategy);
+        if (options.detach) args.push("--detach");
+        if (options.waitTimeout) args.push("--wait-timeout", options.waitTimeout);
+        if (options.volumeInitialSize) args.push("--volume-initial-size", String(options.volumeInitialSize));
 
         const result = await run(args);
 

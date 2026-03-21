@@ -135,6 +135,26 @@ const stageDeploy = async (
     routerId: string;
     flyAppName: string;
     routerPrivateIp?: string;
+    // VM sizing
+    vmSize?: string;
+    vmCpus?: number;
+    vmMemory?: string;
+    vmCpuKind?: string;
+    vmGpuKind?: string;
+    vmGpus?: number;
+    // Build options
+    dockerfile?: string;
+    buildArg?: string[];
+    buildSecret?: string[];
+    buildTarget?: string;
+    localOnly?: boolean;
+    remoteOnly?: boolean;
+    // Deploy behavior
+    env?: string[];
+    strategy?: string;
+    detach?: boolean;
+    waitTimeout?: string;
+    volumeInitialSize?: number;
   },
 ): Promise<void> => {
   out.header("Step 4: Deploy").blank();
@@ -150,6 +170,26 @@ const stageDeploy = async (
       image: deployConfig.image,
       config: deployConfig.configPath,
       region: opts.region,
+      // VM sizing
+      vmSize: opts.vmSize,
+      vmCpus: opts.vmCpus,
+      vmMemory: opts.vmMemory,
+      vmCpuKind: opts.vmCpuKind,
+      vmGpuKind: opts.vmGpuKind,
+      vmGpus: opts.vmGpus,
+      // Build options
+      dockerfile: opts.dockerfile,
+      buildArg: opts.buildArg,
+      buildSecret: opts.buildSecret,
+      buildTarget: opts.buildTarget,
+      localOnly: opts.localOnly,
+      remoteOnly: opts.remoteOnly,
+      // Deploy behavior
+      env: opts.env,
+      strategy: opts.strategy,
+      detach: opts.detach,
+      waitTimeout: opts.waitTimeout,
+      volumeInitialSize: opts.volumeInitialSize,
     },
   };
 
@@ -231,10 +271,24 @@ const deploy = async (argv: string[]): Promise<void> => {
       "config",
       "main-port",
       "template",
+      // VM sizing
+      "vm-size",
+      "vm-cpus",
+      "vm-memory",
+      "vm-cpu-kind",
+      "vm-gpu-kind",
+      "vm-gpus",
+      // Build options
+      "dockerfile",
+      "build-target",
+      "strategy",
+      "wait-timeout",
+      "volume-initial-size",
     ],
-    boolean: ["help", "yes", "json"],
-    alias: { y: "yes" },
+    boolean: ["help", "yes", "json", "local-only", "remote-only", "detach"],
+    alias: { y: "yes", e: "env" },
     default: { "main-port": "80" },
+    collect: ["build-arg", "build-secret", "env"],
   } as const;
   const args = parseArgs(argv, opts);
   checkArgs(args, opts, "ambit deploy", 1);
@@ -283,6 +337,29 @@ ${bold("TEMPLATE MODE")}
     owner/repo/path@tag       Fetch a tagged release
     owner/repo/path@branch    Fetch a specific branch
     owner/repo/path@commit    Fetch a specific commit
+
+${bold("VM SIZING")}
+  --vm-size <size>       VM size preset (see "fly platform vm-sizes")
+  --vm-cpus <n>          Number of CPUs
+  --vm-memory <mb>       Memory in megabytes
+  --vm-cpu-kind <kind>   CPU kind: "shared" or "performance"
+  --vm-gpu-kind <model>  GPU model (a100-pcie-40gb, a100-sxm4-80gb, l40s, a10)
+  --vm-gpus <n>          Number of GPUs
+
+${bold("BUILD OPTIONS")} (config/template mode only)
+  --dockerfile <path>    Path to Dockerfile
+  --build-arg <K=V>      Build-time variable (repeatable)
+  --build-secret <K=V>   Build-time secret (repeatable)
+  --build-target <stage> Target build stage for multi-stage Dockerfiles
+  --local-only           Build locally using local Docker daemon
+  --remote-only          Build on remote builder (default)
+
+${bold("DEPLOY BEHAVIOR")}
+  -e, --env <K=V>        Environment variable (repeatable)
+  --strategy <name>      Deploy strategy: canary, rolling, bluegreen, immediate
+  --detach               Return immediately without monitoring
+  --wait-timeout <dur>   Time to wait for machines to become healthy (default: 5m0s)
+  --volume-initial-size <gb>  Initial volume size in GB on first deploy
 
 ${bold("SAFETY")}
   Always deploys with --no-public-ips and --flycast.
@@ -374,6 +451,28 @@ ${bold("EXAMPLES")}
     routerId,
     flyAppName,
     routerPrivateIp,
+    // VM sizing
+    vmSize: args["vm-size"],
+    vmCpus: args["vm-cpus"] ? Number(args["vm-cpus"]) : undefined,
+    vmMemory: args["vm-memory"],
+    vmCpuKind: args["vm-cpu-kind"],
+    vmGpuKind: args["vm-gpu-kind"],
+    vmGpus: args["vm-gpus"] ? Number(args["vm-gpus"]) : undefined,
+    // Build options
+    dockerfile: args.dockerfile,
+    buildArg: args["build-arg"] as string[] | undefined,
+    buildSecret: args["build-secret"] as string[] | undefined,
+    buildTarget: args["build-target"],
+    localOnly: args["local-only"],
+    remoteOnly: args["remote-only"],
+    // Deploy behavior
+    env: args.env as string[] | undefined,
+    strategy: args.strategy,
+    detach: args.detach,
+    waitTimeout: args["wait-timeout"],
+    volumeInitialSize: args["volume-initial-size"]
+      ? Number(args["volume-initial-size"])
+      : undefined,
   });
 };
 
