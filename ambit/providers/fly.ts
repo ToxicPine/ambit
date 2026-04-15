@@ -21,6 +21,7 @@ import {
 } from "@/schemas/fly.ts";
 import { fileExists } from "@/lib/cli.ts";
 import { getWorkloadAppName } from "@/util/naming.ts";
+import { readFlyConfigToken } from "@/util/fly-token.ts";
 import {
   extractErrorDetail,
   getSizeConfig,
@@ -251,24 +252,21 @@ export const createFlyProvider = (token?: string): FlyProvider => {
       async getToken(): Promise<string> {
         if (token) return token;
 
-        const home = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
-        const configPath = `${home}/.fly/config.yml`;
-
-        if (!(await fileExists(configPath))) {
-          return die(
-            "Fly Config Not Found at ~/.fly/config.yml. Run 'ambit auth login' First",
-          );
-        }
-
-        const content = await Deno.readTextFile(configPath);
-        const match = content.match(/access_token:\s*(.+)/);
-        if (!match || !match[1]) {
+        const configToken = await readFlyConfigToken();
+        if (!configToken) {
+          const home = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") ||
+            "";
+          const configPath = `${home}/.fly/config.yml`;
+          if (!(await fileExists(configPath))) {
+            return die(
+              "Fly Config Not Found at ~/.fly/config.yml. Run 'ambit auth login' First",
+            );
+          }
           return die(
             "No Access Token Found in ~/.fly/config.yml. Run 'ambit auth login' First",
           );
         }
-
-        return match[1].trim();
+        return configToken;
       },
     },
 

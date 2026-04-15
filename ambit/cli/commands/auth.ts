@@ -11,8 +11,8 @@ import { runCommand } from "@/lib/command.ts";
 import { createTailscaleProvider } from "@/providers/tailscale.ts";
 import { getCredentialStore } from "@/util/credentials.ts";
 import { TAILSCALE_API_KEY_PREFIX } from "@/util/constants.ts";
+import { readFlyConfigToken } from "@/util/fly-token.ts";
 import { FlyAuthSchema } from "@/schemas/fly.ts";
-import { fileExists } from "@/lib/cli.ts";
 
 // =============================================================================
 // Types
@@ -52,17 +52,6 @@ const tryFlyWhoami = async (
 
   const parsed = FlyAuthSchema.safeParse(auth.value);
   return parsed.success ? parsed.data.email : null;
-};
-
-const readFlyConfigToken = async (): Promise<string | null> => {
-  const home = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
-  const configPath = `${home}/.fly/config.yml`;
-
-  if (!(await fileExists(configPath))) return null;
-
-  const content = await Deno.readTextFile(configPath);
-  const match = content.match(/access_token:\s*(.+)/);
-  return match?.[1]?.trim() ?? null;
 };
 
 // =============================================================================
