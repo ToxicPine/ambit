@@ -309,7 +309,9 @@ ${bold("EXAMPLES")}
 
   out.blank();
   out.text(`  Fly.io:     ${flyEmail ?? "Not Authenticated"}`);
-  out.text(`  Tailscale:  ${tailscaleOk ? "API Key Configured" : "Not Configured"}`);
+  out.text(
+    `  Tailscale:  ${tailscaleOk ? "API Key Configured" : "Not Configured"}`,
+  );
   out.blank();
 
   out.done({ fly: flyEmail, tailscale: tailscaleOk });

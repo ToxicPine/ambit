@@ -178,17 +178,13 @@ export const createFlyProvider = (token?: string): FlyProvider => {
   const run = (args: string[], opts?: RunOptions) =>
     runCommand(
       args,
-      envOverride
-        ? { ...opts, env: { ...opts?.env, ...envOverride } }
-        : opts,
+      envOverride ? { ...opts, env: { ...opts?.env, ...envOverride } } : opts,
     );
 
   const runJ = <T>(args: string[], opts?: RunOptions) =>
     runJson<T>(
       args,
-      envOverride
-        ? { ...opts, env: { ...opts?.env, ...envOverride } }
-        : opts,
+      envOverride ? { ...opts, env: { ...opts?.env, ...envOverride } } : opts,
     );
 
   const provider: FlyProvider = {
@@ -686,19 +682,29 @@ export const createFlyProvider = (token?: string): FlyProvider => {
         // Build options (only meaningful when not using --image)
         if (!options.image) {
           if (options.dockerfile) args.push("--dockerfile", options.dockerfile);
-          if (options.buildTarget) args.push("--build-target", options.buildTarget);
+          if (options.buildTarget) {
+            args.push("--build-target", options.buildTarget);
+          }
           if (options.localOnly) args.push("--local-only");
           if (options.remoteOnly) args.push("--remote-only");
-          for (const arg of options.buildArg ?? []) args.push("--build-arg", arg);
-          for (const secret of options.buildSecret ?? []) args.push("--build-secret", secret);
+          for (const arg of options.buildArg ?? []) {
+            args.push("--build-arg", arg);
+          }
+          for (const secret of options.buildSecret ?? []) {
+            args.push("--build-secret", secret);
+          }
         }
 
         // Deploy behavior
         for (const e of options.env ?? []) args.push("--env", e);
         if (options.strategy) args.push("--strategy", options.strategy);
         if (options.detach) args.push("--detach");
-        if (options.waitTimeout) args.push("--wait-timeout", options.waitTimeout);
-        if (options.volumeInitialSize) args.push("--volume-initial-size", String(options.volumeInitialSize));
+        if (options.waitTimeout) {
+          args.push("--wait-timeout", options.waitTimeout);
+        }
+        if (options.volumeInitialSize) {
+          args.push("--volume-initial-size", String(options.volumeInitialSize));
+        }
 
         const result = await run(args);
 
