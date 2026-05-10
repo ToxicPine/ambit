@@ -236,6 +236,56 @@ export const unpatchAclRule = (
   return { ...policy, acls: filtered };
 };
 
+/**
+ * Returns a new policy with all `acls` references to the given tag removed.
+ * A destination references a tag when it is exactly the tag or uses the
+ * Tailscale `tag:<name>:<port>` form. A source references a tag only when it
+ * exactly matches the tag. Rules left with no sources or destinations are
+ * dropped.
+ */
+export const unpatchAclTagReferences = (
+  policy: Record<string, unknown>,
+  tag: string,
+): Record<string, unknown> => {
+  const acls = policy.acls as AclRule[] | undefined;
+  if (!Array.isArray(acls)) return policy;
+
+  let changed = false;
+  const tagDstPrefix = `${tag}:`;
+  const cleaned: AclRule[] = [];
+
+  for (const rule of acls) {
+    const src = Array.isArray(rule.src) ? rule.src : undefined;
+    const dst = Array.isArray(rule.dst) ? rule.dst : undefined;
+
+    const nextSrc = src?.filter((entry) => entry !== tag);
+    const nextDst = dst?.filter(
+      (entry) => entry !== tag && !entry.startsWith(tagDstPrefix),
+    );
+
+    if (
+      (src && nextSrc && nextSrc.length !== src.length) ||
+      (dst && nextDst && nextDst.length !== dst.length)
+    ) {
+      changed = true;
+    }
+
+    if (nextSrc?.length === 0 || nextDst?.length === 0) {
+      changed = true;
+      continue;
+    }
+
+    cleaned.push({
+      ...rule,
+      ...(nextSrc ? { src: nextSrc } : {}),
+      ...(nextDst ? { dst: nextDst } : {}),
+    });
+  }
+
+  if (!changed) return policy;
+  return { ...policy, acls: cleaned };
+};
+
 // =============================================================================
 // ACL Policy Un-patching (Pure) — inverse of the patch helpers above
 // =============================================================================

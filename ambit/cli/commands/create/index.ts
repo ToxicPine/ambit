@@ -44,14 +44,14 @@ const stageFlyConfig = async (
 ): Promise<{ fly: FlyProvider; org: string; region: string }> => {
   out.header("Step 1: Fly.io Configuration").blank();
 
-  const flyToken = await getCredentialStore().getFlyToken();
-  const fly = createFlyProvider(flyToken ?? undefined);
+  const fly = createFlyProvider();
   await fly.auth.ensureInstalled();
 
   const email = await fly.auth.login({ interactive: !opts.json });
   out.ok(`Authenticated as ${email}`);
 
   const org = await resolveOrg(fly, opts, out);
+  await fly.auth.useOrgToken(org);
   const region = opts.region || "iad";
   out.ok(`Using Region: ${region}`);
 

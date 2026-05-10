@@ -162,8 +162,10 @@ export const deployTransition = async (
         ctx.out.ok(`Outbound Proxy: ${proxyUrl}`);
       }
 
-      await ctx.out.spin("Staging Ambit Secrets", () =>
-        ctx.fly.secrets.set(ctx.flyAppName, ambitSecrets, { stage: true }),
+      await ctx.out.spin(
+        "Staging Ambit Secrets",
+        () =>
+          ctx.fly.secrets.set(ctx.flyAppName, ambitSecrets, { stage: true }),
       );
 
       return Result.ok("deploy");

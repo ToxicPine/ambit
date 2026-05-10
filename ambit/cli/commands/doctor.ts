@@ -206,8 +206,7 @@ const stageAppChecks = async (
 
   const secrets = await fly.secrets.list(workload.appName);
   const secretNames = new Set(secrets.map((s) => s.name));
-  const hasAmbitSecrets =
-    secretNames.has("AMBIT_APP_NAME") &&
+  const hasAmbitSecrets = secretNames.has("AMBIT_APP_NAME") &&
     secretNames.has("AMBIT_NETWORK_NAME");
 
   if (!hasAmbitSecrets) {

@@ -16,6 +16,7 @@ import { getRouterTag } from "@/util/naming.ts";
 import {
   isAutoApproverConfigured,
   isTagOwnerConfigured,
+  unpatchAclTagReferences,
   unpatchAutoApprover,
   unpatchTagOwner,
 } from "@/util/tailscale-local.ts";
@@ -197,6 +198,12 @@ const destroyNetworkTransition = async (
 
       let changed = false;
 
+      const withoutAclRefs = unpatchAclTagReferences(policy, tag);
+      if (withoutAclRefs !== policy) {
+        policy = withoutAclRefs;
+        changed = true;
+      }
+
       if (isTagOwnerConfigured(policy, tag)) {
         policy = unpatchTagOwner(policy, tag);
         changed = true;
@@ -312,9 +319,9 @@ const stageSummary = (
   if (!ctx.manual) {
     out.blank()
       .dim(
-        "If You Added ACL Rules Referencing This Router, Remember to Remove:",
+        "If You Added Subnet-Only ACL Rules for This Router, Remember to Remove:",
       )
-      .dim(`  acls: rules referencing ${tag}`)
+      .dim(`  acls: rules for this network's subnet`)
       .blank();
   } else if (ctx.tag) {
     out.blank()
@@ -359,14 +366,15 @@ ${bold("USAGE")}
 
 ${bold("OPTIONS")}
   --org <org>        Fly.io organization slug
-  --manual           Skip automatic Tailscale ACL cleanup (tagOwners + autoApprovers)
+  --manual           Skip automatic Tailscale ACL cleanup
   -y, --yes          Skip confirmation prompts
   --json             Output as JSON
 
 ${bold("DESCRIPTION")}
   By default, ambit removes the router's tag from your Tailscale ACL
-  policy (tagOwners and autoApprovers). Use --manual if your API token
-  lacks ACL write permission or you prefer to manage the policy yourself.
+  policy (tagOwners, autoApprovers, and tag-referencing access rules).
+  Use --manual if your API token lacks ACL write permission or you prefer
+  to manage the policy yourself.
 
 ${bold("EXAMPLES")}
   ambit destroy network browsers

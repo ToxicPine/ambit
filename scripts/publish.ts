@@ -2,7 +2,11 @@
 
 const ensureInstalled = async (cmd: string) => {
   try {
-    const p = new Deno.Command(cmd, { args: ["--version"], stdout: "piped", stderr: "piped" });
+    const p = new Deno.Command(cmd, {
+      args: ["--version"],
+      stdout: "piped",
+      stderr: "piped",
+    });
     await p.output();
   } catch {
     console.error(`${cmd} Is Not Installed`);

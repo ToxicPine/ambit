@@ -19,9 +19,8 @@ import {
   FlyOrgsSchema,
   FlyStatusSchema,
 } from "@/schemas/fly.ts";
-import { fileExists } from "@/lib/cli.ts";
 import { getWorkloadAppName } from "@/util/naming.ts";
-import { readFlyConfigToken } from "@/util/fly-token.ts";
+import { createFlyOrgToken } from "@/util/fly-token.ts";
 import {
   extractErrorDetail,
   getSizeConfig,
@@ -114,6 +113,7 @@ export interface FlyProvider {
     ensureInstalled(): Promise<void>;
     login(opts?: { interactive?: boolean }): Promise<string>;
     getToken(): Promise<string>;
+    useOrgToken(org: string): Promise<void>;
   };
   orgs: {
     list(): Promise<Record<string, string>>;
@@ -173,18 +173,42 @@ export interface FlyProvider {
 // =============================================================================
 
 export const createFlyProvider = (token?: string): FlyProvider => {
-  const envOverride = token ? { FLY_API_TOKEN: token } : undefined;
+  const baseEnvOverride = token ? { FLY_API_TOKEN: token } : undefined;
+  let orgToken: string | null = null;
+  let orgTokenPromise: Promise<string> | null = null;
+  let orgTokenOrg: string | null = null;
 
-  const run = (args: string[], opts?: RunOptions) =>
+  const ensureOrgToken = async (): Promise<string | null> => {
+    if (orgToken) return orgToken;
+    if (!orgTokenPromise) return null;
+
+    orgToken = await orgTokenPromise;
+    return orgToken;
+  };
+
+  const withFlyEnv = async (
+    opts?: RunOptions,
+  ): Promise<RunOptions | undefined> => {
+    const activeOrgToken = await ensureOrgToken();
+    const envOverride = activeOrgToken
+      ? { FLY_API_TOKEN: activeOrgToken }
+      : baseEnvOverride;
+
+    return envOverride
+      ? { ...opts, env: { ...opts?.env, ...envOverride } }
+      : opts;
+  };
+
+  const run = async (args: string[], opts?: RunOptions) =>
     runCommand(
       args,
-      envOverride ? { ...opts, env: { ...opts?.env, ...envOverride } } : opts,
+      await withFlyEnv(opts),
     );
 
-  const runJ = <T>(args: string[], opts?: RunOptions) =>
+  const runJ = async <T>(args: string[], opts?: RunOptions) =>
     runJson<T>(
       args,
-      envOverride ? { ...opts, env: { ...opts?.env, ...envOverride } } : opts,
+      await withFlyEnv(opts),
     );
 
   const provider: FlyProvider = {
@@ -246,23 +270,34 @@ export const createFlyProvider = (token?: string): FlyProvider => {
       },
 
       async getToken(): Promise<string> {
-        if (token) return token;
+        const activeOrgToken = await ensureOrgToken();
+        if (activeOrgToken) return activeOrgToken;
 
-        const configToken = await readFlyConfigToken();
-        if (!configToken) {
-          const home = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") ||
-            "";
-          const configPath = `${home}/.fly/config.yml`;
-          if (!(await fileExists(configPath))) {
-            return die(
-              "Fly Config Not Found at ~/.fly/config.yml. Run 'ambit auth login' First",
-            );
-          }
-          return die(
-            "No Access Token Found in ~/.fly/config.yml. Run 'ambit auth login' First",
-          );
+        return die(
+          "Fly.io Organization Token Not Initialized. Resolve an Organization First",
+        );
+      },
+
+      async useOrgToken(org: string): Promise<void> {
+        if (orgToken && orgTokenOrg === org) return;
+        if (orgTokenPromise && orgTokenOrg === org) {
+          await orgTokenPromise;
+          return;
         }
-        return configToken;
+
+        orgToken = null;
+        orgTokenOrg = org;
+        orgTokenPromise = createFlyOrgToken(org, { baseToken: token }).then(
+          (mintedToken) => {
+            if (!mintedToken) {
+              return die(
+                `Failed to Create Fly.io Organization Token for '${org}'`,
+              );
+            }
+            return mintedToken;
+          },
+        );
+        orgToken = await orgTokenPromise;
       },
     },
 

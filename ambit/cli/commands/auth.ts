@@ -11,7 +11,6 @@ import { runCommand } from "@/lib/command.ts";
 import { createTailscaleProvider } from "@/providers/tailscale.ts";
 import { getCredentialStore } from "@/util/credentials.ts";
 import { TAILSCALE_API_KEY_PREFIX } from "@/util/constants.ts";
-import { readFlyConfigToken } from "@/util/fly-token.ts";
 import { FlyAuthSchema } from "@/schemas/fly.ts";
 
 // =============================================================================
@@ -80,8 +79,7 @@ ${bold("OPTIONS")}
 
 ${bold("DESCRIPTION")}
   Authenticates with both Fly.io and Tailscale. Only prompts for
-  credentials that are missing or invalid — existing valid tokens
-  are preserved.
+  credentials that are missing or invalid.
 
 ${bold("EXAMPLES")}
   ambit auth login
@@ -106,22 +104,10 @@ ${bold("EXAMPLES")}
     if (!email) {
       return out.die("Invalid Fly.io API Token");
     }
-    await credentials.setFlyToken(args["fly-api-key"]);
     out.ok(`Authenticated as ${email}`);
     flyEmail = email;
   } else {
-    // Adopt from ~/.fly/config.yml if it has a different token than the store
-    const storedToken = await credentials.getFlyToken();
-    const configToken = await readFlyConfigToken();
-    const bestToken = configToken && configToken !== storedToken
-      ? configToken
-      : storedToken;
-
-    if (bestToken && bestToken !== storedToken) {
-      await credentials.setFlyToken(bestToken);
-    }
-
-    const bestEmail = bestToken ? await tryFlyWhoami(bestToken) : null;
+    const bestEmail = await tryFlyWhoami();
 
     if (bestEmail) {
       out.ok(`Already Authenticated as ${bestEmail}`);
@@ -140,19 +126,11 @@ ${bold("EXAMPLES")}
         return out.die("Fly.io Authentication Failed");
       }
 
-      const token = await readFlyConfigToken();
-      if (!token) {
-        return out.die(
-          "Could Not Read Fly.io Token After Login",
-        );
-      }
-
-      const email = await tryFlyWhoami(token);
+      const email = await tryFlyWhoami();
       if (!email) {
         return out.die("Fly.io Authentication Verification Failed");
       }
 
-      await credentials.setFlyToken(token);
       out.ok(`Authenticated as ${email}`);
       flyEmail = email;
     }
@@ -282,14 +260,7 @@ ${bold("EXAMPLES")}
 
   let flyEmail: string | null = null;
 
-  const storedToken = await credentials.getFlyToken();
-  if (storedToken) {
-    flyEmail = await tryFlyWhoami(storedToken);
-  }
-
-  if (!flyEmail) {
-    flyEmail = await tryFlyWhoami();
-  }
+  flyEmail = await tryFlyWhoami();
 
   // =========================================================================
   // Step 2: Tailscale

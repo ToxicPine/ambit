@@ -1,5 +1,5 @@
 // =============================================================================
-// Credential Store - Persistent Tailscale & Fly.io Token Storage
+// Credential Store - Persistent Tailscale Token Storage
 // =============================================================================
 
 import { z } from "zod";
@@ -9,7 +9,7 @@ import {
   fileExists,
   getConfigDir,
 } from "@/lib/cli.ts";
-import { ENV_FLY_API_TOKEN, ENV_TAILSCALE_API_KEY } from "@/util/constants.ts";
+import { ENV_TAILSCALE_API_KEY } from "@/util/constants.ts";
 
 // =============================================================================
 // Schema
@@ -17,7 +17,6 @@ import { ENV_FLY_API_TOKEN, ENV_TAILSCALE_API_KEY } from "@/util/constants.ts";
 
 const CredentialsSchema = z.object({
   apiKey: z.string().optional(),
-  flyToken: z.string().optional(),
 });
 
 // =============================================================================
@@ -27,8 +26,6 @@ const CredentialsSchema = z.object({
 export interface CredentialStore {
   getTailscaleApiKey(): Promise<string | null>;
   setTailscaleApiKey(key: string): Promise<void>;
-  getFlyToken(): Promise<string | null>;
-  setFlyToken(token: string): Promise<void>;
   clear(): Promise<void>;
 }
 
@@ -39,7 +36,7 @@ export interface CredentialStore {
 const getCredentialsPath = (): string => `${getConfigDir()}/credentials.json`;
 
 const readCredentials = async (): Promise<
-  { apiKey?: string; flyToken?: string }
+  { apiKey?: string }
 > => {
   const path = getCredentialsPath();
   if (!(await fileExists(path))) return {};
@@ -54,7 +51,7 @@ const readCredentials = async (): Promise<
 };
 
 const writeCredentials = async (
-  data: { apiKey?: string; flyToken?: string },
+  data: { apiKey?: string },
 ): Promise<void> => {
   await ensureConfigDir();
   const path = getCredentialsPath();
@@ -74,17 +71,6 @@ export const createConfigCredentialStore = (): CredentialStore => {
       await writeCredentials(data);
     },
 
-    async getFlyToken(): Promise<string | null> {
-      const data = await readCredentials();
-      return data.flyToken ?? null;
-    },
-
-    async setFlyToken(token: string): Promise<void> {
-      const data = await readCredentials();
-      data.flyToken = token;
-      await writeCredentials(data);
-    },
-
     async clear(): Promise<void> {
       const path = getCredentialsPath();
       try {
@@ -97,7 +83,7 @@ export const createConfigCredentialStore = (): CredentialStore => {
 };
 
 // =============================================================================
-// Default Credential Store (env var → file)
+// Default Credential Store (env var -> file)
 // =============================================================================
 
 export const getCredentialStore = (): CredentialStore => {
@@ -113,17 +99,6 @@ export const getCredentialStore = (): CredentialStore => {
 
     async setTailscaleApiKey(key: string): Promise<void> {
       await fileStore.setTailscaleApiKey(key);
-    },
-
-    async getFlyToken(): Promise<string | null> {
-      const envToken = Deno.env.get(ENV_FLY_API_TOKEN);
-      if (envToken) return envToken;
-
-      return await fileStore.getFlyToken();
-    },
-
-    async setFlyToken(token: string): Promise<void> {
-      await fileStore.setFlyToken(token);
     },
 
     async clear(): Promise<void> {
@@ -146,7 +121,7 @@ export const getCredentialStore = (): CredentialStore => {
  */
 export const checkDependencies = async (
   out: { err(msg: string): unknown; die(msg: string): never },
-): Promise<{ tailscaleKey: string; flyToken: string | null }> => {
+): Promise<{ tailscaleKey: string }> => {
   const errors: string[] = [];
 
   if (!(await commandExists("fly"))) {
@@ -164,13 +139,6 @@ export const checkDependencies = async (
     );
   }
 
-  const flyToken = await credentials.getFlyToken();
-  if (!flyToken) {
-    errors.push(
-      "Fly.io Token Required. Run 'ambit auth login' or set FLY_API_TOKEN",
-    );
-  }
-
   if (errors.length === 1) {
     return out.die(errors[0]);
   }
@@ -179,5 +147,5 @@ export const checkDependencies = async (
     return out.die("Missing Prerequisites");
   }
 
-  return { tailscaleKey: key!, flyToken };
+  return { tailscaleKey: key! };
 };

@@ -19,10 +19,11 @@ export const initSession = async <T extends Record<string, unknown>>(
   out: Output<T>,
   opts: { json: boolean; org?: string },
 ): Promise<{ fly: FlyProvider; tailscale: TailscaleProvider; org: string }> => {
-  const { tailscaleKey, flyToken } = await checkDependencies(out);
-  const fly = createFlyProvider(flyToken ?? undefined);
+  const { tailscaleKey } = await checkDependencies(out);
+  const fly = createFlyProvider();
   await fly.auth.login({ interactive: !opts.json });
   const tailscale = createTailscaleProvider(tailscaleKey);
   const org = await resolveOrg(fly, opts, out);
+  await fly.auth.useOrgToken(org);
   return { fly, tailscale, org };
 };

@@ -45,6 +45,7 @@ const stageFlyConfig = async (
   out.ok(`Authenticated as ${email}`);
 
   const org = await resolveOrg(fly, opts, out);
+  await fly.auth.useOrgToken(org);
   out.blank();
 
   return { fly, org };

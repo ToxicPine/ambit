@@ -37,7 +37,9 @@ const parseExports = (value: unknown): DenoConfig["exports"] => {
   if (value === undefined) return undefined;
   if (typeof value === "string") return value;
   if (isStringRecord(value)) return value;
-  throw new Error("Invalid deno.json: exports must be a string or a string map");
+  throw new Error(
+    "Invalid deno.json: exports must be a string or a string map",
+  );
 };
 
 const parseImports = (value: unknown): DenoConfig["imports"] => {
@@ -63,7 +65,9 @@ export const parseDenoConfig = (raw: unknown): DenoConfig => {
   };
 };
 
-export const entryPointsFromExports = (denoConfig: DenoConfig): EntryPoint[] => {
+export const entryPointsFromExports = (
+  denoConfig: DenoConfig,
+): EntryPoint[] => {
   if (!denoConfig.exports || typeof denoConfig.exports === "string") {
     return [];
   }
@@ -160,7 +164,9 @@ export const discoverImportedSubPaths = async (options: {
 }): Promise<Set<string>> => {
   const subPaths = new Set<string>();
   const fileExtensions = new Set(options.fileExtensions ?? [".ts", ".tsx"]);
-  const ignoreDirs = new Set(options.ignoreDirs ?? ["npm", "node_modules", ".git"]);
+  const ignoreDirs = new Set(
+    options.ignoreDirs ?? ["npm", "node_modules", ".git"],
+  );
 
   const walk = async (dir: string): Promise<void> => {
     for await (const entry of Deno.readDir(dir)) {
@@ -172,7 +178,9 @@ export const discoverImportedSubPaths = async (options: {
       }
 
       if (!entry.isFile) continue;
-      if (![...fileExtensions].some((ext) => entry.name.endsWith(ext))) continue;
+      if (![...fileExtensions].some((ext) => entry.name.endsWith(ext))) {
+        continue;
+      }
 
       const text = await Deno.readTextFile(path);
       for (const specifier of readImportedSpecifiers(text)) {

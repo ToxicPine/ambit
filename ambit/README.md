@@ -294,12 +294,12 @@ npx @cardelli/ambit logs my-app.lab --no-tail | less -R   # scroll buffered logs
 
 ### `ambit destroy network <name>`
 
-Tears down a network: destroys the router, cleans up DNS, removes the Tailscale device, and automatically removes the router's tag from your Tailscale ACL policy (tagOwners and autoApprovers). If there are workload apps still on the network, ambit warns you before proceeding.
+Tears down a network: destroys the router, cleans up DNS, removes the Tailscale device, and automatically removes the router's tag from your Tailscale ACL policy (`tagOwners`, `autoApprovers`, and tag-referencing access rules). If there are workload apps still on the network, ambit warns you before proceeding.
 
 | Flag              | Description                    |
 | ----------------- | ------------------------------ |
 | `--org <org>`     | Fly.io organization slug       |
-| `--manual`        | Skip automatic Tailscale ACL cleanup (tagOwners + autoApprovers) |
+| `--manual`        | Skip automatic Tailscale ACL cleanup |
 | `-y`, `--yes`     | Skip confirmation prompts      |
 | `--json`          | Machine-readable JSON output   |
 
@@ -340,7 +340,7 @@ Checks app health: verifies the app is deployed and running, then checks the rou
 
 ## Access Control
 
-By default, `ambit create` automatically adds the router's tag to your Tailscale ACL policy (`tagOwners` and `autoApprovers`). `ambit destroy network` automatically removes them. Pass `--manual` to either command to skip this and manage the policy yourself — useful if your API token lacks ACL write permission (`policy_file` scope).
+By default, `ambit create` automatically adds the router's tag to your Tailscale ACL policy (`tagOwners` and `autoApprovers`). `ambit destroy network` automatically removes those entries and any access rules that reference the router tag. Pass `--manual` to either command to skip this and manage the policy yourself — useful if your API token lacks ACL write permission (`policy_file` scope).
 
 If you want to lock down which users can reach which networks, two rules do the job — one for DNS queries and one for data traffic:
 
@@ -357,7 +357,7 @@ If you want to lock down which users can reach which networks, two rules do the 
 }
 ```
 
-These `acls` entries are never touched automatically — ambit only manages `tagOwners` and `autoApprovers`.
+On destroy, Ambit removes access-rule references to the router tag, such as `tag:ambit-infra:53`, before removing the tag owner. Subnet-only access rules do not reference the tag and may still need manual cleanup.
 
 ## Multiple Networks
 
