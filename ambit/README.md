@@ -67,12 +67,13 @@ Open `http://my-crazy-site.lab`. It works for you and nobody else.
 
 ### `ambit auth login`
 
-Authenticates with both Fly.io and Tailscale. Only prompts for credentials that are missing or invalid — existing valid tokens are preserved. Run this before using any other command.
+Authenticates with both Fly.io and Tailscale. Tailscale API keys are stored per Fly identity: organization slugs use their global Fly org slug, and the `personal` org is scoped to your Fly user email.
 
 | Flag                    | Description                                    |
 | ----------------------- | ---------------------------------------------- |
 | `--ts-api-key <key>`    | Tailscale API access token (tskey-api-...)      |
 | `--fly-api-key <token>` | Fly.io API token                                |
+| `--org <org>`           | Fly.io organization slug for this Tailscale key |
 | `--json`                | Machine-readable JSON output                    |
 
 ### `ambit auth whoami`
@@ -81,6 +82,7 @@ Shows the current authentication status for both Fly.io and Tailscale.
 
 | Flag     | Description                 |
 | -------- | --------------------------- |
+| `--org <org>` | Fly.io organization slug to check |
 | `--json` | Machine-readable JSON output |
 
 ### `ambit auth logout`

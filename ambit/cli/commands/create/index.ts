@@ -16,7 +16,7 @@ import {
   createTailscaleProvider,
   type TailscaleProvider,
 } from "@/providers/tailscale.ts";
-import { getCredentialStore } from "@/util/credentials.ts";
+import { getCredentialStore, getFlyIdentityKey } from "@/util/credentials.ts";
 import { TAILSCALE_API_KEY_PREFIX } from "@/util/constants.ts";
 import { resolveOrg } from "@/util/resolve.ts";
 import {
@@ -41,14 +41,16 @@ import {
 const stageFlyConfig = async (
   out: Output<CreateResult>,
   opts: { json: boolean; org?: string; region?: string },
-): Promise<{ fly: FlyProvider; org: string; region: string }> => {
+): Promise<
+  { fly: FlyProvider; flyEmail: string; org: string; region: string }
+> => {
   out.header("Step 1: Fly.io Configuration").blank();
 
   const fly = createFlyProvider();
   await fly.auth.ensureInstalled();
 
-  const email = await fly.auth.login({ interactive: !opts.json });
-  out.ok(`Authenticated as ${email}`);
+  const flyEmail = await fly.auth.login({ interactive: !opts.json });
+  out.ok(`Authenticated as ${flyEmail}`);
 
   const org = await resolveOrg(fly, opts, out);
   await fly.auth.useOrgToken(org);
@@ -56,7 +58,7 @@ const stageFlyConfig = async (
   out.ok(`Using Region: ${region}`);
 
   out.blank();
-  return { fly, org, region };
+  return { fly, flyEmail, org, region };
 };
 
 // =============================================================================
@@ -84,16 +86,17 @@ const stageTailscaleConfig = async (
     manual: boolean;
     tag: string;
     network: string;
+    scope: string;
   },
 ): Promise<TailscaleProvider> => {
   out.header("Step 2: Tailscale Configuration").blank();
 
   const credentials = getCredentialStore();
-  const apiKey = await credentials.getTailscaleApiKey();
+  const apiKey = await credentials.getTailscaleApiKey(opts.scope);
 
   if (!apiKey) {
     return out.die(
-      "Tailscale API Key Required. Run 'ambit auth login'",
+      "Tailscale API Key Required for This Fly Organization. Run 'ambit auth login --org <org>'",
     );
   }
 
@@ -439,17 +442,19 @@ ${bold("EXAMPLES")}
     .header("=".repeat(50))
     .blank();
 
-  const { fly, org, region } = await stageFlyConfig(out, {
+  const { fly, flyEmail, org, region } = await stageFlyConfig(out, {
     json: args.json,
     org: args.org,
     region: args.region,
   });
+  const scope = getFlyIdentityKey(org, flyEmail);
 
   const tailscale = await stageTailscaleConfig(out, {
     json: args.json,
     manual,
     tag,
     network,
+    scope,
   });
 
   await stageDeploy(out, fly, tailscale, {

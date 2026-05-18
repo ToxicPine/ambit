@@ -9,9 +9,11 @@ import { createOutput, type Output } from "@/lib/output.ts";
 import { registerCommand } from "@/cli/mod.ts";
 import { runCommand } from "@/lib/command.ts";
 import { createTailscaleProvider } from "@/providers/tailscale.ts";
-import { getCredentialStore } from "@/util/credentials.ts";
+import { getCredentialStore, getFlyIdentityKey } from "@/util/credentials.ts";
 import { TAILSCALE_API_KEY_PREFIX } from "@/util/constants.ts";
 import { FlyAuthSchema } from "@/schemas/fly.ts";
+import { createFlyProvider } from "@/providers/fly.ts";
+import { resolveOrg } from "@/util/resolve.ts";
 
 // =============================================================================
 // Types
@@ -19,11 +21,13 @@ import { FlyAuthSchema } from "@/schemas/fly.ts";
 
 type AuthLoginResult = {
   fly: string;
+  flyScope: string;
   tailscale: boolean;
 };
 
 type AuthWhoamiResult = {
   fly: string | null;
+  flyScope: string | null;
   tailscale: boolean;
 };
 
@@ -53,13 +57,24 @@ const tryFlyWhoami = async (
   return parsed.success ? parsed.data.email : null;
 };
 
+const resolveFlyScope = async <T extends Record<string, unknown>>(
+  out: Output<T>,
+  opts: { json: boolean; org?: string; flyApiKey?: string; flyEmail: string },
+): Promise<string> => {
+  const fly = createFlyProvider(opts.flyApiKey);
+  const org = await resolveOrg(fly, { json: opts.json, org: opts.org }, out);
+  const scope = getFlyIdentityKey(org, opts.flyEmail);
+  out.ok(`Using Fly Identity: ${scope}`);
+  return scope;
+};
+
 // =============================================================================
 // Auth Login
 // =============================================================================
 
 const authLogin = async (argv: string[]): Promise<void> => {
   const opts = {
-    string: ["ts-api-key", "fly-api-key"],
+    string: ["ts-api-key", "fly-api-key", "org"],
     boolean: ["help", "json"],
   } as const;
   const args = parseArgs(argv, opts);
@@ -75,6 +90,7 @@ ${bold("USAGE")}
 ${bold("OPTIONS")}
   --ts-api-key <key>    Tailscale API access token (tskey-api-...)
   --fly-api-key <token> Fly.io API token
+  --org <org>           Fly.io organization slug
   --json                Output as JSON
 
 ${bold("DESCRIPTION")}
@@ -83,6 +99,7 @@ ${bold("DESCRIPTION")}
 
 ${bold("EXAMPLES")}
   ambit auth login
+  ambit auth login --org my-org
   ambit auth login --ts-api-key tskey-api-... --fly-api-key fo1_...
 `);
     return;
@@ -136,6 +153,13 @@ ${bold("EXAMPLES")}
     }
   }
 
+  const flyScope = await resolveFlyScope(out, {
+    json: args.json,
+    org: args.org,
+    flyApiKey: args["fly-api-key"],
+    flyEmail,
+  });
+
   // =========================================================================
   // Step 2: Tailscale
   // =========================================================================
@@ -160,10 +184,10 @@ ${bold("EXAMPLES")}
     }
     validateSpinner.success("API Access Token Validated");
 
-    await credentials.setTailscaleApiKey(args["ts-api-key"]);
+    await credentials.setTailscaleApiKey(args["ts-api-key"], flyScope);
     tailscaleOk = true;
   } else {
-    const storedKey = await credentials.getTailscaleApiKey();
+    const storedKey = await credentials.getTailscaleApiKey(flyScope);
 
     if (storedKey) {
       const tailscale = createTailscaleProvider(storedKey);
@@ -213,13 +237,13 @@ ${bold("EXAMPLES")}
       }
       validateSpinner.success("API Access Token Validated");
 
-      await credentials.setTailscaleApiKey(apiKey);
+      await credentials.setTailscaleApiKey(apiKey, flyScope);
       tailscaleOk = true;
     }
   }
 
   out.blank();
-  out.done({ fly: flyEmail, tailscale: tailscaleOk });
+  out.done({ fly: flyEmail, flyScope, tailscale: tailscaleOk });
   out.print();
 };
 
@@ -229,6 +253,7 @@ ${bold("EXAMPLES")}
 
 const authWhoami = async (argv: string[]): Promise<void> => {
   const opts = {
+    string: ["org"],
     boolean: ["help", "json"],
   } as const;
   const args = parseArgs(argv, opts);
@@ -242,10 +267,12 @@ ${bold("USAGE")}
   ambit auth whoami [options]
 
 ${bold("OPTIONS")}
+  --org <org> Fly.io organization slug
   --json   Output as JSON
 
 ${bold("EXAMPLES")}
   ambit auth whoami
+  ambit auth whoami --org my-org
   ambit auth whoami --json
 `);
     return;
@@ -259,8 +286,16 @@ ${bold("EXAMPLES")}
   // =========================================================================
 
   let flyEmail: string | null = null;
+  let flyScope: string | null = null;
 
   flyEmail = await tryFlyWhoami();
+  if (flyEmail) {
+    flyScope = await resolveFlyScope(out, {
+      json: args.json,
+      org: args.org,
+      flyEmail,
+    });
+  }
 
   // =========================================================================
   // Step 2: Tailscale
@@ -268,10 +303,12 @@ ${bold("EXAMPLES")}
 
   let tailscaleOk = false;
 
-  const storedKey = await credentials.getTailscaleApiKey();
-  if (storedKey) {
-    const tailscale = createTailscaleProvider(storedKey);
-    tailscaleOk = await tailscale.auth.validateKey();
+  if (flyScope) {
+    const storedKey = await credentials.getTailscaleApiKey(flyScope);
+    if (storedKey) {
+      const tailscale = createTailscaleProvider(storedKey);
+      tailscaleOk = await tailscale.auth.validateKey();
+    }
   }
 
   // =========================================================================
@@ -280,12 +317,15 @@ ${bold("EXAMPLES")}
 
   out.blank();
   out.text(`  Fly.io:     ${flyEmail ?? "Not Authenticated"}`);
+  if (flyScope) {
+    out.text(`  Fly Scope:  ${flyScope}`);
+  }
   out.text(
     `  Tailscale:  ${tailscaleOk ? "API Key Configured" : "Not Configured"}`,
   );
   out.blank();
 
-  out.done({ fly: flyEmail, tailscale: tailscaleOk });
+  out.done({ fly: flyEmail, flyScope, tailscale: tailscaleOk });
   out.print();
 };
 

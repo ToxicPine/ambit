@@ -16,16 +16,32 @@ import { ENV_TAILSCALE_API_KEY } from "@/util/constants.ts";
 // =============================================================================
 
 const CredentialsSchema = z.object({
-  apiKey: z.string().optional(),
+  tailscaleApiKeys: z.record(z.string(), z.string()).optional(),
 });
+
+type CredentialsData = z.infer<typeof CredentialsSchema>;
+
+export const getFlyIdentityKey = (
+  org: string,
+  flyEmail?: string | null,
+): string => {
+  const normalizedOrg = org.trim().toLowerCase();
+  const normalizedEmail = flyEmail?.trim().toLowerCase();
+
+  if (normalizedOrg === "personal" && normalizedEmail) {
+    return `fly:user:${normalizedEmail}`;
+  }
+
+  return `fly:org:${normalizedOrg}`;
+};
 
 // =============================================================================
 // Credential Store Interface
 // =============================================================================
 
 export interface CredentialStore {
-  getTailscaleApiKey(): Promise<string | null>;
-  setTailscaleApiKey(key: string): Promise<void>;
+  getTailscaleApiKey(scope: string): Promise<string | null>;
+  setTailscaleApiKey(key: string, scope: string): Promise<void>;
   clear(): Promise<void>;
 }
 
@@ -35,9 +51,7 @@ export interface CredentialStore {
 
 const getCredentialsPath = (): string => `${getConfigDir()}/credentials.json`;
 
-const readCredentials = async (): Promise<
-  { apiKey?: string }
-> => {
+const readCredentials = async (): Promise<CredentialsData> => {
   const path = getCredentialsPath();
   if (!(await fileExists(path))) return {};
 
@@ -51,7 +65,7 @@ const readCredentials = async (): Promise<
 };
 
 const writeCredentials = async (
-  data: { apiKey?: string },
+  data: CredentialsData,
 ): Promise<void> => {
   await ensureConfigDir();
   const path = getCredentialsPath();
@@ -60,14 +74,17 @@ const writeCredentials = async (
 
 export const createConfigCredentialStore = (): CredentialStore => {
   return {
-    async getTailscaleApiKey(): Promise<string | null> {
+    async getTailscaleApiKey(scope: string): Promise<string | null> {
       const data = await readCredentials();
-      return data.apiKey ?? null;
+      return data.tailscaleApiKeys?.[scope] ?? null;
     },
 
-    async setTailscaleApiKey(key: string): Promise<void> {
+    async setTailscaleApiKey(key: string, scope: string): Promise<void> {
       const data = await readCredentials();
-      data.apiKey = key;
+      data.tailscaleApiKeys = {
+        ...(data.tailscaleApiKeys ?? {}),
+        [scope]: key,
+      };
       await writeCredentials(data);
     },
 
@@ -90,15 +107,15 @@ export const getCredentialStore = (): CredentialStore => {
   const fileStore = createConfigCredentialStore();
 
   return {
-    async getTailscaleApiKey(): Promise<string | null> {
+    async getTailscaleApiKey(scope: string): Promise<string | null> {
       const envKey = Deno.env.get(ENV_TAILSCALE_API_KEY);
       if (envKey) return envKey;
 
-      return await fileStore.getTailscaleApiKey();
+      return await fileStore.getTailscaleApiKey(scope);
     },
 
-    async setTailscaleApiKey(key: string): Promise<void> {
-      await fileStore.setTailscaleApiKey(key);
+    async setTailscaleApiKey(key: string, scope: string): Promise<void> {
+      await fileStore.setTailscaleApiKey(key, scope);
     },
 
     async clear(): Promise<void> {
@@ -121,6 +138,7 @@ export const getCredentialStore = (): CredentialStore => {
  */
 export const checkDependencies = async (
   out: { err(msg: string): unknown; die(msg: string): never },
+  scope: string,
 ): Promise<{ tailscaleKey: string }> => {
   const errors: string[] = [];
 
@@ -132,10 +150,10 @@ export const checkDependencies = async (
 
   const credentials = getCredentialStore();
 
-  const key = await credentials.getTailscaleApiKey();
+  const key = await credentials.getTailscaleApiKey(scope);
   if (!key) {
     errors.push(
-      "Tailscale API Key Required. Run 'ambit auth login' or set TAILSCALE_API_KEY",
+      "Tailscale API Key Required for This Fly Organization. Run 'ambit auth login --org <org>' or set TAILSCALE_API_KEY",
     );
   }
 
