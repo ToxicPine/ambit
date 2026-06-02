@@ -1,90 +1,189 @@
-# Flake-parts module: Deno package builder
+# Flake-parts module for packaging Deno workspace members.
 #
-# Provides mkDenoPackage for compiling Deno entrypoints into standalone binaries.
-# Package definitions (entrypoints, versions, hashes) live in flake.nix.
-#
+# mkDenoPackage reads name/version metadata from the package deno.json, vendors
+# dependencies in a fixed-output derivation, then wraps `deno run`.
 
 { inputs, lib, ... }:
 
+let
+  workspaceRoot = ./.;
+  workspaceRootString = builtins.toString workspaceRoot;
+
+  dependencyExtensions = [
+    ".cjs"
+    ".cts"
+    ".js"
+    ".json"
+    ".jsonc"
+    ".jsx"
+    ".mjs"
+    ".mts"
+    ".ts"
+    ".tsx"
+  ];
+
+  stripScope = name: lib.last (lib.splitString "/" name);
+in
 {
-  perSystem = { system, ... }:
+  perSystem =
+    { system, ... }:
     let
       pkgs = import inputs.nixpkgs {
         inherit system;
         config.allowUnfree = true;
       };
 
-      mkDenoPackage = { pname, version, entrypoint, binName ? pname, depsHash }:
+      cleanPackageSource =
+        packageDir:
+        filterFile:
+        pkgs.nix-gitignore.gitignoreFilterSource
+          (
+            path: type:
+            let
+              pathString = builtins.toString path;
+              relPath =
+                if pathString == workspaceRootString then
+                  ""
+                else
+                  lib.removePrefix "${workspaceRootString}/" pathString;
+              inPackage =
+                relPath == packageDir
+                || lib.hasPrefix "${packageDir}/" relPath;
+              name = builtins.baseNameOf path;
+            in
+            inPackage && (type == "directory" || filterFile name)
+          )
+          [ ]
+          workspaceRoot;
+
+      mkDenoPackage =
+        {
+          packageDir,
+          entrypoint,
+          depsHash,
+          configFile ? "deno.json",
+          lockFile ? "deno.lock",
+          pname ? null,
+          version ? null,
+          binName ? null,
+          permissions ? [ "-A" ],
+          runtimeInputs ? [ ],
+        }:
         let
-          deps = pkgs.stdenv.mkDerivation {
-            name = "${pname}-deps";
-            src = lib.cleanSourceWith {
-              src = ./.;
-              filter = path: type:
-                let name = builtins.baseNameOf path; in
-                type == "directory"
-                || lib.hasSuffix ".ts" name
-                || name == "deno.json"
-                || name == "deno.lock";
-            };
+          denoConfig =
+            builtins.fromJSON (builtins.readFile (workspaceRoot + "/${packageDir}/${configFile}"));
+          packageName = stripScope (denoConfig.name or packageDir);
+          pname' = if pname == null then packageName else pname;
+          version' = if version == null then denoConfig.version else version;
+          binName' = if binName == null then pname' else binName;
 
-            nativeBuildInputs = [ pkgs.deno pkgs.cacert ];
+          dependencySrc = cleanPackageSource packageDir (
+            name:
+            lib.elem name [
+              configFile
+              lockFile
+            ]
+            || lib.any (suffix: lib.hasSuffix suffix name) dependencyExtensions
+          );
 
-            outputHashMode = "recursive";
-            outputHashAlgo = "sha256";
-            outputHash = depsHash;
+          runtimeSrc = cleanPackageSource packageDir (_name: true);
 
-            buildPhase = ''
-              export HOME=$TMPDIR
-              export DENO_DIR="$out"
+          deps = pkgs.stdenvNoCC.mkDerivation {
+            pname = "${pname'}-deno-deps";
+            version = version';
+            src = dependencySrc;
 
-              deno cache --lock=deno.lock ${entrypoint}
-
-              echo 'Deno.exit(0)' > $TMPDIR/stub.ts
-              deno compile --output $TMPDIR/stub $TMPDIR/stub.ts
-              rm -f $TMPDIR/stub
-            '';
-
-            dontInstall = true;
-          };
-
-          raw = pkgs.stdenv.mkDerivation {
-            name = "${pname}-unwrapped";
-            inherit version;
-            src = ./.;
-
-            nativeBuildInputs = [ pkgs.deno ];
-
-            dontStrip = true;
-            dontPatchELF = true;
+            nativeBuildInputs = [
+              pkgs.cacert
+              pkgs.deno
+            ];
 
             buildPhase = ''
-              export HOME=$TMPDIR
+              runHook preBuild
 
-              # Writable copy of the pre-warmed cache (Nix store is read-only).
-              cp -r ${deps} $TMPDIR/deno-cache
-              chmod -R u+w $TMPDIR/deno-cache
-              export DENO_DIR=$TMPDIR/deno-cache
+              if [ -d ${packageDir} ]; then
+                cd ${packageDir}
+              fi
 
-              deno compile -A --output $TMPDIR/${binName} ${entrypoint}
+              export HOME="$TMPDIR"
+              export DENO_DIR="$TMPDIR/deno-cache"
+              deno cache \
+                --vendor=true \
+                --frozen \
+                --config ${configFile} \
+                --lock ${lockFile} \
+                ${entrypoint}
+
+              runHook postBuild
             '';
 
             installPhase = ''
-              mkdir -p $out/bin
-              cp $TMPDIR/${binName} $out/bin/${binName}
+              runHook preInstall
+
+              if [ -d ${packageDir} ]; then
+                cd ${packageDir}
+              fi
+
+              mkdir -p "$out"
+
+              if [ -d vendor ]; then
+                cp -R vendor "$out/"
+              fi
+
+              if [ -d node_modules ]; then
+                rm -f node_modules/.deno/.setup-cache.bin
+                cp -R node_modules "$out/"
+              fi
+
+              runHook postInstall
             '';
+
+            outputHashAlgo = "sha256";
+            outputHashMode = "recursive";
+            outputHash = depsHash;
           };
         in
-        # deno compile embeds JS in the ELF trailer — patchelf corrupts it.
-        # buildFHSEnv gives the binary an FHS namespace with the standard
-        # /lib64 dynamic linker, so it runs unmodified on NixOS.
-        if pkgs.stdenv.isLinux then
-          pkgs.buildFHSEnv {
-            name = binName;
-            runScript = "${raw}/bin/${binName}";
-          }
-        else
-          raw;
+        pkgs.stdenvNoCC.mkDerivation {
+          pname = pname';
+          version = version';
+          src = runtimeSrc;
+
+          nativeBuildInputs = [
+            pkgs.makeWrapper
+          ];
+
+          installPhase = ''
+            runHook preInstall
+
+            mkdir -p "$out/share/${pname'}" "$out/bin"
+            cp -R ${packageDir}/. "$out/share/${pname'}/"
+
+            if [ -d ${deps}/vendor ]; then
+              cp -R ${deps}/vendor "$out/share/${pname'}/"
+            fi
+
+            if [ -d ${deps}/node_modules ]; then
+              cp -R ${deps}/node_modules "$out/share/${pname'}/"
+            fi
+
+            makeWrapper ${pkgs.deno}/bin/deno "$out/bin/${binName'}" \
+              --prefix PATH : ${lib.makeBinPath runtimeInputs} \
+              --add-flags "run" \
+              --add-flags "--vendor=true" \
+              --add-flags "--frozen" \
+              --add-flags "--cached-only" \
+              --add-flags "--config $out/share/${pname'}/${configFile}" \
+              --add-flags "--lock $out/share/${pname'}/${lockFile}" \
+              ${lib.concatMapStringsSep " \\\n              " (flag: ''--add-flags "${flag}"'') permissions} \
+              --add-flags "$out/share/${pname'}/${entrypoint}"
+
+            runHook postInstall
+          '';
+
+          meta = {
+            mainProgram = binName';
+          };
+        };
     in
     {
       _module.args.mkDenoPackage = mkDenoPackage;

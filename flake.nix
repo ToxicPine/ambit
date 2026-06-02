@@ -18,7 +18,7 @@
 
       imports = [ ./deno.nix ];
 
-      perSystem = { system, mkDenoPackage, ... }:
+      perSystem = { system, self', mkDenoPackage, ... }:
         let
           pkgs = import inputs.nixpkgs {
             inherit system;
@@ -36,21 +36,41 @@
               pkgs.nodejs
               pkgs.flyctl
               pkgs.tailscale
-              unstablePkgs.claude-code
             ];
           };
 
-          packages = let
-            ambit = mkDenoPackage {
-              pname = "ambit";
-              version = "0.2.0";
-              entrypoint = "ambit/main.ts";
-              depsHash = "sha256-ZmqE8oV1hr4O8MlVNOJwnho/qOlwRG+4nwX/iW9dEO4=";
+          packages =
+            let
+              ambit = mkDenoPackage {
+                packageDir = "ambit";
+                entrypoint = "main.ts";
+                binName = "ambit";
+                depsHash = "sha256-lOPeKbqJVtF+BDq66COWiNOaZkhCxdmNdnWMxJpjkq4=";
+                runtimeInputs = [
+                  pkgs.flyctl
+                  pkgs.gnutar
+                  pkgs.gzip
+                  pkgs.tailscale
+                ];
+              };
+            in
+            {
+              inherit ambit;
+              default = ambit;
             };
-          in {
-            inherit ambit;
-            default = ambit;
-          };
+
+          apps =
+            let
+              ambit = self'.packages.ambit;
+            in
+            {
+              ambit = {
+                type = "app";
+                program = "${ambit}/bin/ambit";
+              };
+
+              default = self'.apps.ambit;
+            };
         };
     };
 }
