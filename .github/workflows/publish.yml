@@ -27,6 +27,8 @@ jobs:
 
       - uses: denoland/setup-deno@v2
         if: steps.version.outputs.changed == 'true'
+        with:
+          deno-version: v2.9.6
 
       - uses: actions/setup-node@v4
         if: steps.version.outputs.changed == 'true'

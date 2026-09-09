@@ -1,10 +1,5 @@
 {
   "workspace": ["./ambit"],
-  "imports": {
-    "@deno/dnt": "jsr:@deno/dnt@^0.42",
-    "@std/cli": "jsr:@std/cli@^1.0.27",
-    "@std/fs": "jsr:@std/fs@^1.0.22"
-  },
   "tasks": {
     "build": "deno run -A scripts/build_all.ts",
     "publish": "deno run -A scripts/publish.ts"
