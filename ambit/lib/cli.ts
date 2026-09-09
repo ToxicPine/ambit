@@ -60,7 +60,7 @@ export const die = (message: string): never => {
 const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 export class Spinner {
-  private intervalId: number | null = null;
+  private intervalId: ReturnType<typeof setInterval> | null = null;
   private frameIndex = 0;
   private message = "";
 

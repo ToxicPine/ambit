@@ -70,7 +70,7 @@ const main = async (): Promise<void> => {
 // Entry
 // =============================================================================
 
-if (import.meta.main) {
+export async function run(): Promise<void> {
   try {
     await main();
   } catch (error) {
@@ -80,3 +80,5 @@ if (import.meta.main) {
     Deno.exit(1);
   }
 }
+
+if (import.meta.main) await run();
