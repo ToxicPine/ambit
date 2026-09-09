@@ -31,8 +31,8 @@ const run = async (cmd: string, args: string[], cwd?: string) => {
   }
 };
 
-const build = (dir: string) =>
-  run("deno", ["run", "-A", "scripts/build_npm.ts", "--publish"], dir);
+const buildAndTest = (dir: string) =>
+  run(Deno.execPath(), ["task", "test:npm"], dir);
 
 const isPublished = async (name: string, version: string): Promise<boolean> => {
   const p = new Deno.Command("npm", {
@@ -70,7 +70,7 @@ const publish = async (dir: string) => {
 };
 
 console.log("\n=== @cardelli/ambit ===\n");
-await build("./ambit");
+await buildAndTest("./ambit");
 await publish("./ambit/npm");
 
 console.log("\n=== All Packages Published ===\n");
