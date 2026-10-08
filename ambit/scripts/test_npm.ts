@@ -1,6 +1,7 @@
 import { assertEquals, assertMatch } from "@std/assert";
 import { join } from "@std/path";
 import config from "../deno.json" with { type: "json" };
+import { skills } from "../lib/skills.ts";
 
 const packageDir = new URL("../", import.meta.url);
 const tempDir = await Deno.makeTempDir({ prefix: "ambit-npm-test-" });
@@ -78,6 +79,43 @@ try {
     assertMatch(await command("node", [bin, ...args], consumer), /usage/i);
   }
   await command("node", [bin, "__unknown_command__"], consumer, 1);
+  const listed = JSON.parse(
+    await command("node", [bin, "skills", "list", "--json"], consumer),
+  );
+  assertEquals(listed, {
+    ok: true,
+    skills: Array.from(
+      skills,
+      ([name, skill]) => ({ name, description: skill.description }),
+    ),
+  });
+  for (const [section, skill] of skills) {
+    const context = await Deno.readTextFile(skill.url);
+    assertEquals(
+      await command("node", [bin, "skills", "get", section], consumer),
+      context + "\n",
+    );
+    assertEquals(
+      JSON.parse(
+        await command(
+          "node",
+          [bin, "skills", "get", section, "--json"],
+          consumer,
+        ),
+      ),
+      { ok: true, section, context },
+    );
+  }
+  const missing = JSON.parse(
+    await command(
+      "node",
+      [bin, "skills", "get", "missing", "--json"],
+      consumer,
+      1,
+    ),
+  );
+  assertEquals(missing.ok, false);
+  assertMatch(missing.error, /Unknown Skill/);
   const rejected = JSON.parse(
     await command(
       "node",
@@ -98,7 +136,7 @@ try {
   }
 
   console.log(
-    "npm package passed: install, CLI, exit codes, router assets",
+    "npm package passed: install, CLI, exit codes, router assets, skill guides",
   );
 } finally {
   await Deno.remove(tempDir, { recursive: true });

@@ -59,6 +59,7 @@ ${bold("COMMANDS")}
   logs       Stream logs for a workload app
   destroy    Destroy a network (router) or a workload app
   doctor     Check that Tailscale and the router are working correctly
+  skills     Read agent guides shipped with this CLI
 
 ${bold("OPTIONS")}
   --help     Show help for a command
