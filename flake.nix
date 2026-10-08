@@ -5,6 +5,22 @@
     self.submodules = true;
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    denort-x86_64-linux = {
+      url = "file+https://dl.deno.land/release/v2.7.14/denort-x86_64-unknown-linux-gnu.zip";
+      flake = false;
+    };
+    denort-aarch64-linux = {
+      url = "file+https://dl.deno.land/release/v2.7.14/denort-aarch64-unknown-linux-gnu.zip";
+      flake = false;
+    };
+    denort-x86_64-darwin = {
+      url = "file+https://dl.deno.land/release/v2.7.14/denort-x86_64-apple-darwin.zip";
+      flake = false;
+    };
+    denort-aarch64-darwin = {
+      url = "file+https://dl.deno.land/release/v2.7.14/denort-aarch64-apple-darwin.zip";
+      flake = false;
+    };
   };
 
   outputs =

@@ -1,9 +1,9 @@
 # Deno dependency cache
 
 Dependencies are installed from workspace configuration and the root
-`deno.lock`. The package validates its module graph against that cache.
-`includedPaths` selects files and directories to ship at their package-relative
-locations, without affecting the dependency derivation.
+`deno.lock`. `deno compile` builds against that cache and the pinned `denort`
+flake inputs. `includedPaths` selects package-relative files and directories
+to embed. Self-extraction makes router files available to flyctl.
 
 JSR catalogs are generated from the vendored version manifests so unrelated
 registry changes do not affect the dependency hash.

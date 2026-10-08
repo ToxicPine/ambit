@@ -1,5 +1,5 @@
-# Package Deno workspace members with a shared lockfile and vendored dependencies.
-{ lib, ... }:
+# Compile Deno workspace members with a shared lockfile and pinned runtime.
+{ lib, inputs, ... }:
 
 let
   workspaceRoot = ./.;
@@ -37,8 +37,25 @@ let
 in
 {
   perSystem =
-    { pkgs, ... }:
+    { pkgs, system, ... }:
     let
+      denortVersion = "2.7.14";
+      denort =
+        assert lib.assertMsg (pkgs.deno.version == denortVersion) "Deno and denort versions must match.";
+        pkgs.stdenvNoCC.mkDerivation {
+          pname = "denort";
+          version = denortVersion;
+          src = inputs."denort-${system}";
+          dontUnpack = true;
+          nativeBuildInputs = [ pkgs.unzip ] ++ lib.optional pkgs.stdenv.isLinux pkgs.autoPatchelfHook;
+          buildInputs = lib.optional pkgs.stdenv.isLinux pkgs.stdenv.cc.cc.lib;
+          dontStrip = true;
+          installPhase = ''
+            mkdir -p "$out/bin"
+            unzip "$src" -d "$out/bin"
+            chmod +x "$out/bin/denort"
+          '';
+        };
       mkDenoPackage =
         {
           packageDir,
@@ -49,8 +66,7 @@ in
           binName ? null,
           permissions ? [ "-A" ],
           runtimeInputs ? [ ],
-          # Files/directories to ship, relative to packageDir. Their locations are
-          # preserved; workspace configuration and the lockfile are always included.
+          # Package-relative source and asset paths to compile and embed.
           includedPaths ? [ "." ],
         }:
         let
@@ -60,7 +76,6 @@ in
           pname' = if pname == null then packageName else pname;
           version' = if version == null then denoConfig.version else version;
           binName' = if binName == null then pname' else binName;
-          runtimeSrc = sourceFor (workspaceFiles ++ map (path: packageRoot + "/${path}") includedPaths);
 
           deps = pkgs.stdenvNoCC.mkDerivation {
             name = "${pname'}-deno-deps";
@@ -108,13 +123,13 @@ in
         pkgs.stdenvNoCC.mkDerivation {
           pname = pname';
           version = version';
-          src = runtimeSrc;
+          src = sourceFor (workspaceFiles ++ map (path: packageRoot + "/${path}") includedPaths);
           dontFixup = true;
           nativeBuildInputs = [
             pkgs.deno
-            pkgs.jq
             pkgs.makeWrapper
           ];
+          DENORT_BIN = "${denort}/bin/denort";
 
           buildPhase = ''
             runHook preBuild
@@ -125,31 +140,23 @@ in
             if [ -d ${deps}/node_modules ]; then
               ln -s ${deps}/node_modules node_modules
             fi
-            deno info --json --vendor=true --frozen --config deno.json \
-              ${lib.escapeShellArg "${packageDir}/${entrypoint}"} > graph.json
-            if ! jq -e 'all(.modules[]; .error == null)' graph.json > /dev/null; then
-              jq -r '.modules[] | select(.error) | .error' graph.json >&2
-              exit 1
-            fi
+            deno compile --vendor=true --frozen --cached-only --config deno.json \
+              --self-extracting --output ${lib.escapeShellArg "build/${binName'}"} \
+              ${lib.escapeShellArgs permissions} \
+              ${
+                lib.concatMapStringsSep " " (
+                  path: "--include " + lib.escapeShellArg "${packageDir}/${path}"
+                ) includedPaths
+              } \
+              ${lib.escapeShellArg "${packageDir}/${entrypoint}"}
             runHook postBuild
           '';
 
           installPhase = ''
             runHook preInstall
-            mkdir -p "$out/share/${pname'}" "$out/bin"
-            cp -R ${runtimeSrc}/. "$out/share/${pname'}/"
-            if [ -d ${deps}/vendor ]; then
-              ln -s ${deps}/vendor "$out/share/${pname'}/vendor"
-            fi
-            if [ -d ${deps}/node_modules ]; then
-              ln -s ${deps}/node_modules "$out/share/${pname'}/node_modules"
-            fi
-            makeWrapper ${pkgs.deno}/bin/deno "$out/bin/${binName'}" \
-              --prefix PATH : ${lib.makeBinPath runtimeInputs} \
-              --add-flags "run --vendor=true --frozen --cached-only" \
-              --add-flags "--config $out/share/${pname'}/deno.json" \
-              ${lib.concatMapStringsSep " \\\n              " (flag: ''--add-flags "${flag}"'') permissions} \
-              --add-flags "$out/share/${pname'}/${packageDir}/${entrypoint}"
+            mkdir -p "$out/bin"
+            install -m755 ${lib.escapeShellArg "build/${binName'}"} "$out/bin/${binName'}"
+            wrapProgram "$out/bin/${binName'}" --prefix PATH : ${lib.makeBinPath runtimeInputs}
             runHook postInstall
           '';
 
