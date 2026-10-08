@@ -49,7 +49,7 @@ await Deno.writeTextFile(
       description: config.description,
       license: config.license,
       type: "module",
-      bin: { ambit: "./bin.mjs" },
+      bin: { ambit: "bin.mjs" },
       files: ["bin.mjs", "cli/", "router/"],
       engines: { node: ">=18" },
       dependencies: { "@deno/shim-deno": "0.19.2" },
