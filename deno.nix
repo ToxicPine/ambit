@@ -34,27 +34,21 @@ in
       };
 
       cleanPackageSource =
-        packageDir:
-        filterFile:
-        pkgs.nix-gitignore.gitignoreFilterSource
-          (
-            path: type:
-            let
-              pathString = builtins.toString path;
-              relPath =
-                if pathString == workspaceRootString then
-                  ""
-                else
-                  lib.removePrefix "${workspaceRootString}/" pathString;
-              inPackage =
-                relPath == packageDir
-                || lib.hasPrefix "${packageDir}/" relPath;
-              name = builtins.baseNameOf path;
-            in
-            inPackage && (type == "directory" || filterFile name)
-          )
-          [ ]
-          workspaceRoot;
+        packageDir: filterFile:
+        pkgs.nix-gitignore.gitignoreFilterSource (
+          path: type:
+          let
+            pathString = builtins.toString path;
+            relPath =
+              if pathString == workspaceRootString then
+                ""
+              else
+                lib.removePrefix "${workspaceRootString}/" pathString;
+            inPackage = relPath == packageDir || lib.hasPrefix "${packageDir}/" relPath;
+            name = builtins.baseNameOf path;
+          in
+          inPackage && (type == "directory" || filterFile name)
+        ) [ ] workspaceRoot;
 
       mkDenoPackage =
         {
@@ -71,8 +65,7 @@ in
           runtimeAssets ? { },
         }:
         let
-          denoConfig =
-            builtins.fromJSON (builtins.readFile (workspaceRoot + "/${packageDir}/${configFile}"));
+          denoConfig = builtins.fromJSON (builtins.readFile (workspaceRoot + "/${packageDir}/${configFile}"));
           packageName = stripScope (denoConfig.name or packageDir);
           pname' = if pname == null then packageName else pname;
           version' = if version == null then denoConfig.version else version;
@@ -159,12 +152,12 @@ in
             mkdir -p "$out/share/${pname'}" "$out/bin"
             cp -R ${packageDir}/. "$out/share/${pname'}/"
 
-            ${lib.concatStringsSep "\n" (lib.mapAttrsToList
-              (name: path: ''
+            ${lib.concatStringsSep "\n" (
+              lib.mapAttrsToList (name: path: ''
                 rm -rf "$out/share/${pname'}/${name}"
                 cp -R ${path} "$out/share/${pname'}/${name}"
-              '')
-              runtimeAssets)}
+              '') runtimeAssets
+            )}
 
             if [ -d ${deps}/vendor ]; then
               cp -R ${deps}/vendor "$out/share/${pname'}/"

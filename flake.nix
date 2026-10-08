@@ -8,7 +8,8 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
   };
 
-  outputs = inputs@{ flake-parts, ... }:
+  outputs =
+    inputs@{ flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [
         "x86_64-linux"
@@ -19,7 +20,13 @@
 
       imports = [ ./deno.nix ];
 
-      perSystem = { system, self', mkDenoPackage, ... }:
+      perSystem =
+        {
+          system,
+          self',
+          mkDenoPackage,
+          ...
+        }:
         let
           pkgs = import inputs.nixpkgs {
             inherit system;
