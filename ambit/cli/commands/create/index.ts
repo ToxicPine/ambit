@@ -434,7 +434,7 @@ ${bold("EXAMPLES")}
   }
   const tag = args.tag || getRouterTag(network);
   const manual = !!args.manual;
-  const shouldApprove = !manual || !(args["no-auto-approve"] || args.json);
+  const shouldApprove = !(args["no-auto-approve"] || args.json);
 
   out.blank()
     .header("=".repeat(50))
