@@ -4,11 +4,27 @@
   inputs = {
     self.submodules = true;
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    denort-x86_64-linux = {
+      url = "file+https://dl.deno.land/release/v2.7.14/denort-x86_64-unknown-linux-gnu.zip";
+      flake = false;
+    };
+    denort-aarch64-linux = {
+      url = "file+https://dl.deno.land/release/v2.7.14/denort-aarch64-unknown-linux-gnu.zip";
+      flake = false;
+    };
+    denort-x86_64-darwin = {
+      url = "file+https://dl.deno.land/release/v2.7.14/denort-x86_64-apple-darwin.zip";
+      flake = false;
+    };
+    denort-aarch64-darwin = {
+      url = "file+https://dl.deno.land/release/v2.7.14/denort-aarch64-apple-darwin.zip";
+      flake = false;
+    };
   };
 
-  outputs = inputs@{ flake-parts, ... }:
+  outputs =
+    inputs@{ flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [
         "x86_64-linux"
@@ -19,17 +35,13 @@
 
       imports = [ ./deno.nix ];
 
-      perSystem = { system, self', mkDenoPackage, ... }:
-        let
-          pkgs = import inputs.nixpkgs {
-            inherit system;
-            config.allowUnfree = true;
-          };
-          unstablePkgs = import inputs.nixpkgs-unstable {
-            inherit system;
-            config.allowUnfree = true;
-          };
-        in
+      perSystem =
+        {
+          pkgs,
+          self',
+          mkDenoPackage,
+          ...
+        }:
         {
           devShells.default = pkgs.mkShell {
             nativeBuildInputs = [
@@ -46,14 +58,24 @@
                 packageDir = "ambit";
                 entrypoint = "main.ts";
                 binName = "ambit";
-                depsHash = "sha256-PcoeNAAY7hOXrqpOzZDQsA05vqB+Y8tOCLfyqdIPg3k=";
+                includedPaths = [
+                  "main.ts"
+                  "cli"
+                  "lib"
+                  "providers"
+                  "schemas"
+                  "util"
+                  "router"
+                  "skills"
+                  "../ambit-skills/skills"
+                ];
+                depsHash = "sha256-I70Mw/oZALhxBg5/QU962CX50p7DAIfTCVW9gT/fu7M=";
                 runtimeInputs = [
                   pkgs.flyctl
                   pkgs.gnutar
                   pkgs.gzip
                   pkgs.tailscale
                 ];
-                runtimeAssets.skills = ./ambit-skills/skills;
               };
             in
             {

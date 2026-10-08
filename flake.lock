@@ -1,5 +1,53 @@
 {
   "nodes": {
+    "denort-aarch64-darwin": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-6GorakKw7ZqWjLn472G1266bhwAPrLceehdCEAYTS4M=",
+        "type": "file",
+        "url": "https://dl.deno.land/release/v2.7.14/denort-aarch64-apple-darwin.zip"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://dl.deno.land/release/v2.7.14/denort-aarch64-apple-darwin.zip"
+      }
+    },
+    "denort-aarch64-linux": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-2H7MXfk2V54nNtwhv3m0c5chDJCgSRahUCYP7YMdb1Q=",
+        "type": "file",
+        "url": "https://dl.deno.land/release/v2.7.14/denort-aarch64-unknown-linux-gnu.zip"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://dl.deno.land/release/v2.7.14/denort-aarch64-unknown-linux-gnu.zip"
+      }
+    },
+    "denort-x86_64-darwin": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-sb+52DPFoMmDoRMjchvefO50BdayocRFHA+367JsCEc=",
+        "type": "file",
+        "url": "https://dl.deno.land/release/v2.7.14/denort-x86_64-apple-darwin.zip"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://dl.deno.land/release/v2.7.14/denort-x86_64-apple-darwin.zip"
+      }
+    },
+    "denort-x86_64-linux": {
+      "flake": false,
+      "locked": {
+        "narHash": "sha256-TLc912DvjepyexlZU0c14e1Q9CSpTifoDQU9i+LWYPs=",
+        "type": "file",
+        "url": "https://dl.deno.land/release/v2.7.14/denort-x86_64-unknown-linux-gnu.zip"
+      },
+      "original": {
+        "type": "file",
+        "url": "https://dl.deno.land/release/v2.7.14/denort-x86_64-unknown-linux-gnu.zip"
+      }
+    },
     "flake-parts": {
       "inputs": {
         "nixpkgs-lib": "nixpkgs-lib"
@@ -49,27 +97,14 @@
         "type": "github"
       }
     },
-    "nixpkgs-unstable": {
-      "locked": {
-        "lastModified": 1779536132,
-        "narHash": "sha256-q+fF42iv/geEbHfgSzy3tS0FF/EyD6XTZ98E6yxiBO8=",
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "3d8f0f3f72a6cd4d93d0ad13203f2ea1cb7e1456",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nixos",
-        "ref": "nixpkgs-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
+        "denort-aarch64-darwin": "denort-aarch64-darwin",
+        "denort-aarch64-linux": "denort-aarch64-linux",
+        "denort-x86_64-darwin": "denort-x86_64-darwin",
+        "denort-x86_64-linux": "denort-x86_64-linux",
         "flake-parts": "flake-parts",
-        "nixpkgs": "nixpkgs",
-        "nixpkgs-unstable": "nixpkgs-unstable"
+        "nixpkgs": "nixpkgs"
       }
     }
   },

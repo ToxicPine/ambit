@@ -14,7 +14,7 @@ export interface Command {
   name: string;
   description: string;
   usage: string;
-  run: (args: string[]) => Promise<void>;
+  run: (args: string[], signal?: AbortSignal) => Promise<void>;
 }
 
 // =============================================================================
@@ -86,7 +86,10 @@ export const showVersion = (): void => {
 // Main CLI Runner
 // =============================================================================
 
-export const runCli = async (argv: string[]): Promise<void> => {
+export const runCli = async (
+  argv: string[],
+  signal?: AbortSignal,
+): Promise<void> => {
   const args = parseArgs(argv, {
     boolean: ["help", "version"],
     stopEarly: true,
@@ -124,5 +127,6 @@ ${bold("USAGE")}
   }
 
   const commandArgs = argv.slice(1);
-  await command.run(commandArgs);
+  signal?.throwIfAborted();
+  await command.run(commandArgs, signal);
 };

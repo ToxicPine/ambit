@@ -42,7 +42,7 @@ const stageFlyConfig = async (
   out: Output<CreateResult>,
   opts: { json: boolean; org?: string; region?: string },
 ): Promise<
-  { fly: FlyProvider; flyEmail: string; org: string; region: string }
+  { fly: FlyProvider; flyEmail: string; org: string; region?: string }
 > => {
   out.header("Step 1: Fly.io Configuration").blank();
 
@@ -54,8 +54,8 @@ const stageFlyConfig = async (
 
   const org = await resolveOrg(fly, opts, out);
   await fly.auth.useOrgToken(org);
-  const region = opts.region || "iad";
-  out.ok(`Using Region: ${region}`);
+  const region = opts.region;
+  if (region) out.ok(`Requested Region: ${region}`);
 
   out.blank();
   return { fly, flyEmail, org, region };
@@ -216,24 +216,29 @@ const stageDeploy = async (
   opts: {
     network: string;
     org: string;
-    region: string;
+    region?: string;
     tag: string;
     shouldApprove: boolean;
     manual: boolean;
+    force: boolean;
+    signal?: AbortSignal;
   },
 ): Promise<void> => {
   out.header("Step 3: Deploy Subnet Router").blank();
 
+  const { force, ...settings } = opts;
   const ctx: CreateCtx = {
     fly,
     tailscale,
     out,
-    ...opts,
+    ...settings,
+    region: opts.region ?? "iad",
+    redeploy: false,
     appName: "",
     routerId: "",
   };
 
-  const phase = await hydrateCreate(ctx);
+  const phase = await hydrateCreate(ctx, { force, region: opts.region });
 
   if (phase === "complete") {
     out.ok(`Network "${opts.network}" Already Fully Created`);
@@ -260,7 +265,7 @@ const stageDeploy = async (
   const result = await runMachine(machine, phase, ctx);
   if (!result.ok) return out.die(result.error!);
 
-  stageSummary(out, fly, tailscale, ctx, opts);
+  await stageSummary(out, fly, tailscale, ctx, opts);
 };
 
 // =============================================================================
@@ -289,7 +294,7 @@ const stageSummary = async (
 
   out.blank()
     .header("=".repeat(50))
-    .header("  Router Created!")
+    .header(ctx.redeploy ? "  Router Redeployed!" : "  Router Created!")
     .header("=".repeat(50))
     .blank()
     .text(`The "${opts.network}" Network Is Ready.`)
@@ -377,10 +382,10 @@ const stageSummary = async (
 // Create Command
 // =============================================================================
 
-const create = async (argv: string[]): Promise<void> => {
+const create = async (argv: string[], signal?: AbortSignal): Promise<void> => {
   const opts = {
-    string: ["org", "region", "tag"],
-    boolean: ["help", "yes", "json", "no-auto-approve", "manual"],
+    string: ["org", "region"],
+    boolean: ["help", "yes", "json", "no-auto-approve", "manual", "force"],
     alias: { y: "yes" },
   } as const;
   const args = parseArgs(argv, opts);
@@ -395,10 +400,10 @@ ${bold("USAGE")}
 
 ${bold("OPTIONS")}
   --org <org>         Fly.io organization slug
-  --region <region>   Fly.io region (default: iad)
-  --tag <tag>         Tailscale ACL tag for the router (default: tag:ambit-<network>)
+  --region <region>   Fly.io region (new routers default to iad)
   --manual            Skip automatic Tailscale ACL configuration (tagOwners + autoApprovers)
   --no-auto-approve   Skip waiting for router and approving routes
+  --force             Rebuild and redeploy an existing router in place
   -y, --yes           Skip confirmation prompts
   --json              Output as JSON (implies --no-auto-approve)
 
@@ -412,10 +417,14 @@ ${bold("DESCRIPTION")}
   and autoApprovers). Use --manual if your API token lacks ACL write
   permission or you prefer to manage the policy yourself.
 
+  --force upgrades the router in place, preserving configuration and
+  Tailscale identity. Connectivity briefly pauses during restart.
+
 ${bold("EXAMPLES")}
   ambit create browsers
   ambit create browsers --org my-org --region sea
   ambit create browsers --manual
+  ambit create browsers --force
 `);
     return;
   }
@@ -432,9 +441,10 @@ ${bold("EXAMPLES")}
       `"${network}" Is a Public TLD and Cannot Be Used as a Network Name`,
     );
   }
-  const tag = args.tag || getRouterTag(network);
+  const tag = getRouterTag(network);
   const manual = !!args.manual;
-  const shouldApprove = !manual || !(args["no-auto-approve"] || args.json);
+  const force = !!args.force;
+  const shouldApprove = !(args["no-auto-approve"] || args.json);
 
   out.blank()
     .header("=".repeat(50))
@@ -464,6 +474,8 @@ ${bold("EXAMPLES")}
     tag,
     shouldApprove,
     manual,
+    force,
+    signal,
   });
 };
 
@@ -474,6 +486,6 @@ ${bold("EXAMPLES")}
 registerCommand({
   name: "create",
   description: "Create a Tailscale subnet router on a Fly.io custom network",
-  usage: "ambit create <network> [--org <org>] [--region <region>]",
+  usage: "ambit create <network> [--org <org>] [--region <region>] [--force]",
   run: create,
 });

@@ -133,8 +133,7 @@ const stageDiscover = async (ctx: ShareCtx): Promise<void> => {
   ctx.subnet = machine.subnet;
   machineSpinner.success(`Subnet: ${machine.subnet}`);
 
-  const device = await ctx.tailscale.devices.getByHostname(router.appName);
-  ctx.tag = device?.tags?.[0] ?? getRouterTag(ctx.network);
+  ctx.tag = getRouterTag(ctx.network);
   ctx.out.ok(`Tag: ${ctx.tag}`);
   ctx.out.blank();
 };

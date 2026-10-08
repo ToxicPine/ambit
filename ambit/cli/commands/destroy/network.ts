@@ -84,6 +84,7 @@ const reportSkipped = (
 const hydrateDestroyNetwork = async (
   ctx: DestroyNetworkCtx,
 ): Promise<DestroyNetworkPhase> => {
+  ctx.tag = getRouterTag(ctx.network);
   const router = await findRouterApp(ctx.fly, ctx.org, ctx.network);
   const dns = await ctx.tailscale.dns.getSplit();
   const hasDns = (dns[ctx.network]?.length ?? 0) > 0;
@@ -93,7 +94,6 @@ const hydrateDestroyNetwork = async (
     const device = await ctx.tailscale.devices.getByHostname(router.appName);
     if (device) {
       ctx.device = device;
-      ctx.tag = device.tags?.[0] ?? undefined;
     }
   }
 

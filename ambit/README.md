@@ -101,12 +101,14 @@ Creates a private network. Deploys a Tailscale subnet router on a Fly.io custom 
 | Flag                | Description                                                                 |
 | ------------------- | --------------------------------------------------------------------------- |
 | `--org <org>`       | Fly.io organization slug                                                    |
-| `--region <region>` | Fly.io region (default: `iad`)                                              |
-| `--tag <tag>`       | Tailscale ACL tag for the router (default: `tag:ambit-<network>`)           |
+| `--region <region>` | Fly.io region (new routers default to `iad`)                                |
 | `--manual`          | Skip automatic Tailscale ACL configuration (tagOwners + autoApprovers)      |
 | `--no-auto-approve` | Skip waiting for router and approving routes                                |
+| `--force`          | Rebuild and redeploy the existing router in place                            |
 | `-y`, `--yes`       | Skip confirmation prompts                                                   |
 | `--json`            | Machine-readable JSON output (implies `--no-auto-approve`)                  |
+
+Use `ambit create <network> --force` to upgrade a router in place, preserving its configuration and Tailscale identity. Connectivity briefly pauses during restart. Stopped routers are also redeployed without `--force`.
 
 ### `ambit share <network> <member> [<member>...]`
 

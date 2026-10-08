@@ -1,5 +1,5 @@
 // =============================================================================
-// Fly.io CLI Response Schemas
+// Fly.io CLI and Machines API Response Schemas
 // =============================================================================
 
 import { z } from "zod";
@@ -91,7 +91,7 @@ export const FlyMachineGuestSchema = z.object({
 
 export const FlyMachineConfigSchema = z.object({
   guest: FlyMachineGuestSchema.optional(),
-  metadata: z.record(z.string(), z.string()).optional(),
+  metadata: z.record(z.string(), z.string()).nullish(),
   auto_destroy: z.boolean().optional(),
   services: z.array(
     z.object({
@@ -121,6 +121,23 @@ export const FlyMachineSchema = z.object({
 export type FlyMachine = z.infer<typeof FlyMachineSchema>;
 
 export const FlyMachinesListSchema = z.array(FlyMachineSchema);
+
+export const FlyMachineLeaseSchema = z.object({
+  status: z.literal("success"),
+  data: z.object({
+    nonce: z.string().min(1),
+    expires_at: z.number().int().optional(),
+    owner: z.string().optional(),
+    description: z.string().optional(),
+    version: z.string().optional(),
+  }).loose(),
+  message: z.string().optional(),
+  code: z.string().optional(),
+}).loose();
+
+export const FlyMachineUpdateSchema = FlyMachineSchema.extend({
+  instance_id: z.string().min(1),
+});
 
 // =============================================================================
 // Organization Schemas

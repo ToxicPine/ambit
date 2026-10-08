@@ -119,12 +119,16 @@ async function getAlpineLatest(): Promise<string> {
 
   const versions = data.results
     .map((t: { name: string }) => t.name)
-    .filter((name: string) => /^\d+\.\d+(\.\d+)?$/.test(name))
+    .filter((name: string) => /^\d+\.\d+\.\d+$/.test(name))
     .sort((a: string, b: string) => {
-      const [aMaj, aMin] = a.split(".").map(Number);
-      const [bMaj, bMin] = b.split(".").map(Number);
-      return bMaj - aMaj || bMin - aMin;
+      const [aMaj, aMin, aPatch] = a.split(".").map(Number);
+      const [bMaj, bMin, bPatch] = b.split(".").map(Number);
+      return bMaj - aMaj || bMin - aMin || bPatch - aPatch;
     });
+
+  if (!versions.length) {
+    throw new Error("No stable Alpine patch releases found");
+  }
 
   return versions[0];
 }
