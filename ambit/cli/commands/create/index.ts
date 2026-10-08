@@ -383,7 +383,7 @@ const stageSummary = async (
 
 const create = async (argv: string[]): Promise<void> => {
   const opts = {
-    string: ["org", "region", "tag"],
+    string: ["org", "region"],
     boolean: ["help", "yes", "json", "no-auto-approve", "manual", "force"],
     alias: { y: "yes" },
   } as const;
@@ -400,7 +400,6 @@ ${bold("USAGE")}
 ${bold("OPTIONS")}
   --org <org>         Fly.io organization slug
   --region <region>   Fly.io region (new routers default to iad)
-  --tag <tag>         Tailscale ACL tag for the router (default: tag:ambit-<network>)
   --manual            Skip automatic Tailscale ACL configuration (tagOwners + autoApprovers)
   --no-auto-approve   Skip waiting for router and approving routes
   --force             Rebuild and redeploy an existing router in place
@@ -441,7 +440,7 @@ ${bold("EXAMPLES")}
       `"${network}" Is a Public TLD and Cannot Be Used as a Network Name`,
     );
   }
-  const tag = args.tag || getRouterTag(network);
+  const tag = getRouterTag(network);
   const manual = !!args.manual;
   const force = !!args.force;
   const shouldApprove = !(args["no-auto-approve"] || args.json);

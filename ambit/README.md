@@ -102,7 +102,6 @@ Creates a private network. Deploys a Tailscale subnet router on a Fly.io custom 
 | ------------------- | --------------------------------------------------------------------------- |
 | `--org <org>`       | Fly.io organization slug                                                    |
 | `--region <region>` | Fly.io region (new routers default to `iad`)                                |
-| `--tag <tag>`       | Tailscale ACL tag for the router (default: `tag:ambit-<network>`)           |
 | `--manual`          | Skip automatic Tailscale ACL configuration (tagOwners + autoApprovers)      |
 | `--no-auto-approve` | Skip waiting for router and approving routes                                |
 | `--force`          | Rebuild and redeploy the existing router in place                            |
