@@ -72,10 +72,11 @@ Deno.test({
   async fn() {
     for (const region of [undefined, "sea"]) {
       const ctx = context();
+      ctx.signal = new AbortController().signal;
       let deployed = false;
       ctx.fly.deploy.router = (app, _dir, options) => {
         assertEquals(app, "ambit-lab-abc123");
-        assertEquals(options, { region: "sea" });
+        assertEquals(options, { region: "sea", signal: ctx.signal });
         deployed = true;
         return Promise.resolve();
       };

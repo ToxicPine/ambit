@@ -221,6 +221,7 @@ const stageDeploy = async (
     shouldApprove: boolean;
     manual: boolean;
     force: boolean;
+    signal?: AbortSignal;
   },
 ): Promise<void> => {
   out.header("Step 3: Deploy Subnet Router").blank();
@@ -264,7 +265,7 @@ const stageDeploy = async (
   const result = await runMachine(machine, phase, ctx);
   if (!result.ok) return out.die(result.error!);
 
-  stageSummary(out, fly, tailscale, ctx, opts);
+  await stageSummary(out, fly, tailscale, ctx, opts);
 };
 
 // =============================================================================
@@ -381,7 +382,7 @@ const stageSummary = async (
 // Create Command
 // =============================================================================
 
-const create = async (argv: string[]): Promise<void> => {
+const create = async (argv: string[], signal?: AbortSignal): Promise<void> => {
   const opts = {
     string: ["org", "region"],
     boolean: ["help", "yes", "json", "no-auto-approve", "manual", "force"],
@@ -474,6 +475,7 @@ ${bold("EXAMPLES")}
     shouldApprove,
     manual,
     force,
+    signal,
   });
 };
 

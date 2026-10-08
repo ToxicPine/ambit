@@ -166,7 +166,7 @@ export interface FlyProvider {
     router(
       app: string,
       dir: string,
-      config: { region: string },
+      config: { region: string; signal?: AbortSignal },
     ): Promise<void>;
     app(app: string, options: SafeDeployOptions): Promise<void>;
   };
@@ -663,7 +663,7 @@ export const createFlyProvider = (token?: string): FlyProvider => {
       async router(
         app: string,
         dockerDir: string,
-        config: { region: string },
+        config: { region: string; signal?: AbortSignal },
       ): Promise<void> {
         const apiToken = await provider.auth.getToken();
         const machinesUrl = `https://api.machines.dev/v1/apps/${
@@ -702,7 +702,7 @@ export const createFlyProvider = (token?: string): FlyProvider => {
           return text ? JSON.parse(text) : {};
         };
         const machines = FlyMachinesListSchema.parse(
-          await requestMachinesApi(machinesUrl),
+          await requestMachinesApi(machinesUrl, { signal: config.signal }),
         );
         for (const machine of machines) {
           if (machine.region !== config.region) {
@@ -733,7 +733,8 @@ export const createFlyProvider = (token?: string): FlyProvider => {
             "--primary-region",
             config.region,
           ];
-          const result = await run(args);
+          const result = await run(args, { signal: config.signal });
+          config.signal?.throwIfAborted();
           if (!result.ok) throw new FlyDeployError(app, result.stderr);
           return;
         }
@@ -788,11 +789,18 @@ export const createFlyProvider = (token?: string): FlyProvider => {
           const failed = results.find((result) => result.status === "rejected");
           if (failed?.status === "rejected") throw failed.reason;
         });
+        const signal = config.signal
+          ? AbortSignal.any([config.signal, heartbeat.signal])
+          : heartbeat.signal;
         const releaseLeases = async () => {
           await heartbeat.stop();
           const results = await Promise.allSettled(
             leases.map(({ leaseUrl, nonce }) =>
-              requestMachinesApi(leaseUrl, { method: "DELETE", nonce })
+              requestMachinesApi(leaseUrl, {
+                method: "DELETE",
+                nonce,
+                signal: AbortSignal.timeout(4000),
+              })
             ),
           );
           const failed = results.find((result) => result.status === "rejected");
@@ -801,6 +809,7 @@ export const createFlyProvider = (token?: string): FlyProvider => {
 
         try {
           for (const machine of machines) {
+            signal.throwIfAborted();
             const machineUrl = `${machinesUrl}/${
               encodeURIComponent(machine.id)
             }`;
@@ -809,7 +818,7 @@ export const createFlyProvider = (token?: string): FlyProvider => {
               await requestMachinesApi(leaseUrl, {
                 method: "POST",
                 body: { description: label, ttl: 120 },
-                signal: heartbeat.signal,
+                signal,
               }),
             );
             leases.push({
@@ -819,18 +828,18 @@ export const createFlyProvider = (token?: string): FlyProvider => {
             });
           }
 
-          const built = await run(buildArgs, { signal: heartbeat.signal });
-          heartbeat.signal.throwIfAborted();
+          const built = await run(buildArgs, { signal });
+          signal.throwIfAborted();
           if (!built.ok) throw new FlyDeployError(app, built.stderr);
 
           for (const { machineUrl, nonce } of leases) {
-            heartbeat.signal.throwIfAborted();
+            signal.throwIfAborted();
             // Read the full configuration under the lease before changing it.
             // The Machines API does not support partial configuration updates.
             const current = FlyMachineSchema.parse(
               await requestMachinesApi(machineUrl, {
                 nonce,
-                signal: heartbeat.signal,
+                signal,
               }),
             );
             if (!current.config) {
@@ -840,7 +849,7 @@ export const createFlyProvider = (token?: string): FlyProvider => {
               await requestMachinesApi(machineUrl, {
                 method: "POST",
                 nonce,
-                signal: heartbeat.signal,
+                signal,
                 body: {
                   config: { ...current.config, image },
                   skip_launch: false,
@@ -854,7 +863,7 @@ export const createFlyProvider = (token?: string): FlyProvider => {
             });
             await requestMachinesApi(`${machineUrl}/wait?${query}`, {
               nonce,
-              signal: heartbeat.signal,
+              signal,
             });
           }
         } catch (error) {

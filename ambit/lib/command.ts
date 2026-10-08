@@ -66,6 +66,7 @@ export const runCommand = (
   args: string[],
   options?: RunOptions,
 ): Promise<CmdResult> => {
+  options?.signal?.throwIfAborted();
   const [cmd, ...cmdArgs] = args;
   const interactive = options?.interactive ?? false;
 
@@ -81,30 +82,29 @@ export const runCommand = (
       ],
     });
 
-    if (interactive) {
-      child.on("error", () => {
-        resolve(new CmdResult(-1, "", ""));
-      });
-      child.on("close", (code) => {
-        resolve(new CmdResult(code ?? 1, "", ""));
-      });
-      return;
-    }
-
     const stdout: string[] = [];
     const stderr: string[] = [];
+    let failure: Error | undefined;
 
-    child.stdout!.setEncoding("utf8");
-    child.stderr!.setEncoding("utf8");
-    child.stdout!.on("data", (chunk: string) => stdout.push(chunk));
-    child.stderr!.on("data", (chunk: string) => stderr.push(chunk));
+    if (!interactive) {
+      child.stdout!.setEncoding("utf8");
+      child.stderr!.setEncoding("utf8");
+      child.stdout!.on("data", (chunk: string) => stdout.push(chunk));
+      child.stderr!.on("data", (chunk: string) => stderr.push(chunk));
+    }
 
     child.on("error", (error) => {
-      resolve(new CmdResult(-1, "", error.message));
+      failure = error;
     });
 
     child.on("close", (code) => {
-      resolve(new CmdResult(code ?? 1, stdout.join(""), stderr.join("")));
+      resolve(
+        new CmdResult(
+          failure ? -1 : code ?? 1,
+          stdout.join(""),
+          failure?.message ?? stderr.join(""),
+        ),
+      );
     });
   });
 };

@@ -40,6 +40,7 @@ type Options = {
   buildFails?: boolean;
   updateFails?: boolean;
   releaseFails?: boolean;
+  cancelBuild?: AbortController;
 };
 
 async function withRouter(
@@ -55,17 +56,42 @@ async function withRouter(
   const oldFetch = globalThis.fetch;
   const log = `${dir}/build.json`;
   const held = `${dir}/lease-held`;
+  const stopped = `${dir}/build-stopped`;
   const calls: Call[] = [];
+  let releasedAfterExit = false;
+  let releaseWasCancelled = false;
   try {
     await Deno.writeTextFile(
       `${dir}/fly`,
-      `#!/usr/bin/env -S ${Deno.execPath()} run --no-config --no-lock --allow-read=${held} --allow-write=${log}
+      `#!/usr/bin/env -S ${Deno.execPath()} run --no-config --no-lock --allow-read=${held} --allow-write=${dir}
 ${options.missing ? "" : `await Deno.stat(${JSON.stringify(held)});`}
+${
+        options.cancelBuild
+          ? `Deno.addSignalListener("SIGTERM", () => {
+  setTimeout(async () => {
+    await Deno.writeTextFile(${JSON.stringify(stopped)}, "");
+    Deno.exit(0);
+  }, 30);
+});
+setInterval(() => {}, 1000);`
+          : ""
+      }
 await Deno.writeTextFile(${JSON.stringify(log)}, JSON.stringify(Deno.args));
 ${options.buildFails ? 'console.error("build failed"); Deno.exit(1);' : ""}
 `,
     );
     await Deno.chmod(`${dir}/fly`, 0o755);
+    const watcher = options.cancelBuild ? Deno.watchFs(dir) : undefined;
+    const cancel = watcher
+      ? (async () => {
+        for await (const event of watcher) {
+          if (event.paths.includes(log)) {
+            options.cancelBuild!.abort(new Error("Cancelled Build"));
+            break;
+          }
+        }
+      })()
+      : Promise.resolve();
     Deno.env.set("PATH", `${dir}:${oldPath ?? ""}`);
     const replies: Record<string, unknown> = {
       [`GET ${machinesPath}`]: options.missing ? [] : [machine],
@@ -95,7 +121,18 @@ ${options.buildFails ? 'console.error("build failed"); Deno.exit(1);' : ""}
       });
       if (url.pathname.endsWith("/lease")) {
         if (method === "POST") Deno.writeTextFileSync(held, "");
-        else Deno.removeSync(held);
+        else {
+          if (options.cancelBuild) {
+            try {
+              Deno.statSync(stopped);
+              releasedAfterExit = true;
+            } catch (error) {
+              if (!(error instanceof Deno.errors.NotFound)) throw error;
+            }
+            releaseWasCancelled = init?.signal?.aborted ?? false;
+          }
+          Deno.removeSync(held);
+        }
       }
       if (url.pathname.endsWith("/wait")) {
         assertEquals(url.searchParams.get("instance_id"), "new-instance");
@@ -119,6 +156,11 @@ ${options.buildFails ? 'console.error("build failed"); Deno.exit(1);' : ""}
       calls,
       async () => JSON.parse(await Deno.readTextFile(log)),
     );
+    await cancel;
+    if (options.cancelBuild) {
+      assertEquals(releasedAfterExit, true);
+      assertEquals(releaseWasCancelled, false);
+    }
   } finally {
     globalThis.fetch = oldFetch;
     if (oldPath === undefined) Deno.env.delete("PATH");
@@ -159,6 +201,31 @@ Deno.test({
       });
       for (const call of calls.slice(2)) assertEquals(call.nonce, "lease");
     }),
+});
+
+Deno.test({
+  name:
+    "cancelling a build waits for child exit, then releases leases without updating",
+  permissions,
+  fn: () => {
+    const controller = new AbortController();
+    return withRouter({ cancelBuild: controller }, async (fly, calls) => {
+      await assertRejects(
+        () =>
+          fly.deploy.router(app, "/bundled/router", {
+            region: "sea",
+            signal: controller.signal,
+          }),
+        Error,
+        "Cancelled Build",
+      );
+      assertEquals(calls.map((call) => `${call.method} ${call.path}`), [
+        `GET ${machinesPath}`,
+        `POST ${machinePath}/lease`,
+        `DELETE ${machinePath}/lease`,
+      ]);
+    });
+  },
 });
 
 Deno.test({

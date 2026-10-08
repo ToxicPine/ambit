@@ -30,7 +30,8 @@
 // =============================================================================
 
 import { runCli } from "@/cli/mod.ts";
-import { Spinner, statusErr } from "@/lib/cli.ts";
+import { statusErr } from "@/lib/cli.ts";
+import { runWithSignals } from "@/lib/signals.ts";
 
 import "./cli/commands/auth.ts";
 import "./cli/commands/create/index.ts";
@@ -45,35 +46,12 @@ import "./cli/commands/logs.ts";
 import "./cli/commands/skills.ts";
 
 // =============================================================================
-// Main
-// =============================================================================
-
-const main = async (): Promise<void> => {
-  const spinner = new Spinner();
-
-  try {
-    Deno.addSignalListener("SIGINT", () => {
-      spinner.stop();
-      Deno.exit(130);
-    });
-    Deno.addSignalListener("SIGTERM", () => {
-      spinner.stop();
-      Deno.exit(143);
-    });
-  } catch {
-    // Signal listeners may not be available on all platforms
-  }
-
-  await runCli(Deno.args);
-};
-
-// =============================================================================
 // Entry
 // =============================================================================
 
 export async function run(): Promise<void> {
   try {
-    await main();
+    await runWithSignals((signal) => runCli(Deno.args, signal));
   } catch (error) {
     if (error instanceof Error && error.message !== "exit") {
       statusErr(error.message);

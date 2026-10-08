@@ -61,6 +61,7 @@ export interface CreateCtx {
   shouldApprove: boolean;
   manual: boolean;
   redeploy: boolean;
+  signal?: AbortSignal;
   appName: string;
   routerId: string;
   device?: TailscaleDevice;
@@ -140,6 +141,7 @@ export const createTransition = async (
   phase: CreatePhase,
   ctx: CreateCtx,
 ): Promise<Result<CreatePhase>> => {
+  ctx.signal?.throwIfAborted();
   switch (phase) {
     case "create_app": {
       const suffix = randomId(8);
@@ -177,8 +179,11 @@ export const createTransition = async (
       try {
         await ctx.fly.deploy.router(ctx.appName, dockerDir, {
           region: ctx.region,
+          signal: ctx.signal,
         });
       } catch (e) {
+        deploySpinner.stop();
+        ctx.signal?.throwIfAborted();
         deploySpinner.fail("Router Deploy Failed");
         if (e instanceof FlyDeployError) {
           ctx.out.dim(`  ${e.detail}`);
