@@ -59,12 +59,22 @@ const tryFlyWhoami = async (
 
 const resolveFlyScope = async <T extends Record<string, unknown>>(
   out: Output<T>,
-  opts: { json: boolean; org?: string; flyApiKey?: string; flyEmail: string },
+  opts: {
+    json: boolean;
+    org?: string;
+    flyApiKey?: string;
+    flyEmail: string;
+    orgPrompt?: string;
+  },
 ): Promise<string> => {
   const fly = createFlyProvider(opts.flyApiKey);
-  const org = await resolveOrg(fly, { json: opts.json, org: opts.org }, out);
+  const org = await resolveOrg(fly, {
+    json: opts.json,
+    org: opts.org,
+    orgPrompt: opts.orgPrompt,
+  }, out);
   const scope = getFlyIdentityKey(org, opts.flyEmail);
-  out.ok(`Using Fly Identity: ${scope}`);
+  out.ok(`Fly Identity: ${scope}`);
   return scope;
 };
 
@@ -294,6 +304,7 @@ ${bold("EXAMPLES")}
       json: args.json,
       org: args.org,
       flyEmail,
+      orgPrompt: "Choose a Fly.io organization to check its Tailscale API key.",
     });
   }
 

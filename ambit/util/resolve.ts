@@ -15,7 +15,7 @@ import type { FlyProvider } from "@/providers/fly.ts";
  */
 export const resolveOrg = async (
   fly: FlyProvider,
-  args: { org?: string; json?: boolean },
+  args: { org?: string; json?: boolean; orgPrompt?: string },
   // deno-lint-ignore no-explicit-any
   out: Output<any>,
 ): Promise<string> => {
@@ -37,11 +37,15 @@ export const resolveOrg = async (
     return orgSlugs[0];
   }
 
+  if (args.orgPrompt) {
+    out.text(args.orgPrompt).blank();
+  }
   out.text("Available Organizations:");
   for (const [slug, name] of Object.entries(orgs)) {
     out.text(`  ${slug} - ${name}`);
   }
   const org = await prompt("Organization Slug: ");
+  out.blank();
   if (!orgSlugs.includes(org)) {
     return out.die(`Invalid Organization: ${org}`);
   }
