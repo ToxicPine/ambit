@@ -4,7 +4,6 @@
   inputs = {
     self.submodules = true;
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
   };
 
@@ -22,21 +21,11 @@
 
       perSystem =
         {
-          system,
+          pkgs,
           self',
           mkDenoPackage,
           ...
         }:
-        let
-          pkgs = import inputs.nixpkgs {
-            inherit system;
-            config.allowUnfree = true;
-          };
-          unstablePkgs = import inputs.nixpkgs-unstable {
-            inherit system;
-            config.allowUnfree = true;
-          };
-        in
         {
           devShells.default = pkgs.mkShell {
             nativeBuildInputs = [
@@ -53,14 +42,24 @@
                 packageDir = "ambit";
                 entrypoint = "main.ts";
                 binName = "ambit";
-                depsHash = "sha256-PcoeNAAY7hOXrqpOzZDQsA05vqB+Y8tOCLfyqdIPg3k=";
+                includedPaths = [
+                  "main.ts"
+                  "cli"
+                  "lib"
+                  "providers"
+                  "schemas"
+                  "util"
+                  "router"
+                  "skills"
+                  "../ambit-skills/skills"
+                ];
+                depsHash = "sha256-I70Mw/oZALhxBg5/QU962CX50p7DAIfTCVW9gT/fu7M=";
                 runtimeInputs = [
                   pkgs.flyctl
                   pkgs.gnutar
                   pkgs.gzip
                   pkgs.tailscale
                 ];
-                runtimeAssets.skills = ./ambit-skills/skills;
               };
             in
             {
