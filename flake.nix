@@ -2,6 +2,7 @@
   description = "Ambit - Deploy To Private VPN";
 
   inputs = {
+    self.submodules = true;
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
@@ -45,13 +46,14 @@
                 packageDir = "ambit";
                 entrypoint = "main.ts";
                 binName = "ambit";
-                depsHash = "sha256-lOPeKbqJVtF+BDq66COWiNOaZkhCxdmNdnWMxJpjkq4=";
+                depsHash = "sha256-PcoeNAAY7hOXrqpOzZDQsA05vqB+Y8tOCLfyqdIPg3k=";
                 runtimeInputs = [
                   pkgs.flyctl
                   pkgs.gnutar
                   pkgs.gzip
                   pkgs.tailscale
                 ];
+                runtimeAssets.skills = ./ambit-skills/skills;
               };
             in
             {
