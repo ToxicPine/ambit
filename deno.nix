@@ -68,6 +68,7 @@ in
           binName ? null,
           permissions ? [ "-A" ],
           runtimeInputs ? [ ],
+          runtimeAssets ? { },
         }:
         let
           denoConfig =
@@ -157,6 +158,13 @@ in
 
             mkdir -p "$out/share/${pname'}" "$out/bin"
             cp -R ${packageDir}/. "$out/share/${pname'}/"
+
+            ${lib.concatStringsSep "\n" (lib.mapAttrsToList
+              (name: path: ''
+                rm -rf "$out/share/${pname'}/${name}"
+                cp -R ${path} "$out/share/${pname'}/${name}"
+              '')
+              runtimeAssets)}
 
             if [ -d ${deps}/vendor ]; then
               cp -R ${deps}/vendor "$out/share/${pname'}/"

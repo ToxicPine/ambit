@@ -50,7 +50,7 @@ await Deno.writeTextFile(
       license: config.license,
       type: "module",
       bin: { ambit: "bin.mjs" },
-      files: ["bin.mjs", "cli/", "router/"],
+      files: ["bin.mjs", "cli/", "router/", "skills/"],
       engines: { node: ">=18" },
       dependencies: { "@deno/shim-deno": "0.19.2" },
     },
@@ -59,6 +59,10 @@ await Deno.writeTextFile(
   ) + "\n",
 );
 await copy(new URL("router/", packageDir), new URL("router/", outDir));
+await copy(
+  new URL("../ambit-skills/skills/", packageDir),
+  new URL("skills/", outDir),
+);
 await Deno.copyFile(
   new URL("README.md", packageDir),
   new URL("README.md", outDir),

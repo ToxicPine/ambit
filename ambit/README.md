@@ -372,8 +372,19 @@ npx @cardelli/ambit create browsers
 
 ## Agent Skill
 
-Install the Ambit [skill](https://skills.sh) to give your AI coding agent reference documentation for all the CLI commands. Works with Claude Code, Cursor, Windsurf, and other AI coding agents:
+Install the Ambit [skill](https://skills.sh) to help your AI coding agent discover the CLI guide. Works with Claude Code, Cursor, Windsurf, and other AI coding agents:
 
 ```bash
-npx skills add ToxicPine/ambit-skills --skill ambit-cli
+npx skills add ToxicPine/ambit --skill ambit
 ```
+
+The stub at [`skills/ambit/SKILL.md`](https://github.com/ToxicPine/ambit/blob/master/skills/ambit/SKILL.md)
+points to the full skill shipped with the CLI:
+
+```bash
+npx @cardelli/ambit skills list
+npx @cardelli/ambit skills get core
+npx @cardelli/ambit skills list --json
+```
+
+These commands work offline with an installed CLI and require no authentication.

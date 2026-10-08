@@ -42,6 +42,7 @@ import "./cli/commands/destroy/index.ts";
 import "./cli/commands/doctor.ts";
 import "./cli/commands/secrets.ts";
 import "./cli/commands/logs.ts";
+import "./cli/commands/skills.ts";
 
 // =============================================================================
 // Main
