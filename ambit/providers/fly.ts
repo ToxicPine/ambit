@@ -4,6 +4,7 @@
 
 import { runCommand, runJson, type RunOptions } from "@/lib/command.ts";
 import { Result } from "@/lib/result.ts";
+import { startHeartbeat } from "@/lib/heartbeat.ts";
 import { commandExists, die } from "@/lib/cli.ts";
 import { dirname, resolve } from "@std/path";
 import {
@@ -15,7 +16,10 @@ import {
   type FlyIp,
   FlyIpListSchema,
   type FlyMachine,
+  FlyMachineLeaseSchema,
+  FlyMachineSchema,
   FlyMachinesListSchema,
+  FlyMachineUpdateSchema,
   FlyOrgsSchema,
   FlyStatusSchema,
 } from "@/schemas/fly.ts";
@@ -162,7 +166,7 @@ export interface FlyProvider {
     router(
       app: string,
       dir: string,
-      config?: { region?: string },
+      config: { region: string },
     ): Promise<void>;
     app(app: string, options: SafeDeployOptions): Promise<void>;
   };
@@ -659,27 +663,206 @@ export const createFlyProvider = (token?: string): FlyProvider => {
       async router(
         app: string,
         dockerDir: string,
-        config?: { region?: string },
+        config: { region: string },
       ): Promise<void> {
-        const args = [
+        const apiToken = await provider.auth.getToken();
+        const machinesUrl = `https://api.machines.dev/v1/apps/${
+          encodeURIComponent(app)
+        }/machines`;
+        const requestMachinesApi = async (
+          url: string,
+          options: {
+            method?: "GET" | "POST" | "DELETE";
+            body?: unknown;
+            nonce?: string;
+            signal?: AbortSignal;
+          } = {},
+        ): Promise<unknown> => {
+          const { method = "GET", body, nonce } = options;
+          const response = await fetch(url, {
+            method,
+            headers: {
+              Authorization: `Bearer ${apiToken}`,
+              "Content-Type": "application/json",
+              ...(nonce ? { "fly-machine-lease-nonce": nonce } : {}),
+            },
+            body: body === undefined ? undefined : JSON.stringify(body),
+            signal: options.signal
+              ? AbortSignal.any([options.signal, AbortSignal.timeout(65000)])
+              : AbortSignal.timeout(65000),
+          });
+          if (!response.ok) {
+            await response.body?.cancel();
+            throw new FlyDeployError(
+              app,
+              `Machines API ${method} ${url}: HTTP ${response.status}`,
+            );
+          }
+          const text = await response.text();
+          return text ? JSON.parse(text) : {};
+        };
+        const machines = FlyMachinesListSchema.parse(
+          await requestMachinesApi(machinesUrl),
+        );
+        for (const machine of machines) {
+          if (machine.region !== config.region) {
+            throw new FlyDeployError(
+              app,
+              `Router Is in ${machine.region}; --region ${config.region} Requires Migration.`,
+            );
+          }
+          if (!machine.config) {
+            throw new FlyDeployError(
+              app,
+              `Missing Configuration for Machine ${machine.id}`,
+            );
+          }
+        }
+
+        if (machines.length === 0) {
+          const args = [
+            "fly",
+            "deploy",
+            dockerDir,
+            "-a",
+            app,
+            "--yes",
+            "--ha=false",
+            "--no-public-ips",
+            "--no-cache",
+            "--primary-region",
+            config.region,
+          ];
+          const result = await run(args);
+          if (!result.ok) throw new FlyDeployError(app, result.stderr);
+          return;
+        }
+
+        // flyctl only builds/pushes the image. Existing runtime configuration
+        // comes from the Machines API, never from the bundled fly.toml.
+        const label = `ambit-${crypto.randomUUID()}`;
+        const image = `registry.fly.io/${app}:${label}`;
+        const buildArgs = [
           "fly",
           "deploy",
           dockerDir,
           "-a",
           app,
+          "--build-only",
+          "--push",
+          "--image-label",
+          label,
+          "--dockerfile",
+          resolve(dockerDir, "Dockerfile"),
           "--yes",
-          "--ha=false",
+          "--no-cache",
+          "--primary-region",
+          config.region,
         ];
+        const leases: {
+          machineUrl: string;
+          leaseUrl: string;
+          nonce: string;
+        }[] = [];
+        const heartbeat = startHeartbeat(async (signal) => {
+          const results = await Promise.allSettled(
+            leases.map(async ({ leaseUrl, nonce }) => {
+              const refreshed = FlyMachineLeaseSchema.parse(
+                await requestMachinesApi(
+                  `${leaseUrl}?ttl=120`,
+                  {
+                    method: "POST",
+                    nonce,
+                    signal,
+                  },
+                ),
+              );
+              if (refreshed.data.nonce !== nonce) {
+                throw new FlyDeployError(
+                  app,
+                  "Router Lease Changed During Renewal",
+                );
+              }
+            }),
+          );
+          const failed = results.find((result) => result.status === "rejected");
+          if (failed?.status === "rejected") throw failed.reason;
+        });
+        const releaseLeases = async () => {
+          await heartbeat.stop();
+          const results = await Promise.allSettled(
+            leases.map(({ leaseUrl, nonce }) =>
+              requestMachinesApi(leaseUrl, { method: "DELETE", nonce })
+            ),
+          );
+          const failed = results.find((result) => result.status === "rejected");
+          if (failed?.status === "rejected") throw failed.reason;
+        };
 
-        if (config?.region) {
-          args.push("--primary-region", config.region);
+        try {
+          for (const machine of machines) {
+            const machineUrl = `${machinesUrl}/${
+              encodeURIComponent(machine.id)
+            }`;
+            const leaseUrl = `${machineUrl}/lease`;
+            const { data: { nonce } } = FlyMachineLeaseSchema.parse(
+              await requestMachinesApi(leaseUrl, {
+                method: "POST",
+                body: { description: label, ttl: 120 },
+                signal: heartbeat.signal,
+              }),
+            );
+            leases.push({
+              machineUrl,
+              leaseUrl,
+              nonce,
+            });
+          }
+
+          const built = await run(buildArgs, { signal: heartbeat.signal });
+          heartbeat.signal.throwIfAborted();
+          if (!built.ok) throw new FlyDeployError(app, built.stderr);
+
+          for (const { machineUrl, nonce } of leases) {
+            heartbeat.signal.throwIfAborted();
+            // Read the full configuration under the lease before changing it.
+            // The Machines API does not support partial configuration updates.
+            const current = FlyMachineSchema.parse(
+              await requestMachinesApi(machineUrl, {
+                nonce,
+                signal: heartbeat.signal,
+              }),
+            );
+            if (!current.config) {
+              throw new FlyDeployError(app, "Missing Machine Configuration");
+            }
+            const { instance_id } = FlyMachineUpdateSchema.parse(
+              await requestMachinesApi(machineUrl, {
+                method: "POST",
+                nonce,
+                signal: heartbeat.signal,
+                body: {
+                  config: { ...current.config, image },
+                  skip_launch: false,
+                },
+              }),
+            );
+            const query = new URLSearchParams({
+              state: "started",
+              timeout: "60",
+              instance_id,
+            });
+            await requestMachinesApi(`${machineUrl}/wait?${query}`, {
+              nonce,
+              signal: heartbeat.signal,
+            });
+          }
+        } catch (error) {
+          // Preserve the deployment error if releasing a lease also fails.
+          await releaseLeases().catch(() => {});
+          throw error;
         }
-
-        const result = await run(args);
-
-        if (!result.ok) {
-          throw new FlyDeployError(app, result.stderr);
-        }
+        await releaseLeases();
       },
 
       async app(appName: string, options: SafeDeployOptions): Promise<void> {

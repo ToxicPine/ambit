@@ -60,6 +60,7 @@ export interface CreateCtx {
   tag: string;
   shouldApprove: boolean;
   manual: boolean;
+  redeploy: boolean;
   appName: string;
   routerId: string;
   device?: TailscaleDevice;
@@ -94,6 +95,7 @@ export const reportSkipped = (
 
 export const hydrateCreate = async (
   ctx: CreateCtx,
+  options: { force?: boolean; region?: string } = {},
 ): Promise<CreatePhase> => {
   const router = await findRouterApp(ctx.fly, ctx.org, ctx.network);
   if (!router) return "create_app";
@@ -102,6 +104,12 @@ export const hydrateCreate = async (
   ctx.routerId = router.routerId;
 
   const machine = await getRouterMachineInfo(ctx.fly, router.appName);
+  if (machine) ctx.region = options.region ?? machine.region;
+  if (machine && (options.force || machine.state !== "started")) {
+    ctx.redeploy = true;
+    ctx.subnet = machine.subnet;
+    return "deploy_router";
+  }
   if (!machine || machine.state !== "started") return "deploy_router";
 
   ctx.subnet = machine.subnet;
@@ -147,14 +155,21 @@ export const createTransition = async (
     }
 
     case "deploy_router": {
-      await ctx.out.spin(
-        "Staging Secrets",
-        () =>
-          ctx.fly.secrets.set(ctx.appName, {
-            [SECRET_NETWORK_NAME]: ctx.network,
-            [SECRET_ROUTER_ID]: ctx.routerId,
-          }, { stage: true }),
-      );
+      if (ctx.redeploy) {
+        ctx.out.warn(
+          "Redeploying Existing Router — Connectivity May Briefly Pause",
+        );
+        ctx.out.ok("Keeping Existing Router Settings");
+      } else {
+        await ctx.out.spin(
+          "Staging Secrets",
+          () =>
+            ctx.fly.secrets.set(ctx.appName, {
+              [SECRET_NETWORK_NAME]: ctx.network,
+              [SECRET_ROUTER_ID]: ctx.routerId,
+            }, { stage: true }),
+        );
+      }
 
       const dockerDir = ROUTER_DOCKER_DIR;
       const deploySpinner = ctx.out.spinner("Deploying Router to Fly.io");
@@ -177,6 +192,7 @@ export const createTransition = async (
       const m = machines.find((m) => m.private_ip);
       if (m?.private_ip) ctx.subnet = extractSubnet(m.private_ip);
 
+      if (ctx.redeploy && !ctx.shouldApprove) return Result.ok("complete");
       return Result.ok("approve_routes");
     }
 

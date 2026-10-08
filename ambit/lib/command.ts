@@ -15,6 +15,7 @@ export interface RunOptions {
   interactive?: boolean;
   cwd?: string;
   env?: Record<string, string>;
+  signal?: AbortSignal;
   stdin?: "inherit" | "null";
 }
 
@@ -70,6 +71,7 @@ export const runCommand = (
 
   return new Promise((resolve) => {
     const child = spawn(cmd, cmdArgs, {
+      signal: options?.signal,
       cwd: options?.cwd,
       env: options?.env ? { ...process.env, ...options.env } : undefined,
       stdio: interactive ? "inherit" : [
