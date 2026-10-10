@@ -9,5 +9,11 @@ Before using Ambit, read its bundled skill:
 ambit skills get core
 ```
 
-Use `npx @cardelli/ambit` if the CLI is not installed. Discover skills with
-`ambit skills list`; load a guide with `ambit skills get <name>`.
+Use `npx @cardelli/ambit` if the CLI is not installed, or with Nix:
+
+```bash
+nix shell 'git+https://github.com/ToxicPine/ambit.git?submodules=1#default' -c ambit skills get core
+```
+
+Use the Git URL above rather than `github:ToxicPine/ambit`, which omits submodules.
+Discover skills with `ambit skills list`; load a guide with `ambit skills get <name>`.

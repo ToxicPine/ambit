@@ -58,6 +58,15 @@ Ambit is available on npm:
 npx @cardelli/ambit --help
 ```
 
+With Nix:
+
+```bash
+nix shell 'git+https://github.com/ToxicPine/ambit.git?submodules=1#default' -c ambit --help
+```
+
+Use the Git URL so Nix fetches the pinned submodules, including the bundled
+skills. The `github:ToxicPine/ambit` archive fetch omits submodules.
+
 ## Agent Skills
 
 **HIGHLY RECOMMENDED:** Install the [skill](https://skills.sh) to help your AI coding agent discover Ambit's CLI guide. Works with Claude Code, Cursor, Windsurf, and other AI coding agents:
