@@ -85,7 +85,7 @@ const resolveFlyScope = async <T extends Record<string, unknown>>(
 const authLogin = async (argv: string[]): Promise<void> => {
   const opts = {
     string: ["ts-api-key", "fly-api-key", "org"],
-    boolean: ["help", "json"],
+    boolean: ["help", "json", "skip-tailscale"],
   } as const;
   const args = parseArgs(argv, opts);
   checkArgs(args, opts, "ambit auth login", 0);
@@ -101,22 +101,32 @@ ${bold("OPTIONS")}
   --ts-api-key <key>    Tailscale API access token (tskey-api-...)
   --fly-api-key <token> Fly.io API token
   --org <org>           Fly.io organization slug
+  --skip-tailscale      Authenticate with Fly.io only
   --json                Output as JSON
 
 ${bold("DESCRIPTION")}
   Authenticates with both Fly.io and Tailscale. Only prompts for
   credentials that are missing or invalid.
 
+  Tailscale is optional: skip it with --skip-tailscale, or by pressing
+  Enter at the API token prompt. Commands that manage your tailnet will
+  still ask for a Tailscale API key later.
+
 ${bold("EXAMPLES")}
   ambit auth login
   ambit auth login --org my-org
   ambit auth login --ts-api-key tskey-api-... --fly-api-key fo1_...
+  ambit auth login --skip-tailscale
 `);
     return;
   }
 
   const out = createOutput<AuthLoginResult>(args.json);
   const credentials = getCredentialStore();
+
+  if (args["skip-tailscale"] && args["ts-api-key"]) {
+    return out.die("--skip-tailscale and --ts-api-key Cannot Be Combined");
+  }
 
   // =========================================================================
   // Step 1: Fly.io
@@ -178,7 +188,9 @@ ${bold("EXAMPLES")}
 
   let tailscaleOk = false;
 
-  if (args["ts-api-key"]) {
+  if (args["skip-tailscale"]) {
+    out.info("Skipped. Tailscale API key not configured for this org.");
+  } else if (args["ts-api-key"]) {
     if (!args["ts-api-key"].startsWith(TAILSCALE_API_KEY_PREFIX)) {
       return out.die(
         "Invalid Token Format. Expected 'tskey-api-...' (API Access Token, Not Auth Key)",
@@ -215,7 +227,7 @@ ${bold("EXAMPLES")}
     if (!tailscaleOk) {
       if (args.json) {
         return out.die(
-          "Tailscale API Key Not Configured. Provide --ts-api-key in JSON Mode",
+          "Tailscale API Key Not Configured. Provide --ts-api-key or --skip-tailscale in JSON Mode",
         );
       }
 
@@ -225,30 +237,33 @@ ${bold("EXAMPLES")}
         .dim("Create One at:").link(
           "  https://login.tailscale.com/admin/settings/keys",
         )
+        .dim("Press Enter to Skip.")
         .blank();
 
       const apiKey = await readSecret("API access token (tskey-api-...): ");
       if (!apiKey) {
-        return out.die("Tailscale API Access Token Required");
-      }
-
-      if (!apiKey.startsWith(TAILSCALE_API_KEY_PREFIX)) {
+        out.info(
+          "Skipped. Tailscale API key not configured for this org.",
+        );
+      } else if (!apiKey.startsWith(TAILSCALE_API_KEY_PREFIX)) {
         return out.die(
           "Invalid Token Format. Expected 'tskey-api-...' (API Access Token, Not Auth Key)",
         );
       }
 
-      const tailscale = createTailscaleProvider(apiKey);
-      const validateSpinner = out.spinner("Validating API Access Token");
-      const isValid = await tailscale.auth.validateKey();
-      if (!isValid) {
-        validateSpinner.fail("Invalid API Access Token");
-        return out.die("Failed to Validate Tailscale API Access Token");
-      }
-      validateSpinner.success("API Access Token Validated");
+      if (apiKey) {
+        const tailscale = createTailscaleProvider(apiKey);
+        const validateSpinner = out.spinner("Validating API Access Token");
+        const isValid = await tailscale.auth.validateKey();
+        if (!isValid) {
+          validateSpinner.fail("Invalid API Access Token");
+          return out.die("Failed to Validate Tailscale API Access Token");
+        }
+        validateSpinner.success("API Access Token Validated");
 
-      await credentials.setTailscaleApiKey(apiKey, flyScope);
-      tailscaleOk = true;
+        await credentials.setTailscaleApiKey(apiKey, flyScope);
+        tailscaleOk = true;
+      }
     }
   }
 
